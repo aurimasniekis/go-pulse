@@ -2,12 +2,21 @@ package app
 
 import (
 	"context"
+	"crypto/tls"
+	"crypto/x509"
 	"fmt"
 	"io"
 	"log/slog"
 	"net/http"
+	"os"
+	"path/filepath"
 	"testing"
 	"time"
+
+	"github.com/nats-io/nkeys"
+
+	"github.com/aurimasniekis/go-pulse/internal/certs"
+	"github.com/aurimasniekis/go-pulse/internal/natsauth"
 
 	"github.com/aurimasniekis/go-pulse/internal/config"
 	"github.com/aurimasniekis/go-pulse/internal/testutil/natstest"
@@ -26,6 +35,10 @@ func testConfig(t *testing.T, env *natstest.Env) *config.Config {
 		PublicAddr:      fmt.Sprintf("127.0.0.1:%d", natstest.FreePort(t)),
 		AuthMode:        "none",
 		EventsMaxBytes:  1 << 30,
+		BanThreshold:    5,
+		BanWindow:       10 * time.Minute,
+		BanDuration:     time.Hour,
+		BanMax:          720 * time.Hour,
 		ShutdownTimeout: 5 * time.Second,
 	}
 }
@@ -72,5 +85,76 @@ func TestStartReadyShutdown(t *testing.T) {
 	defer b.Shutdown(ctx)
 	if pushed, err := b.Clients.Sync(ctx, false); err != nil || pushed {
 		t.Fatalf("restart re-pushed the APP account (pushed=%v err=%v)", pushed, err)
+	}
+}
+
+// Prod-style public listener: origin certificate + AOP. Only clients with a certificate from the AOP CA get through;
+// NATS auth failures reach the ban detector.
+func TestPublicTLSWithAOPAndAuthErrors(t *testing.T) {
+	env := natstest.Start(t)
+	cfg := testConfig(t, env)
+	dir := t.TempDir()
+	now := time.Now()
+	originCA, _ := certs.NewCA("origin", now)
+	origin, _ := originCA.IssueServer([]string{"events.example.test", "127.0.0.1"}, time.Hour, now)
+	aopCA, _ := certs.NewCA("aop", now)
+	cf, _ := aopCA.IssueClient("cloudflare", time.Hour, now)
+	write := func(name string, b []byte) string {
+		p := filepath.Join(dir, name)
+		if err := os.WriteFile(p, b, 0o600); err != nil {
+			t.Fatal(err)
+		}
+		return p
+	}
+	cfg.OriginCertFile, cfg.OriginKeyFile, cfg.AOPCAFile = write("o.crt", origin.CertPEM), write("o.key", origin.KeyPEM), write("aop.crt", aopCA.CertPEM)
+	cfg.BanThreshold, cfg.BanWindow, cfg.BanDuration, cfg.BanMax = 5, 10*time.Minute, time.Hour, 720*time.Hour
+	a, err := Start(context.Background(), cfg, slog.New(slog.NewTextHandler(io.Discard, nil)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer a.Shutdown(context.Background())
+
+	roots := x509.NewCertPool()
+	roots.AddCert(originCA.Cert)
+	get := func(withCert bool) (int, error) {
+		tc := &tls.Config{RootCAs: roots, ServerName: "events.example.test", MinVersion: tls.VersionTLS12}
+		if withCert {
+			pair, _ := tls.X509KeyPair(cf.CertPEM, cf.KeyPEM)
+			tc.Certificates = []tls.Certificate{pair}
+		}
+		c := &http.Client{Transport: &http.Transport{TLSClientConfig: tc}, Timeout: 3 * time.Second}
+		req, _ := http.NewRequestWithContext(context.Background(), http.MethodGet, "https://"+cfg.PublicAddr+"/healthz", nil)
+		resp, err := c.Do(req)
+		if err != nil {
+			return 0, err
+		}
+		resp.Body.Close()
+		return resp.StatusCode, nil
+	}
+	if code, err := get(true); err != nil || code != http.StatusOK {
+		t.Fatalf("with AOP certificate: %d %v", code, err)
+	}
+	if _, err := get(false); err == nil {
+		t.Fatal("public listener accepted a connection without a client certificate")
+	}
+
+	// A NATS login with an unknown key produces an AUTH.ERR advisory that the ban detector sees (loopback is never banned,
+	// so it is recorded as ignored).
+	stranger, _ := nkeys.CreateAccount()
+	user, _ := nkeys.CreateUser()
+	upub, _ := user.PublicKey()
+	tok, _ := natsauth.UserJWT(upub, env.Keys.Pub(env.Keys.AppAccount), stranger, natsauth.UserOptions{})
+	seed, _ := user.Seed()
+	creds, _ := natsauth.Creds(tok, seed)
+	_, _ = env.ConnectCreds(creds)
+	deadline := time.Now().Add(5 * time.Second)
+	for {
+		if r := a.Bans.Recent(); len(r) > 0 && r[0].Source == "nats" && r[0].IP == "127.0.0.1" && r[0].Ignored != "" {
+			break
+		}
+		if time.Now().After(deadline) {
+			t.Fatalf("auth error not seen by the detector: %+v", a.Bans.Recent())
+		}
+		time.Sleep(50 * time.Millisecond)
 	}
 }

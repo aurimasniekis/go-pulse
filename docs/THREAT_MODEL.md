@@ -36,7 +36,7 @@
 |---|---|---|---|---|---|
 | T-01 | Credential brute force on 4222 | ADV-1 | NATS JWT auth (no passwords), AUTH.ERR → ban detector → nftables drop | PL-AUTH-001, PL-BAN-001..007 | Attacker rotates IPs; bans are a nuisance filter. |
 | T-02 | Token brute force on `/api/v1` | ADV-1 | 256-bit tokens, hashed at rest, 401 → ban, per-IP rate limit, CF rate-limit rule | PL-ING-001, PL-ING-007, PL-EDGE-009 | — |
-| T-03 | Direct-to-origin traffic bypassing Cloudflare | ADV-2 | nftables allows 443 only from CF ranges; AOP mTLS required | PL-EDGE-003 | CF range list drift (refreshed daily). |
+| T-03 | Direct-to-origin traffic bypassing Cloudflare | ADV-2 | nftables allows 443 only from CF ranges; AOP mTLS required (prod refuses to start without the AOP CA) | PL-EDGE-003 | CF range list drift (refreshed daily). |
 | T-04 | Another CF customer reaching the origin | ADV-6 | Per-hostname AOP with the module's own CA, not the shared CF CA | PL-EDGE-003, ADR-0009 | — |
 | T-05 | Spoofed `CF-Connecting-IP` to evade bans or frame others | ADV-1/2 | Trusted only from CF peers that passed mTLS | PL-EDGE-004 | — |
 | T-06 | Spoofed `X-Forwarded-For` on `/ws` (NATS trusts the first XFF) | ADV-1 | Proxy rewrites XFF to a single trusted value | PL-EDGE-005 | — |

@@ -14,6 +14,8 @@
 | `pulsed healthcheck` | Container HEALTHCHECK: GET `PULSE_HEALTHCHECK_URL`, exit 0 when ready. |
 | `pulsed keys export --yes-i-understand` | Print the decrypted key set (pulsed must be stopped; audited). |
 | `pulsed version [--json]` | Build info. |
+| `pulsed banagent` | nftables ban mirror (see [firewall.md](firewall.md)). |
+| `pulsed openapi [--out-dir]` | Print or write the OpenAPI specs. |
 
 ## Core
 
@@ -50,6 +52,13 @@
 | `PULSE_PUBLIC_ADDR` | `:8443` | Public listener. `off` disables it. Prod requires the origin certificate below. |
 | `PULSE_ORIGIN_CERT_FILE` / `PULSE_ORIGIN_KEY_FILE` | — | Public listener TLS (Cloudflare Origin CA cert + key, PEM). Required in prod when the listener is on. Reload and AOP: M8. |
 | `PULSE_ADMIN_ADDR` | `127.0.0.1:8080` | Admin UI + API. |
+| `PULSE_AOP_CA_FILE` | — | Client CA for Authenticated Origin Pulls (Terraform output `aop_ca_certificate_pem`). Required in prod with a public listener. |
+| `PULSE_BAN_THRESHOLD` / `PULSE_BAN_WINDOW` | `5` / `10m` | Failures within the window that trigger a ban. |
+| `PULSE_BAN_DURATION` / `PULSE_BAN_MAX` | `1h` / `720h` | First ban length; repeat offences ×4 up to the max. |
+| `PULSE_BAN_ALLOW` | — | Comma-separated IPs/CIDRs never banned. |
+| `PULSE_HOST_IPS` | — | The VPS's own public addresses (never banned). |
+| `PULSE_CF_RANGES_REFRESH` | `true` | Refresh Cloudflare ranges daily from api.cloudflare.com (the embedded list is the fallback). |
+| `PULSE_CF_ACCOUNT_ID`, `PULSE_CF_BANLIST_ID`, `PULSE_CF_BANLIST_TOKEN_FILE` | — | Optional: mirror bans ≥ 1 h into a Cloudflare IP list (Terraform outputs `ban_list_id`, `ban_sync_token`). |
 | `PULSE_OUTBOUND_ALLOW` | — | Comma-separated IPs/CIDRs outbound webhooks may reach although they are internal (e.g. a LAN service). |
 | `PULSE_ADMIN_HOSTS` | — | Extra comma-separated Host names the admin listener accepts (besides 127.0.0.1, localhost, ::1). |
 | `PULSE_ADMIN_PUBLISHED_LOOPBACK` | `false` | Set `true` when the admin port binds inside a container and compose publishes it only on host loopback. Required in prod for a non-loopback `PULSE_ADMIN_ADDR` with auth none (ADR-0008). |
@@ -63,5 +72,8 @@
 | Secret / file | Used by | Notes |
 |---|---|---|
 | master key | init, pulsed | compose secret, uid 65532 readable, mode 0400. |
+| origin certificate + key | pulsed | `PULSE_ORIGIN_CERT_FILE`/`PULSE_ORIGIN_KEY_FILE`; reloaded when the files change. |
+| AOP CA certificate | pulsed | `PULSE_AOP_CA_FILE`. |
+| Cloudflare ban-list token | pulsed | optional, `PULSE_CF_BANLIST_TOKEN_FILE`. |
 
 More secrets (Cloudflare origin cert/key, AOP CA, DNS token, S3, age recipients, notifier tokens) are added with M7–M11.

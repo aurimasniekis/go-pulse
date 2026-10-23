@@ -22,3 +22,6 @@ versioning: [docs/VERSIONING.md](docs/VERSIONING.md).
   audit admin APIs; Clients, HTTP tokens and Audit pages with show-once secrets and connection snippets.
 - M7: inbound webhooks (GitHub, Stripe, HMAC, shared secret) and outbound webhooks (ordered, retried, signed,
   SSRF-guarded) with a delivery log; Webhooks page.
+- M8: automatic bans (NATS, HTTP, webhooks) enforced over HTTP, in nftables (`pulsed banagent`) and optionally in a
+  Cloudflare IP list; origin TLS with hot reload and Authenticated Origin Pulls; Cloudflare-aware client IP; `/ws`
+  proxy; Security page. Prod now requires `PULSE_AOP_CA_FILE` for the public listener.

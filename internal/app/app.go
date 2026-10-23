@@ -18,6 +18,7 @@ import (
 	"github.com/aurimasniekis/go-pulse/internal/api"
 	"github.com/aurimasniekis/go-pulse/internal/audit"
 	"github.com/aurimasniekis/go-pulse/internal/auth"
+	"github.com/aurimasniekis/go-pulse/internal/ban"
 	"github.com/aurimasniekis/go-pulse/internal/bootstrap"
 	"github.com/aurimasniekis/go-pulse/internal/certs"
 	"github.com/aurimasniekis/go-pulse/internal/clients"
@@ -49,9 +50,11 @@ type App struct {
 	Tail     *tail.Manager
 	Rollup   *rollup.Engine
 	Outbound *outbound.Service
+	Bans     *ban.Service
 
 	ready     atomic.Bool
 	listeners []*http.Server
+	metrics   *http.ServeMux
 	wg        sync.WaitGroup
 	loopCtx   context.Context
 	stopLoops context.CancelFunc
@@ -169,19 +172,15 @@ func Start(ctx context.Context, cfg *config.Config, log *slog.Logger) (*App, err
 		Query: a.Query, Tail: a.Tail, Rollup: a.Rollup, Auth: authn, Tokens: tokens.New(a.DB), Clients: a.Clients,
 		Hooks: hookSvc, Outbound: a.Outbound,
 		PublicNATSURL: cfg.PublicNATSURL, PublicURL: cfg.PublicURL, CACertPEM: a.Keys.CACert, AdminHosts: cfg.AdminHosts, Ready: a.Ready}
+	ep, err := a.setupEdge(ctx, cfg, deps, hookSvc)
+	if err != nil {
+		return nil, err
+	}
 	if err := a.serve(ctx, "admin", cfg.AdminAddr, api.NewAdmin(deps)); err != nil {
 		return nil, err
 	}
 	if cfg.PublicAddr != "" {
-		var tlsConf *tls.Config
-		if cfg.OriginCertFile != "" {
-			cert, err := tls.LoadX509KeyPair(cfg.OriginCertFile, cfg.OriginKeyFile)
-			if err != nil {
-				return nil, fmt.Errorf("origin certificate: %w", err)
-			}
-			tlsConf = &tls.Config{Certificates: []tls.Certificate{cert}, MinVersion: tls.VersionTLS12}
-		}
-		if err := a.serveTLS(ctx, "public", cfg.PublicAddr, api.NewPublic(deps), tlsConf); err != nil { //nolint:contextcheck // handlers use the per-request context from Huma
+		if err := a.serveTLS(ctx, "public", cfg.PublicAddr, api.NewPublic(deps), ep.tls); err != nil { //nolint:contextcheck // handlers use the per-request context from Huma
 			return nil, err
 		}
 	}
@@ -231,6 +230,7 @@ func (a *App) goLoop(ctx context.Context, name string, every time.Duration, fn f
 
 func (a *App) startMetrics(ctx context.Context) error {
 	mux := http.NewServeMux()
+	a.metrics = mux
 	mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, _ *http.Request) { _, _ = w.Write([]byte("ok\n")) })
 	mux.HandleFunc("GET /readyz", func(w http.ResponseWriter, _ *http.Request) {
 		if !a.Ready() {

@@ -5,6 +5,7 @@ import (
 	"errors"
 	"log/slog"
 	"net/http"
+	"net/url"
 	"slices"
 
 	"github.com/danielgtaylor/huma/v2"
@@ -14,6 +15,7 @@ import (
 
 	"github.com/aurimasniekis/go-pulse/internal/audit"
 	"github.com/aurimasniekis/go-pulse/internal/auth"
+	"github.com/aurimasniekis/go-pulse/internal/ban"
 	"github.com/aurimasniekis/go-pulse/internal/clients"
 	"github.com/aurimasniekis/go-pulse/internal/hooks"
 	"github.com/aurimasniekis/go-pulse/internal/outbound"
@@ -35,18 +37,24 @@ const AdminPrefix = "/api/admin/v1"
 
 // Deps are the services the APIs use. Spec generation passes a zero Deps: handlers must not run then.
 type Deps struct {
-	Log      *slog.Logger
-	Version  string
-	Profile  string
-	DB       *store.DB
-	NC       *nats.Conn
-	JS       jetstream.JetStream
-	Sys      *sysapi.Client
-	Query    *query.Engine
-	Tail     *tail.Manager
-	Rollup   *rollup.Engine
-	Tokens   *tokens.Service
-	Clients  *clients.Service
+	Log     *slog.Logger
+	Version string
+	Profile string
+	DB      *store.DB
+	NC      *nats.Conn
+	JS      jetstream.JetStream
+	Sys     *sysapi.Client
+	Query   *query.Engine
+	Tail    *tail.Manager
+	Rollup  *rollup.Engine
+	Tokens  *tokens.Service
+	Clients *clients.Service
+	Bans    *ban.Service
+	Edge    EdgeInfo
+	// ClientIP returns the real client address of a public request (Cloudflare-aware). Defaults to the TCP peer.
+	ClientIP func(*http.Request) string
+	// WSTarget is the NATS websocket URL /ws proxies to; nil disables /ws.
+	WSTarget *url.URL
 	Hooks    *hooks.Service
 	Outbound *outbound.Service
 	// Connection details shown in snippets and the system page.
@@ -112,6 +120,7 @@ func NewAdminAPI(mux *http.ServeMux, d *Deps) huma.API {
 	registerTokens(api, d)
 	registerAudit(api, d)
 	registerWebhooks(api, d)
+	registerSecurity(api, d)
 	return api
 }
 

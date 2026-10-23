@@ -122,4 +122,14 @@ are refused unless allowlisted with `PULSE_OUTBOUND_ALLOW`.
 Admin endpoints: `/hooks/inbound` (CRUD, `rotate_secret`), `/hooks/outbound` (CRUD, `/pause`, `/resume`, `/test`,
 `/deliveries`), `/hooks/deliveries/{id}/retry`. Secrets are returned only when created or rotated.
 
-`/ws` arrives with M8.
+## Edge
+
+- **Real client IP:** `CF-Connecting-IP` is used only when the TCP peer is in Cloudflare's ranges *and* the connection
+  presented a client certificate that verified against `PULSE_AOP_CA_FILE`; otherwise the peer address is used.
+- **Bans:** banned addresses get 403 on every public route. Missing/invalid tokens and bad webhook signatures count as
+  failures; so do NATS `CLIENT.AUTH.ERR` advisories.
+- **`/ws`:** proxies to the NATS websocket listener for browser clients (`ws(s)://<host>/ws` with creds). The proxy
+  replaces `X-Forwarded-For` with exactly the real client IP, because NATS trusts the first value.
+
+Admin: `GET /security` (edge status, active bans, history, recent failures, offenders, allowlist), `POST /security/bans`,
+`POST /security/bans/lift`, `POST /security/allowlist`, `POST /security/allowlist/remove`.

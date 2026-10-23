@@ -10,7 +10,7 @@ GOVULNCHECK  ?= $(GO) run golang.org/x/vuln/cmd/govulncheck@v1.9.0
 DEV          := docker compose -f deploy/compose.dev.yaml -p pulse-dev
 
 .DEFAULT_GOAL := help
-.PHONY: help api web web-dev build build-go test race vet lint vuln secrets web-test check image dev-up dev-down dev-logs dev-reset spike e2e clean
+.PHONY: help api test-nft web web-dev build build-go test race vet lint vuln secrets web-test check image dev-up dev-down dev-logs dev-reset spike e2e clean
 
 help: ## List targets
 	@awk 'BEGIN {FS = ":.*## "} /^[a-zA-Z_-]+:.*## / {printf "  \033[36m%-14s\033[0m %s\n", $$1, $$2}' $(MAKEFILE_LIST)
@@ -78,6 +78,9 @@ dev-logs: ## Follow dev stack logs
 
 dev-reset: ## Stop the dev stack and delete its volumes
 	$(DEV) down -v
+
+test-nft: ## banagent against real nftables in a privileged Linux container (needs Docker)
+	./scripts/test-nft.sh
 
 spike: ## M2 sizing spike: ~10 GB / 5k subjects into NATS under mem_limit 900m (heavy; run only when intended)
 	./scripts/spike.sh

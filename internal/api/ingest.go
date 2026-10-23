@@ -236,7 +236,7 @@ func registerIngest(api huma.API, d *Deps) {
 	// still answer 401/403.
 	tailAuth := func(ctx huma.Context, next func(huma.Context)) {
 		r, _ := humago.Unwrap(ctx)
-		rctx := context.WithValue(ctx.Context(), clientIPKey{}, remoteIP(r))
+		rctx := context.WithValue(ctx.Context(), clientIPKey{}, d.clientIP(r))
 		subject := ctx.Query("subject")
 		if subject == "" {
 			subject = "evt.>"

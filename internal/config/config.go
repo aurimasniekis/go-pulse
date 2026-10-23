@@ -52,7 +52,18 @@ type Config struct {
 	AuthMode               string   // none | oidc
 	AdminHosts             []string // extra Host names accepted by the admin listener (DNS-rebinding guard)
 	OutboundAllow          []string // networks outbound webhooks may reach despite the SSRF guard
-	OriginCertFile         string   // public listener TLS certificate (Cloudflare Origin CA), PEM
+	AOPCAFile              string   // client CA for Authenticated Origin Pulls on the public listener
+	BanThreshold           int
+	BanWindow              time.Duration
+	BanDuration            time.Duration
+	BanMax                 time.Duration
+	BanAllow               []string // never-ban networks (operator allowlist from config)
+	HostIPs                []string // the host's own addresses, never banned
+	CFRefresh              bool     // refresh Cloudflare ranges daily from the API
+	CFAccountID            string   // Cloudflare IP list sync (optional)
+	CFBanListID            string
+	CFBanListToken         string
+	OriginCertFile         string // public listener TLS certificate (Cloudflare Origin CA), PEM
 	OriginKeyFile          string
 
 	ShutdownTimeout time.Duration
@@ -94,9 +105,24 @@ func Load(getenv Getenv) (*Config, error) {
 		AuthMode:               e.str("PULSE_AUTH_MODE", "none"),
 		AdminHosts:             e.list("PULSE_ADMIN_HOSTS"),
 		OutboundAllow:          e.list("PULSE_OUTBOUND_ALLOW"),
+		AOPCAFile:              e.str("PULSE_AOP_CA_FILE", ""),
+		BanThreshold:           e.int("PULSE_BAN_THRESHOLD", 5),
+		BanWindow:              e.dur("PULSE_BAN_WINDOW", 10*time.Minute),
+		BanDuration:            e.dur("PULSE_BAN_DURATION", time.Hour),
+		BanMax:                 e.dur("PULSE_BAN_MAX", 30*24*time.Hour),
+		BanAllow:               e.list("PULSE_BAN_ALLOW"),
+		HostIPs:                e.list("PULSE_HOST_IPS"),
+		CFRefresh:              e.bool("PULSE_CF_RANGES_REFRESH", true),
+		CFAccountID:            e.str("PULSE_CF_ACCOUNT_ID", ""),
+		CFBanListID:            e.str("PULSE_CF_BANLIST_ID", ""),
 		OriginCertFile:         e.str("PULSE_ORIGIN_CERT_FILE", ""),
 		OriginKeyFile:          e.str("PULSE_ORIGIN_KEY_FILE", ""),
 		ShutdownTimeout:        e.dur("PULSE_SHUTDOWN_TIMEOUT", 20*time.Second),
+	}
+	if tok, err := e.secret("PULSE_CF_BANLIST_TOKEN", c.Profile == ProfileProd); err != nil {
+		e.errs = append(e.errs, err)
+	} else {
+		c.CFBanListToken = tok
 	}
 	if c.PublicNATSURL == "" {
 		host := c.RawHost
@@ -157,6 +183,15 @@ func (c *Config) Validate() error {
 		errs = append(errs, errors.New("the prod profile refuses a plain-HTTP public listener: set PULSE_ORIGIN_CERT_FILE/PULSE_ORIGIN_KEY_FILE "+
 			"or disable the listener with PULSE_PUBLIC_ADDR=off (PL-EDGE-010)"))
 	}
+	if c.Profile == ProfileProd && c.PublicAddr != "" && c.AOPCAFile == "" {
+		errs = append(errs, errors.New("the prod profile requires Authenticated Origin Pulls on the public listener: set PULSE_AOP_CA_FILE (PL-EDGE-003)"))
+	}
+	if (c.CFAccountID != "" || c.CFBanListID != "" || c.CFBanListToken != "") && (c.CFAccountID == "" || c.CFBanListID == "" || c.CFBanListToken == "") {
+		errs = append(errs, errors.New("the Cloudflare ban list sync needs PULSE_CF_ACCOUNT_ID, PULSE_CF_BANLIST_ID and PULSE_CF_BANLIST_TOKEN_FILE together"))
+	}
+	if c.BanThreshold < 2 || c.BanWindow < time.Minute || c.BanDuration < time.Minute || c.BanMax < c.BanDuration {
+		errs = append(errs, errors.New("ban settings out of range (threshold ≥ 2, window ≥ 1m, duration ≥ 1m, max ≥ duration)"))
+	}
 	if c.EventsMaxBytes < 64<<20 {
 		errs = append(errs, errors.New("PULSE_EVENTS_MAX_BYTES must be at least 64MiB"))
 	}
@@ -210,6 +245,18 @@ func (e *envReader) str(k, def string) string {
 		return v
 	}
 	return def
+}
+
+func (e *envReader) int(k string, def int) int {
+	v := strings.TrimSpace(e.get(k))
+	if v == "" {
+		return def
+	}
+	n, err := strconv.Atoi(v)
+	if err != nil {
+		e.errs = append(e.errs, fmt.Errorf("%s: %w", k, err))
+	}
+	return n
 }
 
 func (e *envReader) bool(k string, def bool) bool {

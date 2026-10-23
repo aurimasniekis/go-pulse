@@ -194,3 +194,7 @@ export function useDeliveries(id: string | null) {
     refetchInterval: 5_000,
   })
 }
+
+export function useSecurity() {
+  return useQuery({ queryKey: ['security'], queryFn: async () => unwrap(await admin.GET('/security')), refetchInterval: 5_000 })
+}

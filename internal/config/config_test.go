@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/aurimasniekis/go-pulse/internal/secretbox"
 )
@@ -66,6 +67,14 @@ func TestDevAllowsPlainKey(t *testing.T) {
 	c, err := Load(env(map[string]string{"PULSE_PROFILE": "dev", "PULSE_MASTER_KEY": secretbox.GenerateMasterKey(), "PULSE_ADMIN_ADDR": "0.0.0.0:8080"}))
 	if err != nil || !c.Dev() {
 		t.Fatalf("%v", err)
+	}
+}
+
+func TestProdPublicWithTLSAndAOP(t *testing.T) {
+	c, err := Load(env(map[string]string{"PULSE_MASTER_KEY_FILE": keyFile(t), "PULSE_ORIGIN_CERT_FILE": "/c", "PULSE_ORIGIN_KEY_FILE": "/k",
+		"PULSE_AOP_CA_FILE": "/aop", "PULSE_BAN_ALLOW": "203.0.113.0/24"}))
+	if err != nil || c.BanThreshold != 5 || c.BanDuration != time.Hour || len(c.BanAllow) != 1 || !c.CFRefresh {
+		t.Fatalf("%+v %v", c, err)
 	}
 }
 

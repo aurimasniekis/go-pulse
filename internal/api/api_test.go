@@ -8,6 +8,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"strings"
 	"sync/atomic"
 	"testing"
@@ -16,6 +17,7 @@ import (
 	"github.com/nats-io/nats.go/jetstream"
 
 	"github.com/aurimasniekis/go-pulse/internal/auth"
+	"github.com/aurimasniekis/go-pulse/internal/ban"
 	"github.com/aurimasniekis/go-pulse/internal/clients"
 	"github.com/aurimasniekis/go-pulse/internal/hooks"
 	"github.com/aurimasniekis/go-pulse/internal/outbound"
@@ -33,6 +35,7 @@ import (
 var authFailures atomic.Int64
 
 type harness struct {
+	env    *natstest.Env
 	admin  *httptest.Server
 	public *httptest.Server
 	app    *pulse.Client
@@ -78,8 +81,28 @@ func newHarness(t *testing.T) *harness {
 	}
 	t.Cleanup(func() { ocancel(); ob.Wait() })
 	d.Outbound = ob
-	d.OnAuthFailure = func(ip, source string) { authFailures.Add(1) }
-	h := &harness{admin: httptest.NewServer(NewAdmin(d)), public: httptest.NewServer(NewPublic(d)), app: app, db: db, deps: d}
+	d.Bans, err = ban.New(db, ban.Options{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	_ = d.Bans.Load(context.Background())
+	// Tests choose the client address with a header; production uses the Cloudflare-aware edge.RealIP.
+	d.ClientIP = func(r *http.Request) string {
+		if ip := r.Header.Get("X-Test-IP"); ip != "" {
+			return ip
+		}
+		return remoteIP(r)
+	}
+	if env.WSPort != 0 {
+		d.WSTarget, _ = url.Parse(fmt.Sprintf("http://127.0.0.1:%d", env.WSPort))
+	}
+	d.OnAuthFailure = func(ip, source string) {
+		authFailures.Add(1)
+		if d.Bans != nil {
+			d.Bans.Fail(context.Background(), ip, source, "")
+		}
+	}
+	h := &harness{env: env, admin: httptest.NewServer(NewAdmin(d)), public: httptest.NewServer(NewPublic(d)), app: app, db: db, deps: d}
 	t.Cleanup(h.admin.Close)
 	t.Cleanup(h.public.Close)
 	return h

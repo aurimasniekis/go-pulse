@@ -20,6 +20,8 @@ x-pulse-env: &pulse-env
   PULSE_EVENTS_MAX_BYTES: 30GiB # deployment computes 60% of the data disk
   PULSE_ORIGIN_CERT_FILE: /run/secrets/cf_origin_cert   # Terraform module output origin_certificate_pem
   PULSE_ORIGIN_KEY_FILE: /run/secrets/cf_origin_key     # Terraform module output origin_private_key_pem
+  PULSE_AOP_CA_FILE: /run/secrets/aop_ca                 # Terraform module output aop_ca_certificate_pem
+  PULSE_HOST_IPS: 192.0.2.10,2001:db8::10                # the VPS's public addresses
 
 secrets:
   pulse_master_key:
@@ -28,6 +30,8 @@ secrets:
     file: /srv/pulse/secrets/cf_origin.crt
   cf_origin_key:
     file: /srv/pulse/secrets/cf_origin.key
+  aop_ca:
+    file: /srv/pulse/secrets/aop_ca.crt
 
 networks:
   pulse:
@@ -73,11 +77,11 @@ services:
     environment:
       <<: *pulse-env
       GOMEMLIMIT: 300MiB
-    secrets: [pulse_master_key, cf_origin_cert, cf_origin_key]
+    secrets: [pulse_master_key, cf_origin_cert, cf_origin_key, aop_ca]
     volumes: [pulsed-data:/data/pulsed, nats-data:/data/nats]
     networks: [pulse]
     ports:
-      - "443:8443"            # public, Cloudflare ranges only (nftables), AOP mTLS (M8)
+      - "443:8443"            # public, Cloudflare ranges only (nftables), AOP mTLS
       - "127.0.0.1:8080:8080" # admin UI + API: host loopback only (ADR-0008)
       - "127.0.0.1:9464:9464" # metrics, health, banagent endpoint: host loopback only
     depends_on:
@@ -85,7 +89,7 @@ services:
     mem_limit: 448m
     restart: unless-stopped
 
-  banagent: # (M8)
+  banagent:
     image: ghcr.io/aurimasniekis/pulsed@sha256:<digest>
     command: ["banagent"]
     network_mode: host

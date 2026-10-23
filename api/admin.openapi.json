@@ -1,6 +1,57 @@
 {
   "components": {
     "schemas": {
+      "Add-allowRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "$schema": {
+            "description": "A URL to the JSON Schema for this object.",
+            "examples": [
+              "/api/admin/v1/schemas/Add-allowRequest.json"
+            ],
+            "format": "uri",
+            "readOnly": true,
+            "type": "string"
+          },
+          "network": {
+            "maxLength": 64,
+            "type": "string"
+          },
+          "note": {
+            "maxLength": 256,
+            "type": "string"
+          }
+        },
+        "required": [
+          "network"
+        ],
+        "type": "object"
+      },
+      "AllowEntry": {
+        "additionalProperties": false,
+        "properties": {
+          "actor": {
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "network": {
+            "type": "string"
+          },
+          "note": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "network",
+          "note",
+          "actor",
+          "created_at"
+        ],
+        "type": "object"
+      },
       "AuditPage": {
         "additionalProperties": false,
         "properties": {
@@ -27,6 +78,64 @@
         },
         "required": [
           "entries"
+        ],
+        "type": "object"
+      },
+      "Ban": {
+        "additionalProperties": false,
+        "properties": {
+          "$schema": {
+            "description": "A URL to the JSON Schema for this object.",
+            "examples": [
+              "/api/admin/v1/schemas/Ban.json"
+            ],
+            "format": "uri",
+            "readOnly": true,
+            "type": "string"
+          },
+          "actor": {
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "expires_at": {
+            "description": "Absent: no expiry",
+            "format": "date-time",
+            "type": "string"
+          },
+          "manual": {
+            "type": "boolean"
+          },
+          "network": {
+            "type": "string"
+          },
+          "offences": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "reason": {
+            "type": "string"
+          },
+          "source": {
+            "enum": [
+              "nats",
+              "http_token",
+              "webhook",
+              "manual"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "network",
+          "reason",
+          "source",
+          "manual",
+          "actor",
+          "created_at",
+          "offences"
         ],
         "type": "object"
       },
@@ -397,6 +506,42 @@
         ],
         "type": "object"
       },
+      "Create-banRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "$schema": {
+            "description": "A URL to the JSON Schema for this object.",
+            "examples": [
+              "/api/admin/v1/schemas/Create-banRequest.json"
+            ],
+            "format": "uri",
+            "readOnly": true,
+            "type": "string"
+          },
+          "duration_hours": {
+            "description": "0 = no expiry",
+            "format": "int64",
+            "maximum": 8760,
+            "minimum": 0,
+            "type": "integer"
+          },
+          "network": {
+            "description": "IP or CIDR; a single IPv6 address bans its /64",
+            "maxLength": 64,
+            "type": "string"
+          },
+          "reason": {
+            "maxLength": 256,
+            "type": "string"
+          }
+        },
+        "required": [
+          "network",
+          "duration_hours",
+          "reason"
+        ],
+        "type": "object"
+      },
       "Create-tokenResponse": {
         "additionalProperties": false,
         "properties": {
@@ -496,6 +641,54 @@
           "outcome",
           "status_code",
           "latency_ms"
+        ],
+        "type": "object"
+      },
+      "EdgeInfo": {
+        "additionalProperties": false,
+        "properties": {
+          "aop": {
+            "description": "Authenticated Origin Pulls required",
+            "type": "boolean"
+          },
+          "ban_feed": {
+            "description": "The banagent feed is served",
+            "type": "boolean"
+          },
+          "cloudflare_list_sync": {
+            "type": "boolean"
+          },
+          "cloudflare_ranges": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "cloudflare_updated": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "never_ban": {
+            "description": "Static never-ban networks from configuration",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "origin_not_after": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "tls": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "tls",
+          "aop",
+          "cloudflare_ranges",
+          "cloudflare_updated",
+          "ban_feed",
+          "cloudflare_list_sync",
+          "never_ban"
         ],
         "type": "object"
       },
@@ -772,6 +965,34 @@
           "partial",
           "first_seq",
           "last_seq"
+        ],
+        "type": "object"
+      },
+      "Failure": {
+        "additionalProperties": false,
+        "properties": {
+          "detail": {
+            "type": "string"
+          },
+          "ignored": {
+            "description": "Why this failure cannot lead to a ban (never-ban network)",
+            "type": "string"
+          },
+          "ip": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "time": {
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "time",
+          "ip",
+          "source"
         ],
         "type": "object"
       },
@@ -1255,6 +1476,28 @@
         ],
         "type": "object"
       },
+      "Lift-banRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "$schema": {
+            "description": "A URL to the JSON Schema for this object.",
+            "examples": [
+              "/api/admin/v1/schemas/Lift-banRequest.json"
+            ],
+            "format": "uri",
+            "readOnly": true,
+            "type": "string"
+          },
+          "network": {
+            "maxLength": 64,
+            "type": "string"
+          }
+        },
+        "required": [
+          "network"
+        ],
+        "type": "object"
+      },
       "Node": {
         "additionalProperties": false,
         "properties": {
@@ -1325,6 +1568,29 @@
           "dropped",
           "reason",
           "rate"
+        ],
+        "type": "object"
+      },
+      "Offender": {
+        "additionalProperties": false,
+        "properties": {
+          "count": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "last_at": {
+            "description": "When the last ban ended (or ends)",
+            "format": "date-time",
+            "type": "string"
+          },
+          "network": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "network",
+          "count",
+          "last_at"
         ],
         "type": "object"
       },
@@ -1574,6 +1840,28 @@
         ],
         "type": "object"
       },
+      "Remove-allowRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "$schema": {
+            "description": "A URL to the JSON Schema for this object.",
+            "examples": [
+              "/api/admin/v1/schemas/Remove-allowRequest.json"
+            ],
+            "format": "uri",
+            "readOnly": true,
+            "type": "string"
+          },
+          "network": {
+            "maxLength": 64,
+            "type": "string"
+          }
+        },
+        "required": [
+          "network"
+        ],
+        "type": "object"
+      },
       "Rotate-clientRequest": {
         "additionalProperties": false,
         "properties": {
@@ -1642,6 +1930,64 @@
         },
         "required": [
           "hook"
+        ],
+        "type": "object"
+      },
+      "SecurityOverview": {
+        "additionalProperties": false,
+        "properties": {
+          "$schema": {
+            "description": "A URL to the JSON Schema for this object.",
+            "examples": [
+              "/api/admin/v1/schemas/SecurityOverview.json"
+            ],
+            "format": "uri",
+            "readOnly": true,
+            "type": "string"
+          },
+          "active": {
+            "items": {
+              "$ref": "#/components/schemas/Ban"
+            },
+            "type": "array"
+          },
+          "allowlist": {
+            "items": {
+              "$ref": "#/components/schemas/AllowEntry"
+            },
+            "type": "array"
+          },
+          "edge": {
+            "$ref": "#/components/schemas/EdgeInfo"
+          },
+          "failures": {
+            "description": "Recent authentication failures (in memory, newest first)",
+            "items": {
+              "$ref": "#/components/schemas/Failure"
+            },
+            "type": "array"
+          },
+          "history": {
+            "description": "Expired or lifted bans from the last 30 days",
+            "items": {
+              "$ref": "#/components/schemas/Ban"
+            },
+            "type": "array"
+          },
+          "offenders": {
+            "items": {
+              "$ref": "#/components/schemas/Offender"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "edge",
+          "active",
+          "history",
+          "failures",
+          "offenders",
+          "allowlist"
         ],
         "type": "object"
       },
@@ -3708,6 +4054,181 @@
         "summary": "Overview KPIs and forecast",
         "tags": [
           "rollups"
+        ]
+      }
+    },
+    "/security": {
+      "get": {
+        "operationId": "get-security",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SecurityOverview"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Bans, failures, allowlist, edge",
+        "tags": [
+          "security"
+        ]
+      }
+    },
+    "/security/allowlist": {
+      "post": {
+        "description": "Also lifts active bans inside it.",
+        "operationId": "add-allow",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Add-allowRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Never ban a network",
+        "tags": [
+          "security"
+        ]
+      }
+    },
+    "/security/allowlist/remove": {
+      "post": {
+        "operationId": "remove-allow",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Remove-allowRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Remove an allowlist entry",
+        "tags": [
+          "security"
+        ]
+      }
+    },
+    "/security/bans": {
+      "post": {
+        "operationId": "create-ban",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Create-banRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ban"
+                }
+              }
+            },
+            "description": "Created"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Ban a network",
+        "tags": [
+          "security"
+        ]
+      }
+    },
+    "/security/bans/lift": {
+      "post": {
+        "operationId": "lift-ban",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Lift-banRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Lift a ban",
+        "tags": [
+          "security"
         ]
       }
     },

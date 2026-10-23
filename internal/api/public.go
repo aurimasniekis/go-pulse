@@ -11,6 +11,8 @@ import (
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/danielgtaylor/huma/v2/adapters/humago"
 	"golang.org/x/time/rate"
+
+	"github.com/aurimasniekis/go-pulse/internal/edge"
 )
 
 // PublicPrefix is the public API base path.
@@ -62,6 +64,9 @@ func NewPublic(d *Deps) http.Handler {
 	if d.Hooks != nil {
 		mux.Handle("/hooks/{name}", d.Hooks.Handler())
 	}
+	if d.WSTarget != nil {
+		mux.Handle("GET /ws", edge.WSProxy(d.WSTarget, d.clientIP))
+	}
 	allowed := func(p string) bool {
 		return p == "/healthz" || p == "/ws" || strings.HasPrefix(p, PublicPrefix+"/") || strings.HasPrefix(p, "/hooks/")
 	}
@@ -71,7 +76,7 @@ func NewPublic(d *Deps) http.Handler {
 			http.NotFound(w, r)
 			return
 		}
-		if !limiter.allow(remoteIP(r)) {
+		if !limiter.allow(d.clientIP(r)) {
 			w.Header().Set("Retry-After", "1")
 			http.Error(w, "rate limited", http.StatusTooManyRequests)
 			return
@@ -86,10 +91,28 @@ func NewPublic(d *Deps) http.Handler {
 		w.Header().Set("Cache-Control", "no-store")
 		mux.ServeHTTP(w, r)
 	})
-	return accessLog(d.log(), "public", withClientIP(h))
+	var hh http.Handler = h
+	if d.Bans != nil {
+		hh = d.Bans.Middleware(d.clientIP, hh)
+	}
+	return accessLog(d.log(), "public", d.withRealIP(hh))
 }
 
-// remoteIP is the TCP peer address. M8 replaces it with the Cloudflare-aware real IP (PL-EDGE-004).
+func (d *Deps) clientIP(r *http.Request) string {
+	if d.ClientIP != nil {
+		return d.ClientIP(r)
+	}
+	return remoteIP(r)
+}
+
+// withRealIP stores the real client IP in the request context (used by token auth and audit).
+func (d *Deps) withRealIP(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		next.ServeHTTP(w, r.WithContext(context.WithValue(r.Context(), clientIPKey{}, d.clientIP(r))))
+	})
+}
+
+// remoteIP is the TCP peer address.
 func remoteIP(r *http.Request) string {
 	host, _, err := net.SplitHostPort(r.RemoteAddr)
 	if err != nil {

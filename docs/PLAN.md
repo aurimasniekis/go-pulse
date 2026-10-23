@@ -167,8 +167,8 @@ Status values: `planned`, `in-progress`, `implemented`, `tested`, `externally-ve
 | M4 | UI core | tested | 4d21daf |
 | M5 | Rollups | tested | 07f01fd |
 | M6 | Clients and ingress | tested | 2378428 |
-| M7 | Webhooks | tested | (this commit) |
-| M8 | Security and edge TLS | planned | |
+| M7 | Webhooks | tested | 26c5b2f |
+| M8 | Security and edge TLS | tested (VM/Cloudflare pending) | (this commit) |
 | M9 | ACME | planned | |
 | M10 | Observability | planned | |
 | M11 | Backups | planned | |
@@ -190,6 +190,7 @@ Status values: `planned`, `in-progress`, `implemented`, `tested`, `externally-ve
 | 2026-10-23 | M5 | Rollup engine (headers-only ordered consumers, exactly-once with checkpoint in the same SQLite tx, per-resolution dimensions, minute cache, key sampling, pruning), overview/throughput/subject tree APIs, admin publish endpoint, Overview (KPIs, ECharts throughput, rank lists, forecast) and Subjects pages; data-seeded e2e (9 tests). |
 | 2026-10-24 | M6 | HTTP tokens (hashed, CIDR-limited), public publish/batch/request/replay/tail with grant checks and an auth-failure hook for M8, clients/tokens/audit admin APIs, Clients (grants editor, show-once creds + snippets, rotate, revoke, live connections), HTTP tokens and Audit pages; e2e publishes through the public API with an issued token. Python/TS snippets describe the M13 SDK API and must match it. |
 | 2026-10-24 | M7 | Inbound hooks (GitHub, Stripe, HMAC, shared secret; sealed secrets; 401 feeds the ban hook), outbound dispatcher (ordered, backoff 1 s–1 h, 12 attempts, dead letters, HMAC signing, SSRF guard checked at dial time, delivery log, pause/resume, retry, test), admin API and Webhooks page; e2e covers inbound delivery and outbound test/pause/delete. |
+| 2026-10-24 | M8 | Ban detector (NATS AUTH.ERR, HTTP 401, webhook signatures; window, ×4 escalation, never-ban), SQLite bans/allowlist, HTTP 403 middleware, banagent (long-poll feed, nftables interval sets with timeouts; real nft tested in a privileged container), Cloudflare IP-list reconciler (fake API), origin cert hot reload, AOP mTLS (handshake tests), Cloudflare-aware real IP, /ws proxy (NATS over websocket through the proxy), Security page. |
 
 ## 6. Acceptance checklist (mapped to requirement IDs)
 
@@ -254,27 +255,27 @@ E browser E2E · C CI/static check · S spike/perf · R restore drill · X exter
 #### PL-EDGE — Public listener and TLS
 
 - [x] `PL-EDGE-001` Public routes only — M3 — ✅ tested: internal/api TestUIAndPublic (route allowlist)
-- [ ] `PL-EDGE-002` Origin certificate — M8
-- [ ] `PL-EDGE-003` Authenticated Origin Pulls — M8
-- [ ] `PL-EDGE-004` Real client IP — M8
-- [ ] `PL-EDGE-005` WebSocket proxy — M8
+- [x] `PL-EDGE-002` Origin certificate — M8 — ✅ tested: internal/edge TestCertReloader (mtime reload, broken pair keeps the old one); app TLS test
+- [x] `PL-EDGE-003` Authenticated Origin Pulls — M8 — ✅ tested: internal/edge TestAuthenticatedOriginPulls (no cert / foreign CA rejected), internal/app TestPublicTLSWithAOPAndAuthErrors; real Cloudflare pending (X)
+- [x] `PL-EDGE-004` Real client IP — M8 — ✅ tested: internal/edge TestRealIP (CF peer + verified mTLS only)
+- [x] `PL-EDGE-005` WebSocket proxy — M8 — ✅ tested: internal/edge TestWSProxyRewritesForwardedFor; internal/api TestWebSocketProxy (NATS client over /ws)
 - [ ] `PL-EDGE-006` Raw NATS TLS — M9
 - [x] `PL-EDGE-007` Bootstrap TLS — M1 — ✅ tested: internal/bootstrap TestBootstrapLeafRenewal; internal/clients TestReloadServesNewCert
-- [ ] `PL-EDGE-008` Cloudflare ranges — M8
-- [ ] `PL-EDGE-009` Timeouts and limits — M3 — ◐ partial: read-header 10 s, idle 120 s, body limits, per-IP token bucket tested (TestUIAndPublic); real-IP source arrives with M8
-- [ ] `PL-EDGE-010` Dev mode — M3 — ◐ partial: prod refuses plain HTTP (internal/config); dev plain HTTP works; TLS listener loads the origin cert (reload in M8)
+- [x] `PL-EDGE-008` Cloudflare ranges — M8 — ✅ tested: embedded ranges, FetchCloudflare validation (internal/edge); daily refresh loop wired
+- [x] `PL-EDGE-009` Timeouts and limits — M3 — ✅ tested: timeouts, body limits, per-IP token bucket on the real client IP (internal/api)
+- [x] `PL-EDGE-010` Dev mode — M3 — ✅ tested: prod refuses plain HTTP and missing AOP (internal/config); dev plain HTTP works
 
 #### PL-BAN — Automatic bans
 
-- [ ] `PL-BAN-001` Detection sources — M8
-- [ ] `PL-BAN-002` Sliding windows — M8
-- [ ] `PL-BAN-003` Escalation — M8
-- [ ] `PL-BAN-004` Never-ban list — M8
-- [ ] `PL-BAN-005` Storage — M8
-- [ ] `PL-BAN-006` HTTP enforcement — M8
-- [ ] `PL-BAN-007` nftables enforcement — M8
-- [ ] `PL-BAN-008` Cloudflare list (optional) — M8
-- [ ] `PL-BAN-009` Security page — M8
+- [x] `PL-BAN-001` Detection sources — M8 — ✅ tested: AUTH.ERR → detector (internal/app), HTTP 401 → ban (internal/api), webhook failures hook (internal/hooks)
+- [x] `PL-BAN-002` Sliding windows — M8 — ✅ tested: internal/ban TestThresholdWindowAndGrouping
+- [x] `PL-BAN-003` Escalation — M8 — ✅ tested: internal/ban TestEscalationAndCap (×4, 30-day cap, reset after memory)
+- [x] `PL-BAN-004` Never-ban list — M8 — ✅ tested: internal/ban TestNeverBan (loopback, private, Docker, ULA, Cloudflare, config); allowlist in TestManualAllowlistAndPersistence
+- [x] `PL-BAN-005` Storage — M8 — ✅ tested: SQLite persistence across restart, manual ban/lift audited (internal/ban, internal/api)
+- [x] `PL-BAN-006` HTTP enforcement — M8 — ✅ tested: internal/ban TestMiddlewareAndFeed; internal/api TestSecurityAPIAndEnforcement
+- [ ] `PL-BAN-007` nftables enforcement — M8 — ◐ tested: banagent unit tests + real nftables in a privileged Linux container (make test-nft); not yet externally verified on the VM (M14)
+- [x] `PL-BAN-008` Cloudflare list (optional) — M8 — ✅ tested: internal/ban TestCloudflareReconcile (fake API: add/remove managed items, unmanaged untouched, idempotent); real Cloudflare pending (X)
+- [x] `PL-BAN-009` Security page — M8 — ✅ tested: e2e security.spec.ts (failures, ban, lift, never-ban error, allowlist)
 
 #### PL-ING — HTTP ingress
 
@@ -358,7 +359,7 @@ E browser E2E · C CI/static check · S spike/perf · R restore drill · X exter
 - [x] `PL-DB-002` Migrations — M1 — ✅ tested: internal/store TestMigrationsAndReopen, TestRefuseNewerSchema
 - [x] `PL-DB-003` Single owner — M1 — ✅ tested: internal/store TestExclusiveLock; internal/app second Start refused
 - [ ] `PL-DB-004` No network I/O in transactions — M1 — ◐ implemented: clients service prepares keys before Write and pushes after commit; no analyzer enforces it yet
-- [ ] `PL-DB-005` Retention — M1 — ◐ partial: revocations, rollups (8 d / 400 d), audit (400 d) and delivery log (30 d) pruned; alerts and bans arrive with their milestones
+- [ ] `PL-DB-005` Retention — M1 — ◐ partial: revocations, rollups (8 d / 400 d), audit (400 d), delivery log (30 d), expired bans and offences (30 d) pruned; alert history arrives with M10
 - [ ] `PL-DB-006` Permissions and placement — M1 — ◐ partial: 0700/0600 modes tested (TestDatabaseFileMode); Linux network-FS refusal implemented, untested
 - [x] `PL-DB-007` Integrity — M1 — ✅ tested: internal/store TestCorruptDatabaseRefused
 
@@ -388,9 +389,9 @@ E browser E2E · C CI/static check · S spike/perf · R restore drill · X exter
 #### PL-OPS — Packaging and operations
 
 - [x] `PL-OPS-001` Image — M0 — ✅ tested (local): `make image` builds distroless static-debian13, digests pinned, user 65532:65532; CI image job implemented, not yet run on GitHub
-- [ ] `PL-OPS-002` Commands — M0 — ◐ partial: `version`, `healthcheck`, `init`, `serve`, `keys export` implemented and tested; `banagent` (M8), `openapi` (M3) pending
+- [ ] `PL-OPS-002` Commands — M0 — ◐ partial: version, healthcheck, init, serve, keys export, openapi, banagent implemented; banagent only unit/nft-container tested
 - [x] `PL-OPS-003` Configuration — M1 — ✅ tested: internal/config tests; docs/operator/configuration.md
-- [ ] `PL-OPS-004` Profiles — M1 — ◐ partial: prod refusals for admin exposure, plain master key, missing key tested (internal/config); plain-HTTP public listener and AOP checks arrive in M3/M8
+- [ ] `PL-OPS-004` Profiles — M1 — ◐ partial: prod refusals for admin exposure, plain master key, missing key, plain-HTTP public listener and missing AOP CA tested (internal/config); dev master key detection not applicable (prod requires *_FILE)
 - [ ] `PL-OPS-005` Dev stack — M1 — ◐ partial: deploy/compose.dev.yaml runs init → nats → pulsed (verified locally); SeaweedFS (M11) and pebble (M9) pending
 - [ ] `PL-OPS-006` Reference prod compose — M1 — ◐ implemented: deploy/examples/compose.yaml; banagent service depends on M8
 - [ ] `PL-OPS-007` CI — M0 — ◐ implemented: .github/workflows/ci.yaml (SHA-pinned, GOTOOLCHAIN=local); `make check` green locally; never run on GitHub (no remote)

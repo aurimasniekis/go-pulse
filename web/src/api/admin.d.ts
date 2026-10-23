@@ -364,6 +364,94 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/security": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Bans, failures, allowlist, edge */
+        get: operations["get-security"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/security/allowlist": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Never ban a network
+         * @description Also lifts active bans inside it.
+         */
+        post: operations["add-allow"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/security/allowlist/remove": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Remove an allowlist entry */
+        post: operations["remove-allow"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/security/bans": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Ban a network */
+        post: operations["create-ban"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/security/bans/lift": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Lift a ban */
+        post: operations["lift-ban"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/streams": {
         parameters: {
             query?: never;
@@ -568,6 +656,23 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        "Add-allowRequest": {
+            /**
+             * Format: uri
+             * @description A URL to the JSON Schema for this object.
+             * @example /api/admin/v1/schemas/Add-allowRequest.json
+             */
+            readonly $schema?: string;
+            network: string;
+            note?: string;
+        };
+        AllowEntry: {
+            actor: string;
+            /** Format: date-time */
+            created_at: string;
+            network: string;
+            note: string;
+        };
         AuditPage: {
             /**
              * Format: uri
@@ -581,6 +686,29 @@ export interface components {
              * @description Pass as before_id for the next page
              */
             next?: number;
+        };
+        Ban: {
+            /**
+             * Format: uri
+             * @description A URL to the JSON Schema for this object.
+             * @example /api/admin/v1/schemas/Ban.json
+             */
+            readonly $schema?: string;
+            actor: string;
+            /** Format: date-time */
+            created_at: string;
+            /**
+             * Format: date-time
+             * @description Absent: no expiry
+             */
+            expires_at?: string;
+            manual: boolean;
+            network: string;
+            /** Format: int64 */
+            offences: number;
+            reason: string;
+            /** @enum {string} */
+            source: "nats" | "http_token" | "webhook" | "manual";
         };
         BlobRef: {
             bucket: string;
@@ -711,6 +839,22 @@ export interface components {
             num_waiting: number;
             paused: boolean;
         };
+        "Create-banRequest": {
+            /**
+             * Format: uri
+             * @description A URL to the JSON Schema for this object.
+             * @example /api/admin/v1/schemas/Create-banRequest.json
+             */
+            readonly $schema?: string;
+            /**
+             * Format: int64
+             * @description 0 = no expiry
+             */
+            duration_hours: number;
+            /** @description IP or CIDR; a single IPv6 address bans its /64 */
+            network: string;
+            reason: string;
+        };
         "Create-tokenResponse": {
             /**
              * Format: uri
@@ -747,6 +891,22 @@ export interface components {
             subject: string;
             /** Format: date-time */
             time: string;
+        };
+        EdgeInfo: {
+            /** @description Authenticated Origin Pulls required */
+            aop: boolean;
+            /** @description The banagent feed is served */
+            ban_feed: boolean;
+            cloudflare_list_sync: boolean;
+            /** Format: int64 */
+            cloudflare_ranges: number;
+            /** Format: date-time */
+            cloudflare_updated: string;
+            /** @description Static never-ban networks from configuration */
+            never_ban: string[];
+            /** Format: date-time */
+            origin_not_after?: string;
+            tls: boolean;
         };
         Entry: {
             action: string;
@@ -869,6 +1029,15 @@ export interface components {
             scanned: number;
             /** Format: int64 */
             scanned_bytes: number;
+        };
+        Failure: {
+            detail?: string;
+            /** @description Why this failure cannot lead to a ban (never-ban network) */
+            ignored?: string;
+            ip: string;
+            source: string;
+            /** Format: date-time */
+            time: string;
         };
         Forecast: {
             /** Format: int64 */
@@ -1049,6 +1218,15 @@ export interface components {
             /** Format: int64 */
             kicked: number;
         };
+        "Lift-banRequest": {
+            /**
+             * Format: uri
+             * @description A URL to the JSON Schema for this object.
+             * @example /api/admin/v1/schemas/Lift-banRequest.json
+             */
+            readonly $schema?: string;
+            network: string;
+        };
         Node: {
             /** Format: int64 */
             bytes: number;
@@ -1078,6 +1256,16 @@ export interface components {
             /** Format: int64 */
             rate: number;
             reason: string;
+        };
+        Offender: {
+            /** Format: int64 */
+            count: number;
+            /**
+             * Format: date-time
+             * @description When the last ban ended (or ends)
+             */
+            last_at: string;
+            network: string;
         };
         OutboundInput: {
             /**
@@ -1168,6 +1356,15 @@ export interface components {
             seq: number;
             stream: string;
         };
+        "Remove-allowRequest": {
+            /**
+             * Format: uri
+             * @description A URL to the JSON Schema for this object.
+             * @example /api/admin/v1/schemas/Remove-allowRequest.json
+             */
+            readonly $schema?: string;
+            network: string;
+        };
         "Rotate-clientRequest": {
             /**
              * Format: uri
@@ -1199,6 +1396,22 @@ export interface components {
             hook: components["schemas"]["InboundHook"];
             /** @description Shown once, when created or rotated */
             secret?: string;
+        };
+        SecurityOverview: {
+            /**
+             * Format: uri
+             * @description A URL to the JSON Schema for this object.
+             * @example /api/admin/v1/schemas/SecurityOverview.json
+             */
+            readonly $schema?: string;
+            active: components["schemas"]["Ban"][];
+            allowlist: components["schemas"]["AllowEntry"][];
+            edge: components["schemas"]["EdgeInfo"];
+            /** @description Recent authentication failures (in memory, newest first) */
+            failures: components["schemas"]["Failure"][];
+            /** @description Expired or lifted bans from the last 30 days */
+            history: components["schemas"]["Ban"][];
+            offenders: components["schemas"]["Offender"][];
         };
         Series: {
             key: string;
@@ -2339,6 +2552,161 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["Overview"];
                 };
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
+    "get-security": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SecurityOverview"];
+                };
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
+    "add-allow": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["Add-allowRequest"];
+            };
+        };
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
+    "remove-allow": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["Remove-allowRequest"];
+            };
+        };
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
+    "create-ban": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["Create-banRequest"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Ban"];
+                };
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
+    "lift-ban": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["Lift-banRequest"];
+            };
+        };
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Error */
             default: {

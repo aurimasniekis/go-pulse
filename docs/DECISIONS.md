@@ -278,6 +278,21 @@
   secret/payload vector, so Stripe tests use vectors computed exactly as documented (multiple `v1`, ignored `v0`,
   tolerance). Interoperability with live GitHub and Stripe deliveries is "externally verified" only after a real delivery.
 
+### ADR-0031 — Ban semantics and enforcement plumbing — **security-relevant (strengthening)**
+- **Status:** accepted (M8)
+- **Decision:**
+  - Ban key: IPv4 /32, IPv6 /64 (one host controls a /64); manual bans may name any CIDR.
+  - Offence memory runs 30 days from the *end* of the last ban, so a 30-day ban does not reset its own escalation.
+  - Failure windows and the "recent failures" list are in memory (bounded); bans, offences and the allowlist are in SQLite.
+  - banagent long-polls `GET /internal/v1/bans` on the metrics listener with a bearer token from `banagent.token`
+    and applies interval-set elements with timeouts through netlink (`github.com/google/nftables`).
+  - The prod profile refuses a public listener without the AOP CA (in addition to the origin certificate).
+  - The real IP is taken from `CF-Connecting-IP` only for Cloudflare peers that passed AOP.
+  - The Cloudflare IP-list sync manages only items whose comment starts with `pulse:`.
+- **Consequences:**
+  - A pulsed restart forgets partial failure windows. That is accepted: an attacker gets at most `threshold − 1` extra attempts per restart.
+  - Restarting nftables empties the sets until the next banagent poll (≤ 5 minutes, usually immediate).
+
 ## 2. Open review items
 
 | ID | Item | Default until decided |
