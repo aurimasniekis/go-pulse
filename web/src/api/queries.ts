@@ -177,3 +177,20 @@ export function useAudit(q: AuditQuery) {
     getNextPageParam: (last) => last.next || undefined,
   })
 }
+
+export function useInboundHooks() {
+  return useQuery({ queryKey: ['hooks', 'in'], queryFn: async () => unwrap(await admin.GET('/hooks/inbound')), refetchInterval: 15_000 })
+}
+
+export function useOutboundHooks() {
+  return useQuery({ queryKey: ['hooks', 'out'], queryFn: async () => unwrap(await admin.GET('/hooks/outbound')), refetchInterval: 10_000 })
+}
+
+export function useDeliveries(id: string | null) {
+  return useQuery({
+    queryKey: ['hooks', 'out', id, 'deliveries'],
+    queryFn: async () => unwrap(await admin.GET('/hooks/outbound/{id}/deliveries', { params: { path: { id: id! }, query: { limit: 200 } } })),
+    enabled: !!id,
+    refetchInterval: 5_000,
+  })
+}

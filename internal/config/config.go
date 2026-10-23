@@ -51,6 +51,7 @@ type Config struct {
 	AdminPublic            bool
 	AuthMode               string   // none | oidc
 	AdminHosts             []string // extra Host names accepted by the admin listener (DNS-rebinding guard)
+	OutboundAllow          []string // networks outbound webhooks may reach despite the SSRF guard
 	OriginCertFile         string   // public listener TLS certificate (Cloudflare Origin CA), PEM
 	OriginKeyFile          string
 
@@ -92,6 +93,7 @@ func Load(getenv Getenv) (*Config, error) {
 		AdminPublic:            e.bool("PULSE_ADMIN_PUBLIC", false),
 		AuthMode:               e.str("PULSE_AUTH_MODE", "none"),
 		AdminHosts:             e.list("PULSE_ADMIN_HOSTS"),
+		OutboundAllow:          e.list("PULSE_OUTBOUND_ALLOW"),
 		OriginCertFile:         e.str("PULSE_ORIGIN_CERT_FILE", ""),
 		OriginKeyFile:          e.str("PULSE_ORIGIN_KEY_FILE", ""),
 		ShutdownTimeout:        e.dur("PULSE_SHUTDOWN_TIMEOUT", 20*time.Second),

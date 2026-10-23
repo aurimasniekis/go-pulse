@@ -59,6 +59,9 @@ func NewPublic(d *Deps) http.Handler {
 	mux := http.NewServeMux()
 	NewPublicAPI(mux, d)
 	mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, _ *http.Request) { _, _ = w.Write([]byte("ok\n")) })
+	if d.Hooks != nil {
+		mux.Handle("/hooks/{name}", d.Hooks.Handler())
+	}
 	allowed := func(p string) bool {
 		return p == "/healthz" || p == "/ws" || strings.HasPrefix(p, PublicPrefix+"/") || strings.HasPrefix(p, "/hooks/")
 	}

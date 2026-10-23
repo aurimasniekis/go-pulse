@@ -20,3 +20,5 @@ versioning: [docs/VERSIONING.md](docs/VERSIONING.md).
   Subjects pages; admin publish endpoint and "Publish event" in the Explorer.
 - M6: HTTP tokens and the public ingress API (publish, batch, request bridge, replay, SSE tail); client, token and
   audit admin APIs; Clients, HTTP tokens and Audit pages with show-once secrets and connection snippets.
+- M7: inbound webhooks (GitHub, Stripe, HMAC, shared secret) and outbound webhooks (ordered, retried, signed,
+  SSRF-guarded) with a delivery log; Webhooks page.

@@ -15,6 +15,8 @@ import (
 	"github.com/aurimasniekis/go-pulse/internal/audit"
 	"github.com/aurimasniekis/go-pulse/internal/auth"
 	"github.com/aurimasniekis/go-pulse/internal/clients"
+	"github.com/aurimasniekis/go-pulse/internal/hooks"
+	"github.com/aurimasniekis/go-pulse/internal/outbound"
 	"github.com/aurimasniekis/go-pulse/internal/query"
 	"github.com/aurimasniekis/go-pulse/internal/rollup"
 	"github.com/aurimasniekis/go-pulse/internal/store"
@@ -33,18 +35,20 @@ const AdminPrefix = "/api/admin/v1"
 
 // Deps are the services the APIs use. Spec generation passes a zero Deps: handlers must not run then.
 type Deps struct {
-	Log     *slog.Logger
-	Version string
-	Profile string
-	DB      *store.DB
-	NC      *nats.Conn
-	JS      jetstream.JetStream
-	Sys     *sysapi.Client
-	Query   *query.Engine
-	Tail    *tail.Manager
-	Rollup  *rollup.Engine
-	Tokens  *tokens.Service
-	Clients *clients.Service
+	Log      *slog.Logger
+	Version  string
+	Profile  string
+	DB       *store.DB
+	NC       *nats.Conn
+	JS       jetstream.JetStream
+	Sys      *sysapi.Client
+	Query    *query.Engine
+	Tail     *tail.Manager
+	Rollup   *rollup.Engine
+	Tokens   *tokens.Service
+	Clients  *clients.Service
+	Hooks    *hooks.Service
+	Outbound *outbound.Service
 	// Connection details shown in snippets and the system page.
 	PublicNATSURL string
 	PublicURL     string
@@ -107,6 +111,7 @@ func NewAdminAPI(mux *http.ServeMux, d *Deps) huma.API {
 	registerClients(api, d)
 	registerTokens(api, d)
 	registerAudit(api, d)
+	registerWebhooks(api, d)
 	return api
 }
 

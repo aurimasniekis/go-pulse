@@ -22,7 +22,9 @@ import (
 	"github.com/aurimasniekis/go-pulse/internal/certs"
 	"github.com/aurimasniekis/go-pulse/internal/clients"
 	"github.com/aurimasniekis/go-pulse/internal/config"
+	"github.com/aurimasniekis/go-pulse/internal/hooks"
 	"github.com/aurimasniekis/go-pulse/internal/natsconn"
+	"github.com/aurimasniekis/go-pulse/internal/outbound"
 	"github.com/aurimasniekis/go-pulse/internal/query"
 	"github.com/aurimasniekis/go-pulse/internal/rollup"
 	"github.com/aurimasniekis/go-pulse/internal/store"
@@ -34,18 +36,19 @@ import (
 
 // App is a running pulsed.
 type App struct {
-	Cfg     *config.Config
-	Log     *slog.Logger
-	DB      *store.DB
-	Keys    *bootstrap.KeySet
-	SysConn *nats.Conn
-	AppConn *nats.Conn
-	JS      jetstream.JetStream
-	Sys     *sysapi.Client
-	Clients *clients.Service
-	Query   *query.Engine
-	Tail    *tail.Manager
-	Rollup  *rollup.Engine
+	Cfg      *config.Config
+	Log      *slog.Logger
+	DB       *store.DB
+	Keys     *bootstrap.KeySet
+	SysConn  *nats.Conn
+	AppConn  *nats.Conn
+	JS       jetstream.JetStream
+	Sys      *sysapi.Client
+	Clients  *clients.Service
+	Query    *query.Engine
+	Tail     *tail.Manager
+	Rollup   *rollup.Engine
+	Outbound *outbound.Service
 
 	ready     atomic.Bool
 	listeners []*http.Server
@@ -150,12 +153,21 @@ func Start(ctx context.Context, cfg *config.Config, log *slog.Logger) (*App, err
 		defer a.wg.Done()
 		a.Rollup.Run(a.loopCtx) //nolint:contextcheck // runs until Close; flushes on exit
 	}()
+	a.Outbound, err = outbound.New(a.DB, a.JS, cfg.MasterKey, outbound.Options{Allow: cfg.OutboundAllow, Version: Version, Log: log})
+	if err != nil {
+		return nil, err
+	}
+	if err := a.Outbound.Start(a.loopCtx); err != nil { //nolint:contextcheck // dispatchers outlive startup
+		return nil, fmt.Errorf("start outbound webhooks: %w", err)
+	}
+	hookSvc := hooks.New(a.DB, a.JS, cfg.MasterKey, log)
 	authn, err := auth.New(cfg.AuthMode)
 	if err != nil {
 		return nil, err
 	}
 	deps := &api.Deps{Log: log, Version: Version, Profile: cfg.Profile, DB: a.DB, NC: a.AppConn, JS: a.JS, Sys: a.Sys,
 		Query: a.Query, Tail: a.Tail, Rollup: a.Rollup, Auth: authn, Tokens: tokens.New(a.DB), Clients: a.Clients,
+		Hooks: hookSvc, Outbound: a.Outbound,
 		PublicNATSURL: cfg.PublicNATSURL, PublicURL: cfg.PublicURL, CACertPEM: a.Keys.CACert, AdminHosts: cfg.AdminHosts, Ready: a.Ready}
 	if err := a.serve(ctx, "admin", cfg.AdminAddr, api.NewAdmin(deps)); err != nil {
 		return nil, err
@@ -288,6 +300,9 @@ func (a *App) Close() {
 		}
 	}
 	a.wg.Wait()
+	if a.Outbound != nil {
+		a.Outbound.Wait()
+	}
 	if a.DB != nil {
 		_ = a.DB.Close()
 		a.DB = nil

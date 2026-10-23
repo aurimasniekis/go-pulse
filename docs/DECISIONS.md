@@ -261,6 +261,23 @@
   (PL-EDGE-010); `PULSE_PUBLIC_ADDR=off` disables the listener. M3 loads the certificate once; mtime reload and AOP mTLS
   arrive in M8.
 
+### ADR-0029 — Webhook secrets sealed with the master key; delivery semantics
+- **Status:** accepted (M7)
+- **Decision:** Inbound verification and outbound signing need plaintext secrets, so they are stored sealed with the
+  master key (secretbox, same scheme as the key store) instead of hashed. Outbound hooks deliver at least once, one event
+  at a time in stream order (`MaxAckPending 1`), starting at events published after creation; failures back off from 1 s
+  to 1 h over 12 attempts and then become dead letters (`Term`) so later events are not blocked forever. Manual retry
+  re-delivers a logged event once without moving the consumer. The delivery log lives in SQLite for 30 days.
+- **Consequences:** A copy of `pulse.db` without the master key reveals no webhook secrets. A permanently failing
+  endpoint delays later events by about 2.3 hours per event until it recovers or the hook is paused.
+
+### ADR-0030 — Verifier test vectors
+- **Status:** accepted (M7)
+- **Decision:** The GitHub verifier is tested against the vector in GitHub's "Validating webhook deliveries" docs (secret
+  "It's a Secret to Everybody", payload "Hello, World!"). Stripe documents the scheme but publishes no fixed
+  secret/payload vector, so Stripe tests use vectors computed exactly as documented (multiple `v1`, ignored `v0`,
+  tolerance). Interoperability with live GitHub and Stripe deliveries is "externally verified" only after a real delivery.
+
 ## 2. Open review items
 
 | ID | Item | Default until decided |

@@ -72,7 +72,7 @@ test('live tail: starts and stops', async ({ page }) => {
 })
 
 test('placeholder pages render', async ({ page }) => {
-  for (const path of ['/webhooks', '/security', '/system']) {
+  for (const path of ['/security', '/system', '/settings']) {
     await page.goto(path)
     await expect(page.getByText('Not built yet')).toBeVisible()
   }

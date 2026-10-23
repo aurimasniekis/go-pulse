@@ -191,6 +191,42 @@
         ],
         "type": "object"
       },
+      "Config": {
+        "additionalProperties": false,
+        "properties": {
+          "encoding": {
+            "description": "hmac digest encoding (default hex)",
+            "enum": [
+              "hex",
+              "base64",
+              ""
+            ],
+            "type": "string"
+          },
+          "header": {
+            "description": "Signature/secret header (hmac default X-Signature, secret default X-Webhook-Secret)",
+            "type": "string"
+          },
+          "prefix": {
+            "description": "Prefix before the digest, e.g. sha256=",
+            "type": "string"
+          },
+          "timestamp_header": {
+            "description": "hmac: header with a unix timestamp; signs '\u003cts\u003e.\u003cbody\u003e' and enforces the tolerance",
+            "type": "string"
+          },
+          "tolerance_sec": {
+            "description": "Accepted clock skew for timestamped signatures (default 300)",
+            "format": "int64",
+            "type": "integer"
+          },
+          "type": {
+            "description": "ce-type for published events (github/stripe derive it from the payload)",
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
       "ConnDTO": {
         "additionalProperties": false,
         "properties": {
@@ -383,6 +419,83 @@
         "required": [
           "token",
           "secret"
+        ],
+        "type": "object"
+      },
+      "Delivery": {
+        "additionalProperties": false,
+        "properties": {
+          "$schema": {
+            "description": "A URL to the JSON Schema for this object.",
+            "examples": [
+              "/api/admin/v1/schemas/Delivery.json"
+            ],
+            "format": "uri",
+            "readOnly": true,
+            "type": "string"
+          },
+          "attempt": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "error": {
+            "type": "string"
+          },
+          "event_id": {
+            "type": "string"
+          },
+          "hook_id": {
+            "type": "string"
+          },
+          "id": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "latency_ms": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "outcome": {
+            "enum": [
+              "delivered",
+              "retry",
+              "dead",
+              "manual",
+              "test"
+            ],
+            "type": "string"
+          },
+          "response_excerpt": {
+            "type": "string"
+          },
+          "seq": {
+            "format": "int64",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "status_code": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "subject": {
+            "type": "string"
+          },
+          "time": {
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "hook_id",
+          "time",
+          "seq",
+          "subject",
+          "event_id",
+          "attempt",
+          "outcome",
+          "status_code",
+          "latency_ms"
         ],
         "type": "object"
       },
@@ -768,6 +881,194 @@
         ],
         "type": "object"
       },
+      "Hook": {
+        "additionalProperties": false,
+        "properties": {
+          "$schema": {
+            "description": "A URL to the JSON Schema for this object.",
+            "examples": [
+              "/api/admin/v1/schemas/Hook.json"
+            ],
+            "format": "uri",
+            "readOnly": true,
+            "type": "string"
+          },
+          "consumer": {
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "filter": {
+            "type": "string"
+          },
+          "headers": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object"
+          },
+          "id": {
+            "type": "string"
+          },
+          "last": {
+            "$ref": "#/components/schemas/Delivery"
+          },
+          "name": {
+            "type": "string"
+          },
+          "paused": {
+            "type": "boolean"
+          },
+          "pending": {
+            "description": "Events matching the filter not yet delivered",
+            "format": "int64",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "url": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "filter",
+          "url",
+          "headers",
+          "paused",
+          "created_at",
+          "updated_at",
+          "consumer",
+          "pending"
+        ],
+        "type": "object"
+      },
+      "InboundHook": {
+        "additionalProperties": false,
+        "properties": {
+          "config": {
+            "$ref": "#/components/schemas/Config"
+          },
+          "created_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "id": {
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "github",
+              "stripe",
+              "hmac",
+              "secret"
+            ],
+            "type": "string"
+          },
+          "last_received_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "received": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "rejected": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "subject": {
+            "type": "string"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "url": {
+            "description": "Where the provider sends deliveries",
+            "type": "string"
+          }
+        },
+        "required": [
+          "url",
+          "id",
+          "name",
+          "kind",
+          "subject",
+          "config",
+          "enabled",
+          "created_at",
+          "updated_at",
+          "received",
+          "rejected"
+        ],
+        "type": "object"
+      },
+      "InboundInput": {
+        "additionalProperties": false,
+        "properties": {
+          "$schema": {
+            "description": "A URL to the JSON Schema for this object.",
+            "examples": [
+              "/api/admin/v1/schemas/InboundInput.json"
+            ],
+            "format": "uri",
+            "readOnly": true,
+            "type": "string"
+          },
+          "config": {
+            "$ref": "#/components/schemas/Config"
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "kind": {
+            "enum": [
+              "github",
+              "stripe",
+              "hmac",
+              "secret"
+            ],
+            "type": "string"
+          },
+          "name": {
+            "pattern": "^[a-z0-9][a-z0-9_-]{0,47}$",
+            "type": "string"
+          },
+          "rotate_secret": {
+            "description": "Update only: generate a new secret",
+            "type": "boolean"
+          },
+          "secret": {
+            "description": "Provider secret; empty generates one (create) or keeps the current one (update)",
+            "maxLength": 256,
+            "type": "string"
+          },
+          "subject": {
+            "description": "Default evt.hook.\u003cname\u003e.received",
+            "maxLength": 256,
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "kind",
+          "enabled"
+        ],
+        "type": "object"
+      },
       "IndexStats": {
         "additionalProperties": false,
         "properties": {
@@ -1027,6 +1328,53 @@
         ],
         "type": "object"
       },
+      "OutboundInput": {
+        "additionalProperties": false,
+        "properties": {
+          "$schema": {
+            "description": "A URL to the JSON Schema for this object.",
+            "examples": [
+              "/api/admin/v1/schemas/OutboundInput.json"
+            ],
+            "format": "uri",
+            "readOnly": true,
+            "type": "string"
+          },
+          "filter": {
+            "description": "Subject filter under evt.\u003e",
+            "maxLength": 256,
+            "type": "string"
+          },
+          "headers": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object"
+          },
+          "name": {
+            "pattern": "^[a-z0-9][a-z0-9_-]{0,47}$",
+            "type": "string"
+          },
+          "rotate_secret": {
+            "type": "boolean"
+          },
+          "secret": {
+            "description": "Signing secret; empty generates one (create) or keeps the current one (update)",
+            "maxLength": 256,
+            "type": "string"
+          },
+          "url": {
+            "maxLength": 2048,
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "filter",
+          "url"
+        ],
+        "type": "object"
+      },
       "Overview": {
         "additionalProperties": false,
         "properties": {
@@ -1245,6 +1593,56 @@
             "type": "integer"
           }
         },
+        "type": "object"
+      },
+      "SecretOutHookBody": {
+        "additionalProperties": false,
+        "properties": {
+          "$schema": {
+            "description": "A URL to the JSON Schema for this object.",
+            "examples": [
+              "/api/admin/v1/schemas/SecretOutHookBody.json"
+            ],
+            "format": "uri",
+            "readOnly": true,
+            "type": "string"
+          },
+          "hook": {
+            "$ref": "#/components/schemas/Hook"
+          },
+          "secret": {
+            "description": "Shown once, when created or rotated",
+            "type": "string"
+          }
+        },
+        "required": [
+          "hook"
+        ],
+        "type": "object"
+      },
+      "SecretOutInboundHookBody": {
+        "additionalProperties": false,
+        "properties": {
+          "$schema": {
+            "description": "A URL to the JSON Schema for this object.",
+            "examples": [
+              "/api/admin/v1/schemas/SecretOutInboundHookBody.json"
+            ],
+            "format": "uri",
+            "readOnly": true,
+            "type": "string"
+          },
+          "hook": {
+            "$ref": "#/components/schemas/InboundHook"
+          },
+          "secret": {
+            "description": "Shown once, when created or rotated",
+            "type": "string"
+          }
+        },
+        "required": [
+          "hook"
+        ],
         "type": "object"
       },
       "Series": {
@@ -2674,6 +3072,599 @@
         "summary": "Get one event by sequence",
         "tags": [
           "events"
+        ]
+      }
+    },
+    "/hooks/deliveries/{delivery}/retry": {
+      "post": {
+        "operationId": "retry-delivery",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "delivery",
+            "required": true,
+            "schema": {
+              "format": "int64",
+              "minimum": 1,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Delivery"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Deliver a logged event again",
+        "tags": [
+          "webhooks-out"
+        ]
+      }
+    },
+    "/hooks/inbound": {
+      "get": {
+        "operationId": "list-inbound-hooks",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/InboundHook"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "List inbound hooks",
+        "tags": [
+          "webhooks-in"
+        ]
+      },
+      "post": {
+        "operationId": "create-inbound-hook",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InboundInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SecretOutInboundHookBody"
+                }
+              }
+            },
+            "description": "Created"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Create an inbound hook",
+        "tags": [
+          "webhooks-in"
+        ]
+      }
+    },
+    "/hooks/inbound/{id}": {
+      "delete": {
+        "operationId": "delete-inbound-hook",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "pattern": "^[a-z0-9]{6,32}$",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Delete an inbound hook",
+        "tags": [
+          "webhooks-in"
+        ]
+      },
+      "put": {
+        "operationId": "update-inbound-hook",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "pattern": "^[a-z0-9]{6,32}$",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InboundInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SecretOutInboundHookBody"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Update an inbound hook",
+        "tags": [
+          "webhooks-in"
+        ]
+      }
+    },
+    "/hooks/outbound": {
+      "get": {
+        "operationId": "list-outbound-hooks",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/Hook"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "List outbound hooks",
+        "tags": [
+          "webhooks-out"
+        ]
+      },
+      "post": {
+        "description": "Delivers events published after creation.",
+        "operationId": "create-outbound-hook",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OutboundInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SecretOutHookBody"
+                }
+              }
+            },
+            "description": "Created"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Create an outbound hook",
+        "tags": [
+          "webhooks-out"
+        ]
+      }
+    },
+    "/hooks/outbound/{id}": {
+      "delete": {
+        "operationId": "delete-outbound-hook",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "pattern": "^[a-z0-9]{6,32}$",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Delete an outbound hook",
+        "tags": [
+          "webhooks-out"
+        ]
+      },
+      "get": {
+        "operationId": "get-outbound-hook",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "pattern": "^[a-z0-9]{6,32}$",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Hook"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Get an outbound hook",
+        "tags": [
+          "webhooks-out"
+        ]
+      },
+      "put": {
+        "operationId": "update-outbound-hook",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "pattern": "^[a-z0-9]{6,32}$",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OutboundInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SecretOutHookBody"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Update an outbound hook",
+        "tags": [
+          "webhooks-out"
+        ]
+      }
+    },
+    "/hooks/outbound/{id}/deliveries": {
+      "get": {
+        "operationId": "list-deliveries",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "pattern": "^[a-z0-9]{6,32}$",
+              "type": "string"
+            }
+          },
+          {
+            "explode": false,
+            "in": "query",
+            "name": "before_id",
+            "schema": {
+              "format": "int64",
+              "minimum": 0,
+              "type": "integer"
+            }
+          },
+          {
+            "explode": false,
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "default": 100,
+              "format": "int64",
+              "maximum": 500,
+              "minimum": 1,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/Delivery"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Delivery log",
+        "tags": [
+          "webhooks-out"
+        ]
+      }
+    },
+    "/hooks/outbound/{id}/pause": {
+      "post": {
+        "operationId": "pause-outbound-hook",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "pattern": "^[a-z0-9]{6,32}$",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Hook"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Pause deliveries (keeps position)",
+        "tags": [
+          "webhooks-out"
+        ]
+      }
+    },
+    "/hooks/outbound/{id}/resume": {
+      "post": {
+        "operationId": "resume-outbound-hook",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "pattern": "^[a-z0-9]{6,32}$",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Hook"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Resume deliveries",
+        "tags": [
+          "webhooks-out"
+        ]
+      }
+    },
+    "/hooks/outbound/{id}/test": {
+      "post": {
+        "operationId": "test-outbound-hook",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "pattern": "^[a-z0-9]{6,32}$",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Delivery"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Send a test event",
+        "tags": [
+          "webhooks-out"
         ]
       }
     },

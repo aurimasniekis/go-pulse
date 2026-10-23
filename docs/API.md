@@ -93,4 +93,33 @@ source networks.
 
 Payloads above ~1 MiB get 413: store them as blobs (NATS clients) and publish a reference.
 
-Hooks (`/hooks/*`) arrive with M7, `/ws` with M8.
+## Webhooks
+
+### Inbound: `POST /hooks/{name}` (public listener)
+
+Verified requests are published to the hook's subject (default `evt.hook.<name>.received`) and answered with
+`202 {"seq": N, "duplicate": bool}`. Bad or missing signatures get 401 (no detail) and count toward bans; unknown or
+disabled hooks get 404; bodies above 5 MiB get 413.
+
+| Verifier | Check | Event fields |
+|---|---|---|
+| `github` | `X-Hub-Signature-256: sha256=<hex HMAC-SHA256(secret, body)>` | type `github.<X-GitHub-Event>`, id = `X-GitHub-Delivery` (2-minute de-duplication of redeliveries) |
+| `stripe` | `Stripe-Signature: t=…,v1=…` over `"<t>.<body>"`, any `v1` may match, 5-minute tolerance | type `stripe.<type>`, id = event `id` |
+| `hmac` | configurable header, hex/base64, optional prefix, optional timestamp header (signs `"<ts>.<body>"`) | type from config or `hook.<name>`, id = `Idempotency-Key` |
+| `secret` | constant-time compare of a header value | as `hmac`; no replay protection — use only when the sender cannot sign |
+
+### Outbound
+
+Each outbound hook is a durable consumer on `EVENTS` that starts at events published after creation and delivers one
+event at a time, in stream order. Requests: `POST <url>`, body = event payload, `Content-Type` from the event, plus
+`Pulse-Signature: t=<unix>,v1=<hex HMAC-SHA256(secret, "<t>.<body>")>`, `Pulse-Event-Id`, `Pulse-Event-Type`,
+`Pulse-Event-Source`, `Pulse-Event-Time`, `Pulse-Subject`, `Pulse-Stream-Seq`, `Pulse-Delivery-Attempt` and configured
+headers. A 2xx response acknowledges; anything else is retried after 1 s, 2 s, 5 s, 15 s, 30 s, 1 m, 5 m, 10 m, 20 m,
+40 m and 1 h (12 attempts), then recorded as dead and skipped. Delivery is at least once: receivers should de-duplicate
+on `Pulse-Event-Id`. Destinations that resolve to loopback, private, link-local, CGNAT, multicast or metadata addresses
+are refused unless allowlisted with `PULSE_OUTBOUND_ALLOW`.
+
+Admin endpoints: `/hooks/inbound` (CRUD, `rotate_secret`), `/hooks/outbound` (CRUD, `/pause`, `/resume`, `/test`,
+`/deliveries`), `/hooks/deliveries/{id}/retry`. Secrets are returned only when created or rotated.
+
+`/ws` arrives with M8.

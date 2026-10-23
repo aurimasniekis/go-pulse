@@ -186,6 +186,167 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/hooks/deliveries/{delivery}/retry": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Deliver a logged event again */
+        post: operations["retry-delivery"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/hooks/inbound": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List inbound hooks */
+        get: operations["list-inbound-hooks"];
+        put?: never;
+        /** Create an inbound hook */
+        post: operations["create-inbound-hook"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/hooks/inbound/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Update an inbound hook */
+        put: operations["update-inbound-hook"];
+        post?: never;
+        /** Delete an inbound hook */
+        delete: operations["delete-inbound-hook"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/hooks/outbound": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List outbound hooks */
+        get: operations["list-outbound-hooks"];
+        put?: never;
+        /**
+         * Create an outbound hook
+         * @description Delivers events published after creation.
+         */
+        post: operations["create-outbound-hook"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/hooks/outbound/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get an outbound hook */
+        get: operations["get-outbound-hook"];
+        /** Update an outbound hook */
+        put: operations["update-outbound-hook"];
+        post?: never;
+        /** Delete an outbound hook */
+        delete: operations["delete-outbound-hook"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/hooks/outbound/{id}/deliveries": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Delivery log */
+        get: operations["list-deliveries"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/hooks/outbound/{id}/pause": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Pause deliveries (keeps position) */
+        post: operations["pause-outbound-hook"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/hooks/outbound/{id}/resume": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Resume deliveries */
+        post: operations["resume-outbound-hook"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/hooks/outbound/{id}/test": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Send a test event */
+        post: operations["test-outbound-hook"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/overview": {
         parameters: {
             query?: never;
@@ -475,6 +636,26 @@ export interface components {
             name: string;
             tags?: string[];
         };
+        Config: {
+            /**
+             * @description hmac digest encoding (default hex)
+             * @enum {string}
+             */
+            encoding?: "hex" | "base64" | "";
+            /** @description Signature/secret header (hmac default X-Signature, secret default X-Webhook-Secret) */
+            header?: string;
+            /** @description Prefix before the digest, e.g. sha256= */
+            prefix?: string;
+            /** @description hmac: header with a unix timestamp; signs '<ts>.<body>' and enforces the tolerance */
+            timestamp_header?: string;
+            /**
+             * Format: int64
+             * @description Accepted clock skew for timestamped signatures (default 300)
+             */
+            tolerance_sec?: number;
+            /** @description ce-type for published events (github/stripe derive it from the payload) */
+            type?: string;
+        };
         ConnDTO: {
             /** Format: int64 */
             cid: number;
@@ -539,6 +720,33 @@ export interface components {
             readonly $schema?: string;
             secret: string;
             token: components["schemas"]["Token"];
+        };
+        Delivery: {
+            /**
+             * Format: uri
+             * @description A URL to the JSON Schema for this object.
+             * @example /api/admin/v1/schemas/Delivery.json
+             */
+            readonly $schema?: string;
+            /** Format: int64 */
+            attempt: number;
+            error?: string;
+            event_id: string;
+            hook_id: string;
+            /** Format: int64 */
+            id: number;
+            /** Format: int64 */
+            latency_ms: number;
+            /** @enum {string} */
+            outcome: "delivered" | "retry" | "dead" | "manual" | "test";
+            response_excerpt?: string;
+            /** Format: int64 */
+            seq: number;
+            /** Format: int64 */
+            status_code: number;
+            subject: string;
+            /** Format: date-time */
+            time: string;
         };
         Entry: {
             action: string;
@@ -706,6 +914,73 @@ export interface components {
             stream?: string;
             subject?: string;
         };
+        Hook: {
+            /**
+             * Format: uri
+             * @description A URL to the JSON Schema for this object.
+             * @example /api/admin/v1/schemas/Hook.json
+             */
+            readonly $schema?: string;
+            consumer: string;
+            /** Format: date-time */
+            created_at: string;
+            filter: string;
+            headers: {
+                [key: string]: string;
+            };
+            id: string;
+            last?: components["schemas"]["Delivery"];
+            name: string;
+            paused: boolean;
+            /**
+             * Format: int64
+             * @description Events matching the filter not yet delivered
+             */
+            pending: number;
+            /** Format: date-time */
+            updated_at: string;
+            url: string;
+        };
+        InboundHook: {
+            config: components["schemas"]["Config"];
+            /** Format: date-time */
+            created_at: string;
+            enabled: boolean;
+            id: string;
+            /** @enum {string} */
+            kind: "github" | "stripe" | "hmac" | "secret";
+            /** Format: date-time */
+            last_received_at?: string;
+            name: string;
+            /** Format: int64 */
+            received: number;
+            /** Format: int64 */
+            rejected: number;
+            subject: string;
+            /** Format: date-time */
+            updated_at: string;
+            /** @description Where the provider sends deliveries */
+            url: string;
+        };
+        InboundInput: {
+            /**
+             * Format: uri
+             * @description A URL to the JSON Schema for this object.
+             * @example /api/admin/v1/schemas/InboundInput.json
+             */
+            readonly $schema?: string;
+            config?: components["schemas"]["Config"];
+            enabled: boolean;
+            /** @enum {string} */
+            kind: "github" | "stripe" | "hmac" | "secret";
+            name: string;
+            /** @description Update only: generate a new secret */
+            rotate_secret?: boolean;
+            /** @description Provider secret; empty generates one (create) or keeps the current one (update) */
+            secret?: string;
+            /** @description Default evt.hook.<name>.received */
+            subject?: string;
+        };
         IndexStats: {
             /** Format: int64 */
             cap: number;
@@ -804,6 +1079,24 @@ export interface components {
             rate: number;
             reason: string;
         };
+        OutboundInput: {
+            /**
+             * Format: uri
+             * @description A URL to the JSON Schema for this object.
+             * @example /api/admin/v1/schemas/OutboundInput.json
+             */
+            readonly $schema?: string;
+            /** @description Subject filter under evt.> */
+            filter: string;
+            headers?: {
+                [key: string]: string;
+            };
+            name: string;
+            rotate_secret?: boolean;
+            /** @description Signing secret; empty generates one (create) or keeps the current one (update) */
+            secret?: string;
+            url: string;
+        };
         Overview: {
             /**
              * Format: uri
@@ -884,6 +1177,28 @@ export interface components {
             readonly $schema?: string;
             /** Format: int64 */
             expires_in_days?: number;
+        };
+        SecretOutHookBody: {
+            /**
+             * Format: uri
+             * @description A URL to the JSON Schema for this object.
+             * @example /api/admin/v1/schemas/SecretOutHookBody.json
+             */
+            readonly $schema?: string;
+            hook: components["schemas"]["Hook"];
+            /** @description Shown once, when created or rotated */
+            secret?: string;
+        };
+        SecretOutInboundHookBody: {
+            /**
+             * Format: uri
+             * @description A URL to the JSON Schema for this object.
+             * @example /api/admin/v1/schemas/SecretOutInboundHookBody.json
+             */
+            readonly $schema?: string;
+            hook: components["schemas"]["InboundHook"];
+            /** @description Shown once, when created or rotated */
+            secret?: string;
         };
         Series: {
             key: string;
@@ -1551,6 +1866,447 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["EventDTO"];
+                };
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
+    "retry-delivery": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                delivery: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Delivery"];
+                };
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
+    "list-inbound-hooks": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InboundHook"][];
+                };
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
+    "create-inbound-hook": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["InboundInput"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SecretOutInboundHookBody"];
+                };
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
+    "update-inbound-hook": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["InboundInput"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SecretOutInboundHookBody"];
+                };
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
+    "delete-inbound-hook": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
+    "list-outbound-hooks": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Hook"][];
+                };
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
+    "create-outbound-hook": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OutboundInput"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SecretOutHookBody"];
+                };
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
+    "get-outbound-hook": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Hook"];
+                };
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
+    "update-outbound-hook": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OutboundInput"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SecretOutHookBody"];
+                };
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
+    "delete-outbound-hook": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
+    "list-deliveries": {
+        parameters: {
+            query?: {
+                before_id?: number;
+                limit?: number;
+            };
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Delivery"][];
+                };
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
+    "pause-outbound-hook": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Hook"];
+                };
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
+    "resume-outbound-hook": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Hook"];
+                };
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
+    "test-outbound-hook": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Delivery"];
                 };
             };
             /** @description Error */

@@ -166,8 +166,8 @@ Status values: `planned`, `in-progress`, `implemented`, `tested`, `externally-ve
 | M3 | API and query engine | tested | 9e15025 |
 | M4 | UI core | tested | 4d21daf |
 | M5 | Rollups | tested | 07f01fd |
-| M6 | Clients and ingress | tested | (this commit) |
-| M7 | Webhooks | planned | |
+| M6 | Clients and ingress | tested | 2378428 |
+| M7 | Webhooks | tested | (this commit) |
 | M8 | Security and edge TLS | planned | |
 | M9 | ACME | planned | |
 | M10 | Observability | planned | |
@@ -189,6 +189,7 @@ Status values: `planned`, `in-progress`, `implemented`, `tested`, `externally-ve
 | 2026-10-23 | M4 | Shell with NATS status indicator, Explorer (URL filters, virtualized table, cursor paging, budget notice, event drawer with payload views and replay command), Live tail (SSE, buffered rendering, sampling notices), Streams list/detail/create/edit/delete, consumers. vitest + Playwright (6 smoke tests vs dev stack). Seeded-data e2e waits for M6 (no client creds in the dev stack yet). |
 | 2026-10-23 | M5 | Rollup engine (headers-only ordered consumers, exactly-once with checkpoint in the same SQLite tx, per-resolution dimensions, minute cache, key sampling, pruning), overview/throughput/subject tree APIs, admin publish endpoint, Overview (KPIs, ECharts throughput, rank lists, forecast) and Subjects pages; data-seeded e2e (9 tests). |
 | 2026-10-24 | M6 | HTTP tokens (hashed, CIDR-limited), public publish/batch/request/replay/tail with grant checks and an auth-failure hook for M8, clients/tokens/audit admin APIs, Clients (grants editor, show-once creds + snippets, rotate, revoke, live connections), HTTP tokens and Audit pages; e2e publishes through the public API with an issued token. Python/TS snippets describe the M13 SDK API and must match it. |
+| 2026-10-24 | M7 | Inbound hooks (GitHub, Stripe, HMAC, shared secret; sealed secrets; 401 feeds the ban hook), outbound dispatcher (ordered, backoff 1 s–1 h, 12 attempts, dead letters, HMAC signing, SSRF guard checked at dial time, delivery log, pause/resume, retry, test), admin API and Webhooks page; e2e covers inbound delivery and outbound test/pause/delete. |
 
 ## 6. Acceptance checklist (mapped to requirement IDs)
 
@@ -288,16 +289,16 @@ E browser E2E · C CI/static check · S spike/perf · R restore drill · X exter
 
 #### PL-HOOK — Webhooks
 
-- [ ] `PL-HOOK-001` Named inbound hooks — M7
-- [ ] `PL-HOOK-002` Verifiers — M7
-- [ ] `PL-HOOK-003` Verifier tests — M7
-- [ ] `PL-HOOK-004` Failure handling — M7
-- [ ] `PL-HOOK-005` Outbound hooks — M7
-- [ ] `PL-HOOK-006` Retries — M7
-- [ ] `PL-HOOK-007` Signing — M7
-- [ ] `PL-HOOK-008` SSRF guard — M7
-- [ ] `PL-HOOK-009` Delivery log — M7
-- [ ] `PL-HOOK-010` Pause/resume — M7
+- [x] `PL-HOOK-001` Named inbound hooks — M7 — ✅ tested: internal/hooks TestGitHubDeliveryPublishesEvent, TestStripeAndSecretHooks; internal/api TestWebhooksAPI; e2e inbound
+- [x] `PL-HOOK-002` Verifiers — M7 — ✅ tested: internal/hooks verify tests (all four verifiers)
+- [ ] `PL-HOOK-003` Verifier tests — M7 — ◐ tested: GitHub doc vector (internal/hooks TestGitHubDocVector); Stripe uses documented-scheme vectors (no published fixed vector, ADR-0030); live deliveries not externally verified
+- [x] `PL-HOOK-004` Failure handling — M7 — ✅ tested: 401 without detail, failure hook called, Stripe/HMAC tolerance enforced
+- [x] `PL-HOOK-005` Outbound hooks — M7 — ✅ tested: internal/outbound TestDeliveryOrderSignatureAndRetry (in order, one in flight)
+- [x] `PL-HOOK-006` Retries — M7 — ✅ tested: retry then success; TestDeadLetterThenNext (dead letter, next event proceeds); default schedule asserted
+- [x] `PL-HOOK-007` Signing — M7 — ✅ tested: signature recomputed by the receiver in TestDeliveryOrderSignatureAndRetry
+- [x] `PL-HOOK-008` SSRF guard — M7 — ✅ tested: internal/netguard (blocklist, dial-time check, allowlist); internal/outbound TestSSRFGuard
+- [x] `PL-HOOK-009` Delivery log — M7 — ✅ tested: delivery log entries, excerpts, manual retry (outbound + API); 30-day prune implemented
+- [x] `PL-HOOK-010` Pause/resume — M7 — ✅ tested: internal/outbound TestPauseResumeKeepsPosition; e2e pause
 
 #### PL-API — API
 
@@ -357,7 +358,7 @@ E browser E2E · C CI/static check · S spike/perf · R restore drill · X exter
 - [x] `PL-DB-002` Migrations — M1 — ✅ tested: internal/store TestMigrationsAndReopen, TestRefuseNewerSchema
 - [x] `PL-DB-003` Single owner — M1 — ✅ tested: internal/store TestExclusiveLock; internal/app second Start refused
 - [ ] `PL-DB-004` No network I/O in transactions — M1 — ◐ implemented: clients service prepares keys before Write and pushes after commit; no analyzer enforces it yet
-- [ ] `PL-DB-005` Retention — M1 — ◐ partial: revocations, rollups (8 d / 400 d) and audit (400 d) pruned; delivery log, alerts, bans arrive with their milestones
+- [ ] `PL-DB-005` Retention — M1 — ◐ partial: revocations, rollups (8 d / 400 d), audit (400 d) and delivery log (30 d) pruned; alerts and bans arrive with their milestones
 - [ ] `PL-DB-006` Permissions and placement — M1 — ◐ partial: 0700/0600 modes tested (TestDatabaseFileMode); Linux network-FS refusal implemented, untested
 - [x] `PL-DB-007` Integrity — M1 — ✅ tested: internal/store TestCorruptDatabaseRefused
 

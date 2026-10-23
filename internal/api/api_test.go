@@ -17,6 +17,8 @@ import (
 
 	"github.com/aurimasniekis/go-pulse/internal/auth"
 	"github.com/aurimasniekis/go-pulse/internal/clients"
+	"github.com/aurimasniekis/go-pulse/internal/hooks"
+	"github.com/aurimasniekis/go-pulse/internal/outbound"
 	"github.com/aurimasniekis/go-pulse/internal/query"
 	"github.com/aurimasniekis/go-pulse/internal/rollup"
 	"github.com/aurimasniekis/go-pulse/internal/store"
@@ -64,7 +66,18 @@ func newHarness(t *testing.T) *harness {
 	t.Cleanup(func() { rcancel(); <-rdone })
 	d := &Deps{Version: "test", Profile: "dev", DB: db, NC: nc, JS: js, Sys: sys, Query: query.New(js, 4, query.DefaultBudget),
 		Tail: tail.New(js, 2, 1000), Rollup: ro, Auth: auth.None{}, Ready: func() bool { return true },
-		Tokens: tokens.New(db), Clients: clients.New(db, env.Keys, sys, nil)}
+		Tokens: tokens.New(db), Clients: clients.New(db, env.Keys, sys, nil), PublicURL: "https://events.example.test"}
+	d.Hooks = hooks.New(db, js, env.MasterKey, nil)
+	ob, err := outbound.New(db, js, env.MasterKey, outbound.Options{Allow: []string{"127.0.0.0/8"}, Backoff: []time.Duration{50 * time.Millisecond}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	octx, ocancel := context.WithCancel(context.Background())
+	if err := ob.Start(octx); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { ocancel(); ob.Wait() })
+	d.Outbound = ob
 	d.OnAuthFailure = func(ip, source string) { authFailures.Add(1) }
 	h := &harness{admin: httptest.NewServer(NewAdmin(d)), public: httptest.NewServer(NewPublic(d)), app: app, db: db, deps: d}
 	t.Cleanup(h.admin.Close)
