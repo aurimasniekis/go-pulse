@@ -158,7 +158,19 @@ func (x *run) exhausted() bool {
 	return true
 }
 
+// directGetHeaders are added by the server to direct-get replies; they describe the read, not the event.
+var directGetHeaders = []string{"Nats-Stream", "Nats-Subject", "Nats-Sequence", "Nats-Time-Stamp", "Nats-Last-Sequence",
+	"Nats-Num-Pending", "Nats-UpTo-Sequence"}
+
+// StripReadHeaders removes direct-get metadata headers in place.
+func StripReadHeaders(h nats.Header) {
+	for _, k := range directGetHeaders {
+		delete(h, k)
+	}
+}
+
 func (x *run) consider(stream string, seq uint64, subject string, t time.Time, h nats.Header, data []byte) {
+	StripReadHeaders(h)
 	x.res.Scanned++
 	size := len(subject) + len(data)
 	for k, vs := range h {

@@ -135,3 +135,45 @@ export function useSubjectInfo(stream: string, subject: string | null) {
     enabled: !!subject,
   })
 }
+
+export function useClients() {
+  return useQuery({ queryKey: ['clients'], queryFn: async () => unwrap(await admin.GET('/clients')), refetchInterval: 15_000 })
+}
+
+export function useClient(id: string) {
+  return useQuery({
+    queryKey: ['clients', id],
+    queryFn: async () => unwrap(await admin.GET('/clients/{id}', { params: { path: { id } } })),
+    refetchInterval: 15_000,
+  })
+}
+
+export function useClientConnections(id: string, enabled: boolean) {
+  return useQuery({
+    queryKey: ['clients', id, 'connections'],
+    queryFn: async () => unwrap(await admin.GET('/clients/{id}/connections', { params: { path: { id } } })),
+    refetchInterval: 5_000,
+    enabled,
+  })
+}
+
+export function useTokens() {
+  return useQuery({ queryKey: ['tokens'], queryFn: async () => unwrap(await admin.GET('/tokens')), refetchInterval: 30_000 })
+}
+
+export interface AuditQuery {
+  action?: string
+  actor?: string
+  target?: string
+  result?: 'ok' | 'denied' | 'error'
+}
+
+export function useAudit(q: AuditQuery) {
+  return useInfiniteQuery({
+    queryKey: ['audit', q],
+    initialPageParam: 0,
+    queryFn: async ({ pageParam }) =>
+      unwrap(await admin.GET('/audit', { params: { query: { ...q, limit: 100, before_id: pageParam || undefined } } })),
+    getNextPageParam: (last) => last.next || undefined,
+  })
+}

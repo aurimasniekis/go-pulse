@@ -34,6 +34,8 @@
 | `PULSE_NATS_TLS_NAME` | `nats` | Name verified on the 4222 certificate (internal CA leaf has `nats`, `localhost`, `127.0.0.1`, `::1`, raw host). |
 | `PULSE_RAW_HOST` | — | Public raw NATS hostname (e.g. `r.events.wan.lt`); SAN on the bootstrap leaf, ACME name (M9). |
 | `PULSE_PUBLIC_HOST` | — | Public HTTPS hostname behind Cloudflare (e.g. `events.wan.lt`). |
+| `PULSE_PUBLIC_NATS_URL` | `tls://<PULSE_RAW_HOST or localhost>:4222` | NATS URL shown in client snippets. |
+| `PULSE_PUBLIC_URL` | `https://<PULSE_PUBLIC_HOST>` | Public HTTP base URL shown in token snippets. |
 | `PULSE_NATS_CLIENT_LISTEN` | `0.0.0.0:4222` | Rendered into `nats.conf` by init. |
 | `PULSE_NATS_MONITOR_LISTEN` | `0.0.0.0:8222` | NATS monitoring (never publish it). |
 | `PULSE_NATS_WEBSOCKET_LISTEN` | `0.0.0.0:8080` | NATS websocket inside the compose network (pulsed proxies `/ws`, M8). Empty disables. |

@@ -28,7 +28,8 @@ func publicConfig(version string) huma.Config {
 	c.DocsPath = ""
 	c.SchemasPath = ""
 	c.OpenAPIPath = "/openapi"
-	c.Info.Description = "Token-authenticated HTTP ingress for tools that cannot speak NATS."
+	c.Info.Description = "Token-authenticated HTTP ingress for tools that cannot speak NATS. Send `Authorization: Bearer pulse_…`."
+	c.Components.SecuritySchemes = map[string]*huma.SecurityScheme{"bearer": {Type: "http", Scheme: "bearer"}}
 	return c
 }
 
@@ -49,6 +50,7 @@ func NewPublicAPI(mux *http.ServeMux, d *Deps) huma.API {
 			out.Body.Status = "ok"
 			return out, nil
 		})
+	registerIngest(api, d)
 	return api
 }
 
@@ -75,12 +77,13 @@ func NewPublic(d *Deps) http.Handler {
 		if strings.HasPrefix(r.URL.Path, "/hooks/") {
 			limit = MaxHookBody
 		}
-		r.Body = http.MaxBytesReader(w, r.Body, limit)
+		// Slightly above the Huma per-operation limit so Huma answers 413 itself; this reader is the hard backstop.
+		r.Body = http.MaxBytesReader(w, r.Body, limit+4096)
 		w.Header().Set("X-Content-Type-Options", "nosniff")
 		w.Header().Set("Cache-Control", "no-store")
 		mux.ServeHTTP(w, r)
 	})
-	return accessLog(d.log(), "public", h)
+	return accessLog(d.log(), "public", withClientIP(h))
 }
 
 // remoteIP is the TCP peer address. M8 replaces it with the Cloudflare-aware real IP (PL-EDGE-004).

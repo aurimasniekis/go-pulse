@@ -18,3 +18,5 @@ versioning: [docs/VERSIONING.md](docs/VERSIONING.md).
 - M4: dashboard Explorer, Live tail and Streams & consumers pages, NATS status in the header, Playwright smoke tests.
 - M5: rollups (minute/hour/day counts by prefix and type, exactly once), subject index, disk forecast; Overview and
   Subjects pages; admin publish endpoint and "Publish event" in the Explorer.
+- M6: HTTP tokens and the public ingress API (publish, batch, request bridge, replay, SSE tail); client, token and
+  audit admin APIs; Clients, HTTP tokens and Audit pages with show-once secrets and connection snippets.

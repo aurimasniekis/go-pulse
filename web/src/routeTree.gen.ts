@@ -13,7 +13,6 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AlertsRouteImport } from './routes/alerts'
 import { Route as AuditRouteImport } from './routes/audit'
 import { Route as BackupsRouteImport } from './routes/backups'
-import { Route as ClientsRouteImport } from './routes/clients'
 import { Route as ExplorerRouteImport } from './routes/explorer'
 import { Route as KvRouteImport } from './routes/kv'
 import { Route as SecurityRouteImport } from './routes/security'
@@ -23,6 +22,8 @@ import { Route as SystemRouteImport } from './routes/system'
 import { Route as TailRouteImport } from './routes/tail'
 import { Route as TokensRouteImport } from './routes/tokens'
 import { Route as WebhooksRouteImport } from './routes/webhooks'
+import { Route as ClientsIndexRouteImport } from './routes/clients/index'
+import { Route as ClientsIdRouteImport } from './routes/clients/$id'
 import { Route as StreamsIndexRouteImport } from './routes/streams/index'
 import { Route as StreamsNameRouteImport } from './routes/streams/$name'
 
@@ -44,11 +45,6 @@ const AuditRoute = AuditRouteImport.update({
 const BackupsRoute = BackupsRouteImport.update({
   id: '/backups',
   path: '/backups',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ClientsRoute = ClientsRouteImport.update({
-  id: '/clients',
-  path: '/clients',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ExplorerRoute = ExplorerRouteImport.update({
@@ -96,6 +92,16 @@ const WebhooksRoute = WebhooksRouteImport.update({
   path: '/webhooks',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ClientsIndexRoute = ClientsIndexRouteImport.update({
+  id: '/clients/',
+  path: '/clients/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ClientsIdRoute = ClientsIdRouteImport.update({
+  id: '/clients/$id',
+  path: '/clients/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const StreamsIndexRoute = StreamsIndexRouteImport.update({
   id: '/streams/',
   path: '/streams/',
@@ -112,7 +118,6 @@ export interface FileRoutesByFullPath {
   '/alerts': typeof AlertsRoute
   '/audit': typeof AuditRoute
   '/backups': typeof BackupsRoute
-  '/clients': typeof ClientsRoute
   '/explorer': typeof ExplorerRoute
   '/kv': typeof KvRoute
   '/security': typeof SecurityRoute
@@ -122,7 +127,9 @@ export interface FileRoutesByFullPath {
   '/tail': typeof TailRoute
   '/tokens': typeof TokensRoute
   '/webhooks': typeof WebhooksRoute
+  '/clients/$id': typeof ClientsIdRoute
   '/streams/$name': typeof StreamsNameRoute
+  '/clients/': typeof ClientsIndexRoute
   '/streams/': typeof StreamsIndexRoute
 }
 export interface FileRoutesByTo {
@@ -130,7 +137,6 @@ export interface FileRoutesByTo {
   '/alerts': typeof AlertsRoute
   '/audit': typeof AuditRoute
   '/backups': typeof BackupsRoute
-  '/clients': typeof ClientsRoute
   '/explorer': typeof ExplorerRoute
   '/kv': typeof KvRoute
   '/security': typeof SecurityRoute
@@ -140,7 +146,9 @@ export interface FileRoutesByTo {
   '/tail': typeof TailRoute
   '/tokens': typeof TokensRoute
   '/webhooks': typeof WebhooksRoute
+  '/clients/$id': typeof ClientsIdRoute
   '/streams/$name': typeof StreamsNameRoute
+  '/clients': typeof ClientsIndexRoute
   '/streams': typeof StreamsIndexRoute
 }
 export interface FileRoutesById {
@@ -149,7 +157,6 @@ export interface FileRoutesById {
   '/alerts': typeof AlertsRoute
   '/audit': typeof AuditRoute
   '/backups': typeof BackupsRoute
-  '/clients': typeof ClientsRoute
   '/explorer': typeof ExplorerRoute
   '/kv': typeof KvRoute
   '/security': typeof SecurityRoute
@@ -159,7 +166,9 @@ export interface FileRoutesById {
   '/tail': typeof TailRoute
   '/tokens': typeof TokensRoute
   '/webhooks': typeof WebhooksRoute
+  '/clients/$id': typeof ClientsIdRoute
   '/streams/$name': typeof StreamsNameRoute
+  '/clients/': typeof ClientsIndexRoute
   '/streams/': typeof StreamsIndexRoute
 }
 export interface FileRouteTypes {
@@ -169,7 +178,6 @@ export interface FileRouteTypes {
     | '/alerts'
     | '/audit'
     | '/backups'
-    | '/clients'
     | '/explorer'
     | '/kv'
     | '/security'
@@ -179,7 +187,9 @@ export interface FileRouteTypes {
     | '/tail'
     | '/tokens'
     | '/webhooks'
+    | '/clients/$id'
     | '/streams/$name'
+    | '/clients/'
     | '/streams/'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -187,7 +197,6 @@ export interface FileRouteTypes {
     | '/alerts'
     | '/audit'
     | '/backups'
-    | '/clients'
     | '/explorer'
     | '/kv'
     | '/security'
@@ -197,7 +206,9 @@ export interface FileRouteTypes {
     | '/tail'
     | '/tokens'
     | '/webhooks'
+    | '/clients/$id'
     | '/streams/$name'
+    | '/clients'
     | '/streams'
   id:
     | '__root__'
@@ -205,7 +216,6 @@ export interface FileRouteTypes {
     | '/alerts'
     | '/audit'
     | '/backups'
-    | '/clients'
     | '/explorer'
     | '/kv'
     | '/security'
@@ -215,7 +225,9 @@ export interface FileRouteTypes {
     | '/tail'
     | '/tokens'
     | '/webhooks'
+    | '/clients/$id'
     | '/streams/$name'
+    | '/clients/'
     | '/streams/'
   fileRoutesById: FileRoutesById
 }
@@ -224,7 +236,6 @@ export interface RootRouteChildren {
   AlertsRoute: typeof AlertsRoute
   AuditRoute: typeof AuditRoute
   BackupsRoute: typeof BackupsRoute
-  ClientsRoute: typeof ClientsRoute
   ExplorerRoute: typeof ExplorerRoute
   KvRoute: typeof KvRoute
   SecurityRoute: typeof SecurityRoute
@@ -234,7 +245,9 @@ export interface RootRouteChildren {
   TailRoute: typeof TailRoute
   TokensRoute: typeof TokensRoute
   WebhooksRoute: typeof WebhooksRoute
+  ClientsIdRoute: typeof ClientsIdRoute
   StreamsNameRoute: typeof StreamsNameRoute
+  ClientsIndexRoute: typeof ClientsIndexRoute
   StreamsIndexRoute: typeof StreamsIndexRoute
 }
 
@@ -266,13 +279,6 @@ declare module '@tanstack/react-router' {
       path: '/backups'
       fullPath: '/backups'
       preLoaderRoute: typeof BackupsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/clients': {
-      id: '/clients'
-      path: '/clients'
-      fullPath: '/clients'
-      preLoaderRoute: typeof ClientsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/explorer': {
@@ -338,6 +344,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof WebhooksRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/clients/': {
+      id: '/clients/'
+      path: '/clients'
+      fullPath: '/clients/'
+      preLoaderRoute: typeof ClientsIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/clients/$id': {
+      id: '/clients/$id'
+      path: '/clients/$id'
+      fullPath: '/clients/$id'
+      preLoaderRoute: typeof ClientsIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/streams/': {
       id: '/streams/'
       path: '/streams'
@@ -360,7 +380,6 @@ const rootRouteChildren: RootRouteChildren = {
   AlertsRoute: AlertsRoute,
   AuditRoute: AuditRoute,
   BackupsRoute: BackupsRoute,
-  ClientsRoute: ClientsRoute,
   ExplorerRoute: ExplorerRoute,
   KvRoute: KvRoute,
   SecurityRoute: SecurityRoute,
@@ -370,7 +389,9 @@ const rootRouteChildren: RootRouteChildren = {
   TailRoute: TailRoute,
   TokensRoute: TokensRoute,
   WebhooksRoute: WebhooksRoute,
+  ClientsIdRoute: ClientsIdRoute,
   StreamsNameRoute: StreamsNameRoute,
+  ClientsIndexRoute: ClientsIndexRoute,
   StreamsIndexRoute: StreamsIndexRoute,
 }
 export const routeTree = rootRouteImport

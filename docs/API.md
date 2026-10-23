@@ -43,6 +43,14 @@ Every other path on the public listener returns 404 (PL-EDGE-001). The public li
 | GET | `/throughput` | Time series: `range` 1h/24h/7d/30d/1y, `dim` total/type/p1–p4, `top` N keys |
 | GET | `/subjects/tree` | One level of the subject tree below `prefix` |
 | GET | `/subjects/info` | One indexed subject with sampled JSON keys |
+| GET/POST | `/clients` | List clients (with live connection counts) / create a client and return its `.creds` once |
+| GET/PUT | `/clients/{id}` | Read / update name, description, tags (optimistic `version`) |
+| PUT | `/clients/{id}/grants` | Replace grants (no new creds; NATS reconnects live sessions) |
+| POST | `/clients/{id}/rotate` · `/revoke` · `/kick` | New creds (old revoked) · permanent revoke · disconnect |
+| GET | `/clients/{id}/connections` | Live connections from CONNZ |
+| GET/POST | `/tokens` | List / create an HTTP token (secret returned once) |
+| POST | `/tokens/{id}/revoke` | Revoke a token |
+| GET | `/audit` | Audit log, newest first; filters `action` (exact or `prefix.`), `actor`, `target`, `result`, `since`, `until`, `before_id` |
 
 ### Explorer (`GET /events`)
 
@@ -70,5 +78,19 @@ Counts come from headers-only consumers and are committed every 10 s together wi
 
 ## Public API
 
-M3 ships `GET /api/v1/health`. Token publish, the request bridge, replay and SSE tail arrive with M6; hooks with M7;
-`/ws` with M8.
+Every route needs `Authorization: Bearer pulse_<prefix>_<secret>`. A missing or invalid token gets 401 (and counts as a
+failed login for the ban detector, M8); a valid token without the needed grant gets 403. Tokens may be limited to
+source networks.
+
+| Method | Path | Grant | Purpose |
+|---|---|---|---|
+| POST | `/api/v1/publish/{subject}` | publish | Body = payload. Headers: `Ce-Type`, `Ce-Source` (default `token:<name>`), `Idempotency-Key` (→ `Nats-Msg-Id`), `Content-Type`. 201 with `{stream, seq, id, duplicate}`. |
+| POST | `/api/v1/publish` | publish (each) | `{events: [...]}`, up to 100; all are authorized before any is published. `data` (JSON value; a JSON string is stored as text) or `data_base64`. |
+| POST | `/api/v1/request/{subject}?timeout_ms=` | request | NATS request/reply; returns the reply body and content type. 503 no responders, 504 timeout (max 30 s). |
+| GET | `/api/v1/events?subject=&since=&seq=&limit=&cursor=` | subscribe | Replay oldest first, paged. `subject` must be within a grant. |
+| GET | `/api/v1/tail?subject=&since=` | subscribe | SSE live events; resume with `Last-Event-ID`. |
+| GET | `/api/v1/health` | none | Liveness. |
+
+Payloads above ~1 MiB get 413: store them as blobs (NATS clients) and publish a reference.
+
+Hooks (`/hooks/*`) arrive with M7, `/ws` with M8.

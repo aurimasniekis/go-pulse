@@ -1,6 +1,35 @@
 {
   "components": {
     "schemas": {
+      "AuditPage": {
+        "additionalProperties": false,
+        "properties": {
+          "$schema": {
+            "description": "A URL to the JSON Schema for this object.",
+            "examples": [
+              "/api/admin/v1/schemas/AuditPage.json"
+            ],
+            "format": "uri",
+            "readOnly": true,
+            "type": "string"
+          },
+          "entries": {
+            "items": {
+              "$ref": "#/components/schemas/Entry"
+            },
+            "type": "array"
+          },
+          "next": {
+            "description": "Pass as before_id for the next page",
+            "format": "int64",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "entries"
+        ],
+        "type": "object"
+      },
       "BlobRef": {
         "additionalProperties": false,
         "properties": {
@@ -23,6 +52,226 @@
           "name",
           "size",
           "sha256"
+        ],
+        "type": "object"
+      },
+      "ClientDTO": {
+        "additionalProperties": false,
+        "properties": {
+          "$schema": {
+            "description": "A URL to the JSON Schema for this object.",
+            "examples": [
+              "/api/admin/v1/schemas/ClientDTO.json"
+            ],
+            "format": "uri",
+            "readOnly": true,
+            "type": "string"
+          },
+          "connections": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "created_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "expires_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "expires_soon": {
+            "description": "Expires within 30 days (PL-AUTH-012)",
+            "type": "boolean"
+          },
+          "grants": {
+            "items": {
+              "$ref": "#/components/schemas/Grant"
+            },
+            "type": "array"
+          },
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "revoked_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "signing_key": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "tags": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "user_key": {
+            "type": "string"
+          },
+          "version": {
+            "format": "int64",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "connections",
+          "expires_soon",
+          "id",
+          "name",
+          "description",
+          "tags",
+          "grants",
+          "user_key",
+          "signing_key",
+          "status",
+          "expires_at",
+          "created_at",
+          "updated_at",
+          "version"
+        ],
+        "type": "object"
+      },
+      "ClientInput": {
+        "additionalProperties": false,
+        "properties": {
+          "$schema": {
+            "description": "A URL to the JSON Schema for this object.",
+            "examples": [
+              "/api/admin/v1/schemas/ClientInput.json"
+            ],
+            "format": "uri",
+            "readOnly": true,
+            "type": "string"
+          },
+          "description": {
+            "maxLength": 512,
+            "type": "string"
+          },
+          "expires_in_days": {
+            "description": "0 = 365 days",
+            "format": "int64",
+            "maximum": 3650,
+            "minimum": 0,
+            "type": "integer"
+          },
+          "grants": {
+            "items": {
+              "$ref": "#/components/schemas/Grant"
+            },
+            "maxItems": 64,
+            "type": "array"
+          },
+          "name": {
+            "pattern": "^[a-z0-9][a-z0-9_.-]{0,63}$",
+            "type": "string"
+          },
+          "tags": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 16,
+            "type": "array"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
+      "ConnDTO": {
+        "additionalProperties": false,
+        "properties": {
+          "cid": {
+            "format": "int64",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "in_bytes": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "in_msgs": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "ip": {
+            "type": "string"
+          },
+          "kind": {
+            "description": "Client or WebSocket",
+            "type": "string"
+          },
+          "lang": {
+            "type": "string"
+          },
+          "last_active": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "out_bytes": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "out_msgs": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "port": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "rtt": {
+            "type": "string"
+          },
+          "start": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "subscriptions": {
+            "format": "int32",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "uptime": {
+            "type": "string"
+          },
+          "version": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "cid",
+          "ip",
+          "port",
+          "start",
+          "last_active",
+          "rtt",
+          "uptime",
+          "subscriptions",
+          "in_msgs",
+          "out_msgs",
+          "in_bytes",
+          "out_bytes",
+          "name",
+          "lang",
+          "version",
+          "kind"
         ],
         "type": "object"
       },
@@ -109,6 +358,73 @@
           "ack_floor_stream_seq",
           "paused",
           "internal"
+        ],
+        "type": "object"
+      },
+      "Create-tokenResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "$schema": {
+            "description": "A URL to the JSON Schema for this object.",
+            "examples": [
+              "/api/admin/v1/schemas/Create-tokenResponse.json"
+            ],
+            "format": "uri",
+            "readOnly": true,
+            "type": "string"
+          },
+          "secret": {
+            "type": "string"
+          },
+          "token": {
+            "$ref": "#/components/schemas/Token"
+          }
+        },
+        "required": [
+          "token",
+          "secret"
+        ],
+        "type": "object"
+      },
+      "Entry": {
+        "additionalProperties": false,
+        "properties": {
+          "action": {
+            "type": "string"
+          },
+          "actor": {
+            "type": "string"
+          },
+          "details": {
+            "additionalProperties": {},
+            "type": "object"
+          },
+          "id": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "ip": {
+            "type": "string"
+          },
+          "result": {
+            "type": "string"
+          },
+          "target": {
+            "type": "string"
+          },
+          "time": {
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "time",
+          "actor",
+          "action",
+          "target",
+          "ip",
+          "result"
         ],
         "type": "object"
       },
@@ -423,6 +739,35 @@
         ],
         "type": "object"
       },
+      "Grant": {
+        "additionalProperties": false,
+        "properties": {
+          "action": {
+            "enum": [
+              "publish",
+              "subscribe",
+              "request",
+              "reply",
+              "durable",
+              "blobs"
+            ],
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "stream": {
+            "type": "string"
+          },
+          "subject": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "action"
+        ],
+        "type": "object"
+      },
       "IndexStats": {
         "additionalProperties": false,
         "properties": {
@@ -444,6 +789,32 @@
           "indexed",
           "cap",
           "dropped"
+        ],
+        "type": "object"
+      },
+      "Issued": {
+        "additionalProperties": false,
+        "properties": {
+          "$schema": {
+            "description": "A URL to the JSON Schema for this object.",
+            "examples": [
+              "/api/admin/v1/schemas/Issued.json"
+            ],
+            "format": "uri",
+            "readOnly": true,
+            "type": "string"
+          },
+          "client": {
+            "$ref": "#/components/schemas/ClientDTO"
+          },
+          "creds": {
+            "description": "The .creds file. Shown once; pulsed does not keep the seed.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "client",
+          "creds"
         ],
         "type": "object"
       },
@@ -558,6 +929,28 @@
           "key",
           "msgs",
           "bytes"
+        ],
+        "type": "object"
+      },
+      "Kick-clientResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "$schema": {
+            "description": "A URL to the JSON Schema for this object.",
+            "examples": [
+              "/api/admin/v1/schemas/Kick-clientResponse.json"
+            ],
+            "format": "uri",
+            "readOnly": true,
+            "type": "string"
+          },
+          "kicked": {
+            "format": "int64",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "kicked"
         ],
         "type": "object"
       },
@@ -831,6 +1224,27 @@
           "id",
           "duplicate"
         ],
+        "type": "object"
+      },
+      "Rotate-clientRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "$schema": {
+            "description": "A URL to the JSON Schema for this object.",
+            "examples": [
+              "/api/admin/v1/schemas/Rotate-clientRequest.json"
+            ],
+            "format": "uri",
+            "readOnly": true,
+            "type": "string"
+          },
+          "expires_in_days": {
+            "format": "int64",
+            "maximum": 3650,
+            "minimum": 0,
+            "type": "integer"
+          }
+        },
         "type": "object"
       },
       "Series": {
@@ -1220,6 +1634,9 @@
           "auth_mode": {
             "type": "string"
           },
+          "connect": {
+            "$ref": "#/components/schemas/SystemInfoConnectStruct"
+          },
           "jetstream": {
             "$ref": "#/components/schemas/Jsz"
           },
@@ -1241,7 +1658,31 @@
           "profile",
           "auth_mode",
           "ready",
-          "nats"
+          "nats",
+          "connect"
+        ],
+        "type": "object"
+      },
+      "SystemInfoConnectStruct": {
+        "additionalProperties": false,
+        "properties": {
+          "ca_cert": {
+            "description": "Internal CA (PEM); clients need it while 4222 serves the bootstrap certificate",
+            "type": "string"
+          },
+          "nats_url": {
+            "description": "Where tools connect (raw NATS TLS)",
+            "type": "string"
+          },
+          "public_url": {
+            "description": "Base URL of the public HTTP API",
+            "type": "string"
+          }
+        },
+        "required": [
+          "nats_url",
+          "public_url",
+          "ca_cert"
         ],
         "type": "object"
       },
@@ -1269,6 +1710,191 @@
           "rtt_ms"
         ],
         "type": "object"
+      },
+      "Token": {
+        "additionalProperties": false,
+        "properties": {
+          "cidrs": {
+            "description": "Allowed source networks; empty means any",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "created_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "expires_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "grants": {
+            "items": {
+              "$ref": "#/components/schemas/Grant"
+            },
+            "type": "array"
+          },
+          "id": {
+            "type": "string"
+          },
+          "last_used_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "last_used_ip": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "prefix": {
+            "description": "First characters of the token, for recognizing it",
+            "type": "string"
+          },
+          "revoked_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "active",
+              "revoked",
+              "expired"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "description",
+          "prefix",
+          "grants",
+          "cidrs",
+          "expires_at",
+          "created_at",
+          "status"
+        ],
+        "type": "object"
+      },
+      "TokenInput": {
+        "additionalProperties": false,
+        "properties": {
+          "$schema": {
+            "description": "A URL to the JSON Schema for this object.",
+            "examples": [
+              "/api/admin/v1/schemas/TokenInput.json"
+            ],
+            "format": "uri",
+            "readOnly": true,
+            "type": "string"
+          },
+          "cidrs": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 32,
+            "type": "array"
+          },
+          "description": {
+            "maxLength": 512,
+            "type": "string"
+          },
+          "expires_in_days": {
+            "format": "int64",
+            "maximum": 3650,
+            "minimum": 0,
+            "type": "integer"
+          },
+          "grants": {
+            "description": "publish, subscribe or request",
+            "items": {
+              "$ref": "#/components/schemas/Grant"
+            },
+            "maxItems": 64,
+            "type": "array"
+          },
+          "name": {
+            "pattern": "^[a-z0-9][a-z0-9_.-]{0,63}$",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
+      "Update-client-grantsRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "$schema": {
+            "description": "A URL to the JSON Schema for this object.",
+            "examples": [
+              "/api/admin/v1/schemas/Update-client-grantsRequest.json"
+            ],
+            "format": "uri",
+            "readOnly": true,
+            "type": "string"
+          },
+          "grants": {
+            "items": {
+              "$ref": "#/components/schemas/Grant"
+            },
+            "maxItems": 64,
+            "type": "array"
+          },
+          "version": {
+            "format": "int64",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "grants",
+          "version"
+        ],
+        "type": "object"
+      },
+      "Update-clientRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "$schema": {
+            "description": "A URL to the JSON Schema for this object.",
+            "examples": [
+              "/api/admin/v1/schemas/Update-clientRequest.json"
+            ],
+            "format": "uri",
+            "readOnly": true,
+            "type": "string"
+          },
+          "description": {
+            "maxLength": 512,
+            "type": "string"
+          },
+          "name": {
+            "pattern": "^[a-z0-9][a-z0-9_.-]{0,63}$",
+            "type": "string"
+          },
+          "tags": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 16,
+            "type": "array"
+          },
+          "version": {
+            "format": "int64",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "name",
+          "version"
+        ],
+        "type": "object"
       }
     }
   },
@@ -1279,6 +1905,515 @@
   },
   "openapi": "3.1.0",
   "paths": {
+    "/audit": {
+      "get": {
+        "operationId": "list-audit",
+        "parameters": [
+          {
+            "description": "Exact action, or a prefix ending in '.' (e.g. client.)",
+            "explode": false,
+            "in": "query",
+            "name": "action",
+            "schema": {
+              "description": "Exact action, or a prefix ending in '.' (e.g. client.)",
+              "maxLength": 64,
+              "type": "string"
+            }
+          },
+          {
+            "explode": false,
+            "in": "query",
+            "name": "actor",
+            "schema": {
+              "maxLength": 128,
+              "type": "string"
+            }
+          },
+          {
+            "explode": false,
+            "in": "query",
+            "name": "target",
+            "schema": {
+              "maxLength": 256,
+              "type": "string"
+            }
+          },
+          {
+            "explode": false,
+            "in": "query",
+            "name": "result",
+            "schema": {
+              "enum": [
+                "ok",
+                "denied",
+                "error",
+                ""
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "explode": false,
+            "in": "query",
+            "name": "since",
+            "schema": {
+              "format": "date-time",
+              "type": "string"
+            }
+          },
+          {
+            "explode": false,
+            "in": "query",
+            "name": "until",
+            "schema": {
+              "format": "date-time",
+              "type": "string"
+            }
+          },
+          {
+            "explode": false,
+            "in": "query",
+            "name": "before_id",
+            "schema": {
+              "format": "int64",
+              "minimum": 0,
+              "type": "integer"
+            }
+          },
+          {
+            "explode": false,
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "default": 100,
+              "format": "int64",
+              "maximum": 500,
+              "minimum": 1,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuditPage"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Audit log",
+        "tags": [
+          "audit"
+        ]
+      }
+    },
+    "/clients": {
+      "get": {
+        "operationId": "list-clients",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ClientDTO"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "List clients",
+        "tags": [
+          "clients"
+        ]
+      },
+      "post": {
+        "operationId": "create-client",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ClientInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Issued"
+                }
+              }
+            },
+            "description": "Created"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Create a client and its credentials",
+        "tags": [
+          "clients"
+        ]
+      }
+    },
+    "/clients/{id}": {
+      "get": {
+        "operationId": "get-client",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "pattern": "^[a-z0-9]{6,32}$",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientDTO"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Get a client",
+        "tags": [
+          "clients"
+        ]
+      },
+      "put": {
+        "operationId": "update-client",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "pattern": "^[a-z0-9]{6,32}$",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Update-clientRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientDTO"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Update name, description and tags",
+        "tags": [
+          "clients"
+        ]
+      }
+    },
+    "/clients/{id}/connections": {
+      "get": {
+        "operationId": "client-connections",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "pattern": "^[a-z0-9]{6,32}$",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ConnDTO"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Live connections",
+        "tags": [
+          "clients"
+        ]
+      }
+    },
+    "/clients/{id}/grants": {
+      "put": {
+        "description": "Takes effect without new credentials; NATS reconnects the client's live connections with the new permissions.",
+        "operationId": "update-client-grants",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "pattern": "^[a-z0-9]{6,32}$",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Update-client-grantsRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientDTO"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Replace grants",
+        "tags": [
+          "clients"
+        ]
+      }
+    },
+    "/clients/{id}/kick": {
+      "post": {
+        "operationId": "kick-client",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "pattern": "^[a-z0-9]{6,32}$",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kick-clientResponse"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Disconnect live connections",
+        "tags": [
+          "clients"
+        ]
+      }
+    },
+    "/clients/{id}/revoke": {
+      "post": {
+        "description": "Permanent. Its connections are closed within seconds.",
+        "operationId": "revoke-client",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "pattern": "^[a-z0-9]{6,32}$",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Revoke a client",
+        "tags": [
+          "clients"
+        ]
+      }
+    },
+    "/clients/{id}/rotate": {
+      "post": {
+        "operationId": "rotate-client",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "pattern": "^[a-z0-9]{6,32}$",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Rotate-clientRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Issued"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Issue new credentials, revoke the old ones",
+        "tags": [
+          "clients"
+        ]
+      }
+    },
     "/events": {
       "get": {
         "operationId": "query-events",
@@ -2251,6 +3386,115 @@
         "summary": "Throughput time series",
         "tags": [
           "rollups"
+        ]
+      }
+    },
+    "/tokens": {
+      "get": {
+        "operationId": "list-tokens",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/Token"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "List HTTP tokens",
+        "tags": [
+          "tokens"
+        ]
+      },
+      "post": {
+        "description": "The secret is returned once and stored only as a hash.",
+        "operationId": "create-token",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TokenInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Create-tokenResponse"
+                }
+              }
+            },
+            "description": "Created"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Create an HTTP token",
+        "tags": [
+          "tokens"
+        ]
+      }
+    },
+    "/tokens/{id}/revoke": {
+      "post": {
+        "operationId": "revoke-token",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "pattern": "^[a-z0-9]{6,32}$",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Revoke an HTTP token",
+        "tags": [
+          "tokens"
         ]
       }
     }

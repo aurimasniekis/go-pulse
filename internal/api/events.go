@@ -152,6 +152,7 @@ func registerEvents(api huma.API, d *Deps) {
 			if err != nil {
 				return nil, mapQueryErr(d, "get-event", err)
 			}
+			query.StripReadHeaders(m.Header)
 			size := len(m.Subject) + len(m.Data)
 			return &struct{ Body EventDTO }{toDTO(query.Message{Stream: in.Stream, Seq: m.Sequence, Subject: m.Subject, Time: m.Time.UTC(),
 				Headers: m.Header, Data: m.Data, Size: size})}, nil

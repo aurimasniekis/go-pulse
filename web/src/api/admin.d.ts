@@ -4,6 +4,150 @@
  */
 
 export interface paths {
+    "/audit": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Audit log */
+        get: operations["list-audit"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/clients": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List clients */
+        get: operations["list-clients"];
+        put?: never;
+        /** Create a client and its credentials */
+        post: operations["create-client"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/clients/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get a client */
+        get: operations["get-client"];
+        /** Update name, description and tags */
+        put: operations["update-client"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/clients/{id}/connections": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Live connections */
+        get: operations["client-connections"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/clients/{id}/grants": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Replace grants
+         * @description Takes effect without new credentials; NATS reconnects the client's live connections with the new permissions.
+         */
+        put: operations["update-client-grants"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/clients/{id}/kick": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Disconnect live connections */
+        post: operations["kick-client"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/clients/{id}/revoke": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Revoke a client
+         * @description Permanent. Its connections are closed within seconds.
+         */
+        post: operations["revoke-client"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/clients/{id}/rotate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Issue new credentials, revoke the old ones */
+        post: operations["rotate-client"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/events": {
         parameters: {
             query?: never;
@@ -221,16 +365,143 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/tokens": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List HTTP tokens */
+        get: operations["list-tokens"];
+        put?: never;
+        /**
+         * Create an HTTP token
+         * @description The secret is returned once and stored only as a hash.
+         */
+        post: operations["create-token"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/tokens/{id}/revoke": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Revoke an HTTP token */
+        post: operations["revoke-token"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        AuditPage: {
+            /**
+             * Format: uri
+             * @description A URL to the JSON Schema for this object.
+             * @example /api/admin/v1/schemas/AuditPage.json
+             */
+            readonly $schema?: string;
+            entries: components["schemas"]["Entry"][];
+            /**
+             * Format: int64
+             * @description Pass as before_id for the next page
+             */
+            next?: number;
+        };
         BlobRef: {
             bucket: string;
             name: string;
             sha256: string;
             /** Format: int64 */
             size: number;
+        };
+        ClientDTO: {
+            /**
+             * Format: uri
+             * @description A URL to the JSON Schema for this object.
+             * @example /api/admin/v1/schemas/ClientDTO.json
+             */
+            readonly $schema?: string;
+            /** Format: int64 */
+            connections: number;
+            /** Format: date-time */
+            created_at: string;
+            description: string;
+            /** Format: date-time */
+            expires_at: string;
+            /** @description Expires within 30 days (PL-AUTH-012) */
+            expires_soon: boolean;
+            grants: components["schemas"]["Grant"][];
+            id: string;
+            name: string;
+            /** Format: date-time */
+            revoked_at?: string;
+            signing_key: string;
+            status: string;
+            tags: string[];
+            /** Format: date-time */
+            updated_at: string;
+            user_key: string;
+            /** Format: int64 */
+            version: number;
+        };
+        ClientInput: {
+            /**
+             * Format: uri
+             * @description A URL to the JSON Schema for this object.
+             * @example /api/admin/v1/schemas/ClientInput.json
+             */
+            readonly $schema?: string;
+            description?: string;
+            /**
+             * Format: int64
+             * @description 0 = 365 days
+             */
+            expires_in_days?: number;
+            grants?: components["schemas"]["Grant"][];
+            name: string;
+            tags?: string[];
+        };
+        ConnDTO: {
+            /** Format: int64 */
+            cid: number;
+            /** Format: int64 */
+            in_bytes: number;
+            /** Format: int64 */
+            in_msgs: number;
+            ip: string;
+            /** @description Client or WebSocket */
+            kind: string;
+            lang: string;
+            /** Format: date-time */
+            last_active: string;
+            name: string;
+            /** Format: int64 */
+            out_bytes: number;
+            /** Format: int64 */
+            out_msgs: number;
+            /** Format: int64 */
+            port: number;
+            rtt: string;
+            /** Format: date-time */
+            start: string;
+            /** Format: int32 */
+            subscriptions: number;
+            uptime: string;
+            version: string;
         };
         ConsumerDTO: {
             /** Format: int64 */
@@ -258,6 +529,30 @@ export interface components {
             /** Format: int64 */
             num_waiting: number;
             paused: boolean;
+        };
+        "Create-tokenResponse": {
+            /**
+             * Format: uri
+             * @description A URL to the JSON Schema for this object.
+             * @example /api/admin/v1/schemas/Create-tokenResponse.json
+             */
+            readonly $schema?: string;
+            secret: string;
+            token: components["schemas"]["Token"];
+        };
+        Entry: {
+            action: string;
+            actor: string;
+            details?: {
+                [key: string]: unknown;
+            };
+            /** Format: int64 */
+            id: number;
+            ip: string;
+            result: string;
+            target: string;
+            /** Format: date-time */
+            time: string;
         };
         ErrorDetail: {
             /** @description Where the error occurred, e.g. 'body.items[3].tags' or 'path.thing-id' */
@@ -404,6 +699,13 @@ export interface components {
             index: components["schemas"]["IndexStats"];
             nodes: components["schemas"]["Node"][];
         };
+        Grant: {
+            /** @enum {string} */
+            action: "publish" | "subscribe" | "request" | "reply" | "durable" | "blobs";
+            name?: string;
+            stream?: string;
+            subject?: string;
+        };
         IndexStats: {
             /** Format: int64 */
             cap: number;
@@ -414,6 +716,17 @@ export interface components {
             dropped: number;
             /** Format: int64 */
             indexed: number;
+        };
+        Issued: {
+            /**
+             * Format: uri
+             * @description A URL to the JSON Schema for this object.
+             * @example /api/admin/v1/schemas/Issued.json
+             */
+            readonly $schema?: string;
+            client: components["schemas"]["ClientDTO"];
+            /** @description The .creds file. Shown once; pulsed does not keep the seed. */
+            creds: string;
         };
         Jsz: {
             api: components["schemas"]["JszAPIStruct"];
@@ -450,6 +763,16 @@ export interface components {
             key: string;
             /** Format: int64 */
             msgs: number;
+        };
+        "Kick-clientResponse": {
+            /**
+             * Format: uri
+             * @description A URL to the JSON Schema for this object.
+             * @example /api/admin/v1/schemas/Kick-clientResponse.json
+             */
+            readonly $schema?: string;
+            /** Format: int64 */
+            kicked: number;
         };
         Node: {
             /** Format: int64 */
@@ -551,6 +874,16 @@ export interface components {
             /** Format: int64 */
             seq: number;
             stream: string;
+        };
+        "Rotate-clientRequest": {
+            /**
+             * Format: uri
+             * @description A URL to the JSON Schema for this object.
+             * @example /api/admin/v1/schemas/Rotate-clientRequest.json
+             */
+            readonly $schema?: string;
+            /** Format: int64 */
+            expires_in_days?: number;
         };
         Series: {
             key: string;
@@ -696,11 +1029,20 @@ export interface components {
              */
             readonly $schema?: string;
             auth_mode: string;
+            connect: components["schemas"]["SystemInfoConnectStruct"];
             jetstream?: components["schemas"]["Jsz"];
             nats: components["schemas"]["SystemInfoNATSStruct"];
             profile: string;
             ready: boolean;
             version: string;
+        };
+        SystemInfoConnectStruct: {
+            /** @description Internal CA (PEM); clients need it while 4222 serves the bootstrap certificate */
+            ca_cert: string;
+            /** @description Where tools connect (raw NATS TLS) */
+            nats_url: string;
+            /** @description Base URL of the public HTTP API */
+            public_url: string;
         };
         SystemInfoNATSStruct: {
             connected: boolean;
@@ -708,6 +1050,66 @@ export interface components {
             rtt_ms: number;
             server_name: string;
             version: string;
+        };
+        Token: {
+            /** @description Allowed source networks; empty means any */
+            cidrs: string[];
+            /** Format: date-time */
+            created_at: string;
+            description: string;
+            /** Format: date-time */
+            expires_at: string;
+            grants: components["schemas"]["Grant"][];
+            id: string;
+            /** Format: date-time */
+            last_used_at?: string;
+            last_used_ip?: string;
+            name: string;
+            /** @description First characters of the token, for recognizing it */
+            prefix: string;
+            /** Format: date-time */
+            revoked_at?: string;
+            /** @enum {string} */
+            status: "active" | "revoked" | "expired";
+        };
+        TokenInput: {
+            /**
+             * Format: uri
+             * @description A URL to the JSON Schema for this object.
+             * @example /api/admin/v1/schemas/TokenInput.json
+             */
+            readonly $schema?: string;
+            cidrs?: string[];
+            description?: string;
+            /** Format: int64 */
+            expires_in_days?: number;
+            /** @description publish, subscribe or request */
+            grants?: components["schemas"]["Grant"][];
+            name: string;
+        };
+        "Update-client-grantsRequest": {
+            /**
+             * Format: uri
+             * @description A URL to the JSON Schema for this object.
+             * @example /api/admin/v1/schemas/Update-client-grantsRequest.json
+             */
+            readonly $schema?: string;
+            grants: components["schemas"]["Grant"][];
+            /** Format: int64 */
+            version: number;
+        };
+        "Update-clientRequest": {
+            /**
+             * Format: uri
+             * @description A URL to the JSON Schema for this object.
+             * @example /api/admin/v1/schemas/Update-clientRequest.json
+             */
+            readonly $schema?: string;
+            description?: string;
+            name: string;
+            tags?: string[];
+            /** Format: int64 */
+            version: number;
         };
     };
     responses: never;
@@ -718,6 +1120,334 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    "list-audit": {
+        parameters: {
+            query?: {
+                /** @description Exact action, or a prefix ending in '.' (e.g. client.) */
+                action?: string;
+                actor?: string;
+                target?: string;
+                result?: "ok" | "denied" | "error" | "";
+                since?: string;
+                until?: string;
+                before_id?: number;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuditPage"];
+                };
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
+    "list-clients": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ClientDTO"][];
+                };
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
+    "create-client": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ClientInput"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Issued"];
+                };
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
+    "get-client": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ClientDTO"];
+                };
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
+    "update-client": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["Update-clientRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ClientDTO"];
+                };
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
+    "client-connections": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConnDTO"][];
+                };
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
+    "update-client-grants": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["Update-client-grantsRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ClientDTO"];
+                };
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
+    "kick-client": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Kick-clientResponse"];
+                };
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
+    "revoke-client": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
+    "rotate-client": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["Rotate-clientRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Issued"];
+                };
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
     "query-events": {
         parameters: {
             query?: {
@@ -1263,6 +1993,97 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["SeriesSet"];
                 };
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
+    "list-tokens": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Token"][];
+                };
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
+    "create-token": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TokenInput"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Create-tokenResponse"];
+                };
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
+    "revoke-token": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Error */
             default: {

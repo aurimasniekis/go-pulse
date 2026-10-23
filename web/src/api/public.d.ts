@@ -4,6 +4,26 @@
  */
 
 export interface paths {
+    "/events": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Replay events
+         * @description Oldest first from `since` or `seq`, paged with `cursor`. Needs a subscribe grant covering `subject`.
+         */
+        get: operations["replay"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/health": {
         parameters: {
             query?: never;
@@ -21,10 +41,109 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/publish": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Publish up to 100 events
+         * @description All events are authorized before any is published.
+         */
+        post: operations["publish-batch"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/publish/{subject}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Publish one event
+         * @description The request body is the payload, stored as-is. Envelope fields come from headers.
+         */
+        post: operations["publish"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/request/{subject}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Request/reply bridge
+         * @description Sends the body as a NATS request and returns the reply body. 503 when nobody serves the subject, 504 on timeout.
+         */
+        post: operations["request"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/tail": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Live events (SSE)
+         * @description Streams `event` messages (id = stream sequence; resume with Last-Event-ID). Needs a subscribe grant covering `subject`.
+         */
+        get: operations["tail"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        BatchEvent: {
+            content_type?: string;
+            /** @description Any JSON value; a JSON string is stored as text */
+            data?: unknown;
+            /** @description Binary payload; exclusive with data */
+            data_base64?: string;
+            /** @description Idempotency key (Nats-Msg-Id) */
+            id?: string;
+            source?: string;
+            subject: string;
+            type?: string;
+        };
+        BlobRef: {
+            bucket: string;
+            name: string;
+            sha256: string;
+            /** Format: int64 */
+            size: number;
+        };
         ErrorDetail: {
             /** @description Where the error occurred, e.g. 'body.items[3].tags' or 'path.thing-id' */
             location?: string;
@@ -72,6 +191,68 @@ export interface components {
              */
             type: string;
         };
+        EventDTO: {
+            blob?: components["schemas"]["BlobRef"];
+            content_type?: string;
+            data: string;
+            /** @enum {string} */
+            encoding: "utf8" | "base64";
+            /**
+             * Format: date-time
+             * @description ce-time
+             */
+            event_time?: string;
+            headers: {
+                [key: string]: string[];
+            };
+            id?: string;
+            /** Format: int64 */
+            seq: number;
+            /** Format: int64 */
+            size: number;
+            source?: string;
+            stream: string;
+            /**
+             * Format: date-time
+             * @description When NATS stored the event
+             */
+            stream_time: string;
+            subject: string;
+            /** @description Subject follows evt.<domain>.<entity>.<action>[.<key>] */
+            subject_valid: boolean;
+            type?: string;
+            untyped: boolean;
+        };
+        EventsPage: {
+            /**
+             * Format: uri
+             * @description A URL to the JSON Schema for this object.
+             * @example /api/v1/EventsPage.json
+             */
+            readonly $schema?: string;
+            events: components["schemas"]["EventDTO"][];
+            /** Format: int64 */
+            first_seq: number;
+            /** Format: int64 */
+            last_seq: number;
+            /** @description Cursor for the next page; absent at the end */
+            next?: string;
+            /** @description The scan budget ran out before the page filled; continue with next */
+            partial: boolean;
+            /** @enum {string} */
+            reason?: "msgs" | "bytes" | "time";
+            /** Format: int64 */
+            scanned: number;
+            /** Format: int64 */
+            scanned_bytes: number;
+        };
+        Notice: {
+            /** Format: int64 */
+            dropped: number;
+            /** Format: int64 */
+            rate: number;
+            reason: string;
+        };
         "Public-healthResponse": {
             /**
              * Format: uri
@@ -80,6 +261,37 @@ export interface components {
              */
             readonly $schema?: string;
             status: string;
+        };
+        "Publish-batchRequest": {
+            /**
+             * Format: uri
+             * @description A URL to the JSON Schema for this object.
+             * @example /api/v1/Publish-batchRequest.json
+             */
+            readonly $schema?: string;
+            events: components["schemas"]["BatchEvent"][];
+        };
+        "Publish-batchResponse": {
+            /**
+             * Format: uri
+             * @description A URL to the JSON Schema for this object.
+             * @example /api/v1/Publish-batchResponse.json
+             */
+            readonly $schema?: string;
+            results: components["schemas"]["PublishOutput"][];
+        };
+        PublishOutput: {
+            /**
+             * Format: uri
+             * @description A URL to the JSON Schema for this object.
+             * @example /api/v1/PublishOutput.json
+             */
+            readonly $schema?: string;
+            duplicate: boolean;
+            id: string;
+            /** Format: int64 */
+            seq: number;
+            stream: string;
         };
     };
     responses: never;
@@ -90,6 +302,43 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    replay: {
+        parameters: {
+            query: {
+                subject: string;
+                since?: string;
+                seq?: number;
+                limit?: number;
+                cursor?: string;
+            };
+            header?: {
+                Authorization?: string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EventsPage"];
+                };
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
     "public-health": {
         parameters: {
             query?: never;
@@ -106,6 +355,182 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Public-healthResponse"];
+                };
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
+    "publish-batch": {
+        parameters: {
+            query?: never;
+            header?: {
+                Authorization?: string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["Publish-batchRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Publish-batchResponse"];
+                };
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
+    publish: {
+        parameters: {
+            query?: never;
+            header?: {
+                Authorization?: string;
+                "Ce-Type"?: string;
+                "Ce-Source"?: string;
+                /** @description Stored as Nats-Msg-Id; retries within 2 minutes are de-duplicated */
+                "Idempotency-Key"?: string;
+                "Content-Type"?: string;
+            };
+            path: {
+                subject: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/octet-stream": string;
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublishOutput"];
+                };
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
+    request: {
+        parameters: {
+            query?: {
+                timeout_ms?: number;
+            };
+            header?: {
+                Authorization?: string;
+                "Content-Type"?: string;
+            };
+            path: {
+                subject: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/octet-stream": string;
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    "Content-Type"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": string;
+                };
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
+    tail: {
+        parameters: {
+            query?: {
+                /** @description Filter; default evt.> */
+                subject?: string;
+                since?: string;
+            };
+            header?: {
+                Authorization?: string;
+                "Last-Event-ID"?: number;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/event-stream": ({
+                        data: components["schemas"]["EventDTO"];
+                        /**
+                         * @description The event name.
+                         * @constant
+                         */
+                        event: "event";
+                        /** @description The event ID. */
+                        id?: number;
+                        /** @description The retry time in milliseconds. */
+                        retry?: number;
+                    } | {
+                        data: components["schemas"]["Notice"];
+                        /**
+                         * @description The event name.
+                         * @constant
+                         */
+                        event: "notice";
+                        /** @description The event ID. */
+                        id?: number;
+                        /** @description The retry time in milliseconds. */
+                        retry?: number;
+                    })[];
                 };
             };
             /** @description Error */

@@ -14,11 +14,13 @@ import (
 
 	"github.com/aurimasniekis/go-pulse/internal/audit"
 	"github.com/aurimasniekis/go-pulse/internal/auth"
+	"github.com/aurimasniekis/go-pulse/internal/clients"
 	"github.com/aurimasniekis/go-pulse/internal/query"
 	"github.com/aurimasniekis/go-pulse/internal/rollup"
 	"github.com/aurimasniekis/go-pulse/internal/store"
 	"github.com/aurimasniekis/go-pulse/internal/sysapi"
 	"github.com/aurimasniekis/go-pulse/internal/tail"
+	"github.com/aurimasniekis/go-pulse/internal/tokens"
 )
 
 func init() {
@@ -31,19 +33,27 @@ const AdminPrefix = "/api/admin/v1"
 
 // Deps are the services the APIs use. Spec generation passes a zero Deps: handlers must not run then.
 type Deps struct {
-	Log        *slog.Logger
-	Version    string
-	Profile    string
-	DB         *store.DB
-	NC         *nats.Conn
-	JS         jetstream.JetStream
-	Sys        *sysapi.Client
-	Query      *query.Engine
-	Tail       *tail.Manager
-	Rollup     *rollup.Engine
-	Auth       auth.Authenticator
-	AdminHosts []string
-	Ready      func() bool
+	Log     *slog.Logger
+	Version string
+	Profile string
+	DB      *store.DB
+	NC      *nats.Conn
+	JS      jetstream.JetStream
+	Sys     *sysapi.Client
+	Query   *query.Engine
+	Tail    *tail.Manager
+	Rollup  *rollup.Engine
+	Tokens  *tokens.Service
+	Clients *clients.Service
+	// Connection details shown in snippets and the system page.
+	PublicNATSURL string
+	PublicURL     string
+	CACertPEM     string
+	// OnAuthFailure is told about failed token authentication (the ban detector, M8). May be nil.
+	OnAuthFailure func(ip, source string)
+	Auth          auth.Authenticator
+	AdminHosts    []string
+	Ready         func() bool
 }
 
 func (d *Deps) log() *slog.Logger {
@@ -94,6 +104,9 @@ func NewAdminAPI(mux *http.ServeMux, d *Deps) huma.API {
 	registerStreams(api, d)
 	registerEvents(api, d)
 	registerRollups(api, d)
+	registerClients(api, d)
+	registerTokens(api, d)
+	registerAudit(api, d)
 	return api
 }
 
@@ -125,6 +138,11 @@ type SystemInfo struct {
 		RTTMillis  float64 `json:"rtt_ms"`
 	} `json:"nats"`
 	JetStream *sysapi.Jsz `json:"jetstream,omitempty"`
+	Connect   struct {
+		NATSURL   string `json:"nats_url" doc:"Where tools connect (raw NATS TLS)"`
+		PublicURL string `json:"public_url" doc:"Base URL of the public HTTP API"`
+		CACert    string `json:"ca_cert" doc:"Internal CA (PEM); clients need it while 4222 serves the bootstrap certificate"`
+	} `json:"connect"`
 }
 
 func registerSystem(api huma.API, d *Deps) {
@@ -134,6 +152,7 @@ func registerSystem(api huma.API, d *Deps) {
 		out := &struct{ Body SystemInfo }{}
 		b := &out.Body
 		b.Version, b.Profile = d.Version, d.Profile
+		b.Connect.NATSURL, b.Connect.PublicURL, b.Connect.CACert = d.PublicNATSURL, d.PublicURL, d.CACertPEM
 		if d.Auth != nil {
 			b.AuthMode = d.Auth.Mode()
 		}

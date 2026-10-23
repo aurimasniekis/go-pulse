@@ -1,6 +1,68 @@
 {
   "components": {
     "schemas": {
+      "BatchEvent": {
+        "additionalProperties": false,
+        "properties": {
+          "content_type": {
+            "maxLength": 128,
+            "type": "string"
+          },
+          "data": {
+            "description": "Any JSON value; a JSON string is stored as text"
+          },
+          "data_base64": {
+            "description": "Binary payload; exclusive with data",
+            "type": "string"
+          },
+          "id": {
+            "description": "Idempotency key (Nats-Msg-Id)",
+            "maxLength": 128,
+            "type": "string"
+          },
+          "source": {
+            "maxLength": 256,
+            "type": "string"
+          },
+          "subject": {
+            "maxLength": 256,
+            "type": "string"
+          },
+          "type": {
+            "maxLength": 256,
+            "type": "string"
+          }
+        },
+        "required": [
+          "subject"
+        ],
+        "type": "object"
+      },
+      "BlobRef": {
+        "additionalProperties": false,
+        "properties": {
+          "bucket": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "sha256": {
+            "type": "string"
+          },
+          "size": {
+            "format": "int64",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "bucket",
+          "name",
+          "size",
+          "sha256"
+        ],
+        "type": "object"
+      },
       "ErrorDetail": {
         "additionalProperties": false,
         "properties": {
@@ -79,6 +141,175 @@
         },
         "type": "object"
       },
+      "EventDTO": {
+        "additionalProperties": false,
+        "properties": {
+          "blob": {
+            "$ref": "#/components/schemas/BlobRef"
+          },
+          "content_type": {
+            "type": "string"
+          },
+          "data": {
+            "type": "string"
+          },
+          "encoding": {
+            "enum": [
+              "utf8",
+              "base64"
+            ],
+            "type": "string"
+          },
+          "event_time": {
+            "description": "ce-time",
+            "format": "date-time",
+            "type": "string"
+          },
+          "headers": {
+            "additionalProperties": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "type": "object"
+          },
+          "id": {
+            "type": "string"
+          },
+          "seq": {
+            "format": "int64",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "size": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "source": {
+            "type": "string"
+          },
+          "stream": {
+            "type": "string"
+          },
+          "stream_time": {
+            "description": "When NATS stored the event",
+            "format": "date-time",
+            "type": "string"
+          },
+          "subject": {
+            "type": "string"
+          },
+          "subject_valid": {
+            "description": "Subject follows evt.\u003cdomain\u003e.\u003centity\u003e.\u003caction\u003e[.\u003ckey\u003e]",
+            "type": "boolean"
+          },
+          "type": {
+            "type": "string"
+          },
+          "untyped": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "stream",
+          "seq",
+          "subject",
+          "stream_time",
+          "size",
+          "headers",
+          "data",
+          "encoding",
+          "untyped",
+          "subject_valid"
+        ],
+        "type": "object"
+      },
+      "EventsPage": {
+        "additionalProperties": false,
+        "properties": {
+          "$schema": {
+            "description": "A URL to the JSON Schema for this object.",
+            "examples": [
+              "/api/v1/EventsPage.json"
+            ],
+            "format": "uri",
+            "readOnly": true,
+            "type": "string"
+          },
+          "events": {
+            "items": {
+              "$ref": "#/components/schemas/EventDTO"
+            },
+            "type": "array"
+          },
+          "first_seq": {
+            "format": "int64",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "last_seq": {
+            "format": "int64",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "next": {
+            "description": "Cursor for the next page; absent at the end",
+            "type": "string"
+          },
+          "partial": {
+            "description": "The scan budget ran out before the page filled; continue with next",
+            "type": "boolean"
+          },
+          "reason": {
+            "enum": [
+              "msgs",
+              "bytes",
+              "time"
+            ],
+            "type": "string"
+          },
+          "scanned": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "scanned_bytes": {
+            "format": "int64",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "events",
+          "scanned",
+          "scanned_bytes",
+          "partial",
+          "first_seq",
+          "last_seq"
+        ],
+        "type": "object"
+      },
+      "Notice": {
+        "additionalProperties": false,
+        "properties": {
+          "dropped": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "rate": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "reason": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "dropped",
+          "reason",
+          "rate"
+        ],
+        "type": "object"
+      },
       "Public-healthResponse": {
         "additionalProperties": false,
         "properties": {
@@ -99,16 +330,203 @@
           "status"
         ],
         "type": "object"
+      },
+      "Publish-batchRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "$schema": {
+            "description": "A URL to the JSON Schema for this object.",
+            "examples": [
+              "/api/v1/Publish-batchRequest.json"
+            ],
+            "format": "uri",
+            "readOnly": true,
+            "type": "string"
+          },
+          "events": {
+            "items": {
+              "$ref": "#/components/schemas/BatchEvent"
+            },
+            "maxItems": 100,
+            "minItems": 1,
+            "type": "array"
+          }
+        },
+        "required": [
+          "events"
+        ],
+        "type": "object"
+      },
+      "Publish-batchResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "$schema": {
+            "description": "A URL to the JSON Schema for this object.",
+            "examples": [
+              "/api/v1/Publish-batchResponse.json"
+            ],
+            "format": "uri",
+            "readOnly": true,
+            "type": "string"
+          },
+          "results": {
+            "items": {
+              "$ref": "#/components/schemas/PublishOutput"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "results"
+        ],
+        "type": "object"
+      },
+      "PublishOutput": {
+        "additionalProperties": false,
+        "properties": {
+          "$schema": {
+            "description": "A URL to the JSON Schema for this object.",
+            "examples": [
+              "/api/v1/PublishOutput.json"
+            ],
+            "format": "uri",
+            "readOnly": true,
+            "type": "string"
+          },
+          "duplicate": {
+            "type": "boolean"
+          },
+          "id": {
+            "type": "string"
+          },
+          "seq": {
+            "format": "int64",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "stream": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "stream",
+          "seq",
+          "id",
+          "duplicate"
+        ],
+        "type": "object"
+      }
+    },
+    "securitySchemes": {
+      "bearer": {
+        "scheme": "bearer",
+        "type": "http"
       }
     }
   },
   "info": {
-    "description": "Token-authenticated HTTP ingress for tools that cannot speak NATS.",
+    "description": "Token-authenticated HTTP ingress for tools that cannot speak NATS. Send `Authorization: Bearer pulse_…`.",
     "title": "Pulse public API",
     "version": "v1"
   },
   "openapi": "3.1.0",
   "paths": {
+    "/events": {
+      "get": {
+        "description": "Oldest first from `since` or `seq`, paged with `cursor`. Needs a subscribe grant covering `subject`.",
+        "operationId": "replay",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "Authorization",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "explode": false,
+            "in": "query",
+            "name": "subject",
+            "required": true,
+            "schema": {
+              "maxLength": 256,
+              "type": "string"
+            }
+          },
+          {
+            "explode": false,
+            "in": "query",
+            "name": "since",
+            "schema": {
+              "format": "date-time",
+              "type": "string"
+            }
+          },
+          {
+            "explode": false,
+            "in": "query",
+            "name": "seq",
+            "schema": {
+              "format": "int64",
+              "minimum": 0,
+              "type": "integer"
+            }
+          },
+          {
+            "explode": false,
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "default": 100,
+              "format": "int64",
+              "maximum": 500,
+              "minimum": 1,
+              "type": "integer"
+            }
+          },
+          {
+            "explode": false,
+            "in": "query",
+            "name": "cursor",
+            "schema": {
+              "maxLength": 512,
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EventsPage"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Replay events",
+        "tags": [
+          "ingest"
+        ]
+      }
+    },
     "/health": {
       "get": {
         "operationId": "public-health",
@@ -137,6 +555,389 @@
         "summary": "Liveness",
         "tags": [
           "health"
+        ]
+      }
+    },
+    "/publish": {
+      "post": {
+        "description": "All events are authorized before any is published.",
+        "operationId": "publish-batch",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "Authorization",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Publish-batchRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Publish-batchResponse"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Publish up to 100 events",
+        "tags": [
+          "ingest"
+        ]
+      }
+    },
+    "/publish/{subject}": {
+      "post": {
+        "description": "The request body is the payload, stored as-is. Envelope fields come from headers.",
+        "operationId": "publish",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "Authorization",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "subject",
+            "required": true,
+            "schema": {
+              "maxLength": 256,
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "Ce-Type",
+            "schema": {
+              "maxLength": 256,
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "Ce-Source",
+            "schema": {
+              "maxLength": 256,
+              "type": "string"
+            }
+          },
+          {
+            "description": "Stored as Nats-Msg-Id; retries within 2 minutes are de-duplicated",
+            "in": "header",
+            "name": "Idempotency-Key",
+            "schema": {
+              "description": "Stored as Nats-Msg-Id; retries within 2 minutes are de-duplicated",
+              "maxLength": 128,
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "Content-Type",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/octet-stream": {
+              "schema": {
+                "contentMediaType": "application/octet-stream",
+                "format": "binary",
+                "type": "string"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublishOutput"
+                }
+              }
+            },
+            "description": "Created"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Publish one event",
+        "tags": [
+          "ingest"
+        ]
+      }
+    },
+    "/request/{subject}": {
+      "post": {
+        "description": "Sends the body as a NATS request and returns the reply body. 503 when nobody serves the subject, 504 on timeout.",
+        "operationId": "request",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "Authorization",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "subject",
+            "required": true,
+            "schema": {
+              "maxLength": 256,
+              "type": "string"
+            }
+          },
+          {
+            "explode": false,
+            "in": "query",
+            "name": "timeout_ms",
+            "schema": {
+              "default": 5000,
+              "format": "int64",
+              "maximum": 30000,
+              "minimum": 100,
+              "type": "integer"
+            }
+          },
+          {
+            "in": "header",
+            "name": "Content-Type",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/octet-stream": {
+              "schema": {
+                "contentMediaType": "application/octet-stream",
+                "format": "binary",
+                "type": "string"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "contentEncoding": "base64",
+                  "type": "string"
+                }
+              }
+            },
+            "description": "OK",
+            "headers": {
+              "Content-Type": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Request/reply bridge",
+        "tags": [
+          "ingest"
+        ]
+      }
+    },
+    "/tail": {
+      "get": {
+        "description": "Streams `event` messages (id = stream sequence; resume with Last-Event-ID). Needs a subscribe grant covering `subject`.",
+        "operationId": "tail",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "Authorization",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Filter; default evt.\u003e",
+            "explode": false,
+            "in": "query",
+            "name": "subject",
+            "schema": {
+              "description": "Filter; default evt.\u003e",
+              "maxLength": 256,
+              "type": "string"
+            }
+          },
+          {
+            "explode": false,
+            "in": "query",
+            "name": "since",
+            "schema": {
+              "format": "date-time",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "Last-Event-ID",
+            "schema": {
+              "format": "int64",
+              "minimum": 0,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "text/event-stream": {
+                "schema": {
+                  "description": "Each oneOf object in the array represents one possible Server Sent Events (SSE) message, serialized as UTF-8 text according to the SSE specification.",
+                  "items": {
+                    "oneOf": [
+                      {
+                        "properties": {
+                          "data": {
+                            "$ref": "#/components/schemas/EventDTO"
+                          },
+                          "event": {
+                            "const": "event",
+                            "description": "The event name.",
+                            "type": "string"
+                          },
+                          "id": {
+                            "description": "The event ID.",
+                            "type": "integer"
+                          },
+                          "retry": {
+                            "description": "The retry time in milliseconds.",
+                            "type": "integer"
+                          }
+                        },
+                        "required": [
+                          "data",
+                          "event"
+                        ],
+                        "title": "Event event",
+                        "type": "object"
+                      },
+                      {
+                        "properties": {
+                          "data": {
+                            "$ref": "#/components/schemas/Notice"
+                          },
+                          "event": {
+                            "const": "notice",
+                            "description": "The event name.",
+                            "type": "string"
+                          },
+                          "id": {
+                            "description": "The event ID.",
+                            "type": "integer"
+                          },
+                          "retry": {
+                            "description": "The retry time in milliseconds.",
+                            "type": "integer"
+                          }
+                        },
+                        "required": [
+                          "data",
+                          "event"
+                        ],
+                        "title": "Event notice",
+                        "type": "object"
+                      }
+                    ]
+                  },
+                  "title": "Server Sent Events",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Live events (SSE)",
+        "tags": [
+          "ingest"
         ]
       }
     }

@@ -139,3 +139,29 @@ func TestAccountEquivalent(t *testing.T) {
 		t.Fatal("garbage considered equivalent")
 	}
 }
+
+func TestSubsetAndAllows(t *testing.T) {
+	for _, c := range []struct {
+		filter, pattern string
+		want            bool
+	}{
+		{"evt.a.b.c", "evt.a.>", true}, {"evt.a", "evt.a.>", false}, {"evt.a.>", "evt.a.>", true}, {"evt.a.b.>", "evt.a.>", true},
+		{"evt.>", "evt.a.>", false}, {"evt.*.b.c", "evt.a.>", false}, {"evt.a.*.c", "evt.a.>", true}, {"evt.a.b", "evt.*.b", true},
+		{"evt.*.b", "evt.*.b", true}, {"evt.>", "evt.*.b", false}, {"evt.a.b", "evt.a.b", true}, {"evt.a.b", "evt.a.c", false},
+		{"evt.a.b.c", "evt.a.b", false}, {">", ">", true}, {"x", ">", true},
+	} {
+		if got := Subset(c.filter, c.pattern); got != c.want {
+			t.Errorf("Subset(%q, %q) = %v", c.filter, c.pattern, got)
+		}
+	}
+	gs := []Grant{{Action: ActPublish, Subject: "evt.home.>"}, {Action: ActDurable, Subject: "evt.work.>", Name: "x"}, {Action: ActRequest, Subject: "svc.*"}}
+	if !Allows(gs, ActPublish, "evt.home.door.opened") || Allows(gs, ActPublish, "evt.work.a.b") {
+		t.Error("publish")
+	}
+	if !Allows(gs, ActSubscribe, "evt.work.build.>") || Allows(gs, ActSubscribe, "evt.home.>") {
+		t.Error("subscribe via durable")
+	}
+	if !Allows(gs, ActRequest, "svc.weather") || Allows(gs, ActRequest, "svc.a.b") {
+		t.Error("request")
+	}
+}

@@ -42,3 +42,9 @@ export function unwrap<T>(res: { data?: T; error?: unknown; response: Response }
   }
   return res.data
 }
+
+export type Grant = Schemas['Grant']
+export type ClientDTO = Schemas['ClientDTO']
+export type ConnDTO = Schemas['ConnDTO']
+export type TokenDTO = Schemas['Token']
+export type AuditEntry = Schemas['Entry']

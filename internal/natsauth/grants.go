@@ -43,7 +43,7 @@ const BlobsBucket = "blobs"
 
 // Grant is one permission statement on a client or HTTP token.
 type Grant struct {
-	Action  Action `json:"action"`
+	Action  Action `json:"action" enum:"publish,subscribe,request,reply,durable,blobs"`
 	Subject string `json:"subject,omitempty"`
 	Stream  string `json:"stream,omitempty"`
 	Name    string `json:"name,omitempty"`

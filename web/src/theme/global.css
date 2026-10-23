@@ -10,3 +10,13 @@ body {
   font-family: var(--pulse-mono);
   font-size: var(--mantine-font-size-sm);
 }
+
+/* Code must read exactly as typed: no programming ligatures (e.g. != rendered as ≠). */
+code,
+pre,
+kbd,
+.mono,
+[style*='font-family-monospace'] {
+  font-variant-ligatures: none;
+  font-feature-settings: 'liga' 0, 'calt' 0;
+}

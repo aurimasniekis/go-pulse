@@ -38,6 +38,8 @@ type Config struct {
 	NATSWebsocketURL    string // where pulsed proxies /ws to
 	NATSMaxFileStore    int64
 	RawHost             string // r.events.wan.lt
+	PublicNATSURL       string // what tools use, shown in snippets
+	PublicURL           string // public HTTPS base URL, shown in snippets
 	PublicHost          string // events.wan.lt
 	EventsMaxBytes      int64
 
@@ -80,6 +82,8 @@ func Load(getenv Getenv) (*Config, error) {
 		NATSMaxFileStore:       e.bytes("PULSE_NATS_MAX_FILE_STORE", 0),
 		RawHost:                e.str("PULSE_RAW_HOST", ""),
 		PublicHost:             e.str("PULSE_PUBLIC_HOST", ""),
+		PublicNATSURL:          e.str("PULSE_PUBLIC_NATS_URL", ""),
+		PublicURL:              e.str("PULSE_PUBLIC_URL", ""),
 		EventsMaxBytes:         e.bytes("PULSE_EVENTS_MAX_BYTES", 10<<30),
 		PublicAddr:             e.strAllowEmpty("PULSE_PUBLIC_ADDR", ":8443"),
 		AdminAddr:              e.str("PULSE_ADMIN_ADDR", "127.0.0.1:8080"),
@@ -91,6 +95,16 @@ func Load(getenv Getenv) (*Config, error) {
 		OriginCertFile:         e.str("PULSE_ORIGIN_CERT_FILE", ""),
 		OriginKeyFile:          e.str("PULSE_ORIGIN_KEY_FILE", ""),
 		ShutdownTimeout:        e.dur("PULSE_SHUTDOWN_TIMEOUT", 20*time.Second),
+	}
+	if c.PublicNATSURL == "" {
+		host := c.RawHost
+		if host == "" {
+			host = "localhost"
+		}
+		c.PublicNATSURL = "tls://" + host + ":4222"
+	}
+	if c.PublicURL == "" && c.PublicHost != "" {
+		c.PublicURL = "https://" + c.PublicHost
 	}
 	mk, err := e.secret("PULSE_MASTER_KEY", c.Profile == ProfileProd)
 	if err != nil {

@@ -46,10 +46,23 @@ func toDTO(m query.Message) EventDTO {
 		t := e.Time
 		d.EventTime = &t
 	}
-	if utf8.Valid(m.Data) {
+	if isText(m.Data) {
 		d.Data, d.Encoding = string(m.Data), "utf8"
 	} else {
 		d.Data, d.Encoding = base64.StdEncoding.EncodeToString(m.Data), "base64"
 	}
 	return d
+}
+
+// isText reports whether data is UTF-8 without control characters other than tab, newline and carriage return.
+func isText(data []byte) bool {
+	if !utf8.Valid(data) {
+		return false
+	}
+	for _, r := range string(data) {
+		if r < 0x20 && r != '\t' && r != '\n' && r != '\r' || r == 0x7f {
+			return false
+		}
+	}
+	return true
 }

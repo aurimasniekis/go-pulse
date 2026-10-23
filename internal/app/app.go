@@ -16,6 +16,7 @@ import (
 	"github.com/nats-io/nats.go/jetstream"
 
 	"github.com/aurimasniekis/go-pulse/internal/api"
+	"github.com/aurimasniekis/go-pulse/internal/audit"
 	"github.com/aurimasniekis/go-pulse/internal/auth"
 	"github.com/aurimasniekis/go-pulse/internal/bootstrap"
 	"github.com/aurimasniekis/go-pulse/internal/certs"
@@ -28,6 +29,7 @@ import (
 	"github.com/aurimasniekis/go-pulse/internal/streams"
 	"github.com/aurimasniekis/go-pulse/internal/sysapi"
 	"github.com/aurimasniekis/go-pulse/internal/tail"
+	"github.com/aurimasniekis/go-pulse/internal/tokens"
 )
 
 // App is a running pulsed.
@@ -153,7 +155,8 @@ func Start(ctx context.Context, cfg *config.Config, log *slog.Logger) (*App, err
 		return nil, err
 	}
 	deps := &api.Deps{Log: log, Version: Version, Profile: cfg.Profile, DB: a.DB, NC: a.AppConn, JS: a.JS, Sys: a.Sys,
-		Query: a.Query, Tail: a.Tail, Rollup: a.Rollup, Auth: authn, AdminHosts: cfg.AdminHosts, Ready: a.Ready}
+		Query: a.Query, Tail: a.Tail, Rollup: a.Rollup, Auth: authn, Tokens: tokens.New(a.DB), Clients: a.Clients,
+		PublicNATSURL: cfg.PublicNATSURL, PublicURL: cfg.PublicURL, CACertPEM: a.Keys.CACert, AdminHosts: cfg.AdminHosts, Ready: a.Ready}
 	if err := a.serve(ctx, "admin", cfg.AdminAddr, api.NewAdmin(deps)); err != nil {
 		return nil, err
 	}
@@ -166,10 +169,15 @@ func Start(ctx context.Context, cfg *config.Config, log *slog.Logger) (*App, err
 			}
 			tlsConf = &tls.Config{Certificates: []tls.Certificate{cert}, MinVersion: tls.VersionTLS12}
 		}
-		if err := a.serveTLS(ctx, "public", cfg.PublicAddr, api.NewPublic(deps), tlsConf); err != nil {
+		if err := a.serveTLS(ctx, "public", cfg.PublicAddr, api.NewPublic(deps), tlsConf); err != nil { //nolint:contextcheck // handlers use the per-request context from Huma
 			return nil, err
 		}
 	}
+	a.goLoop(a.loopCtx, "audit-prune", time.Hour, func(ctx context.Context) { //nolint:contextcheck // loops outlive startup
+		if err := audit.Prune(ctx, a.DB, 400*24*time.Hour); err != nil {
+			log.Warn("prune audit", "err", err)
+		}
+	})
 	a.goLoop(a.loopCtx, "account-sync", time.Minute, func(ctx context.Context) { //nolint:contextcheck // loops outlive startup
 		if _, err := a.Clients.Sync(ctx, false); err != nil {
 			log.Warn("account sync", "err", err)

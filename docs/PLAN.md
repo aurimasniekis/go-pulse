@@ -165,8 +165,8 @@ Status values: `planned`, `in-progress`, `implemented`, `tested`, `externally-ve
 | M2 | Envelope, EVENTS, Go SDK, CLI | tested (spike pending user run) | 1e417c0 |
 | M3 | API and query engine | tested | 9e15025 |
 | M4 | UI core | tested | 4d21daf |
-| M5 | Rollups | tested | (this commit) |
-| M6 | Clients and ingress | planned | |
+| M5 | Rollups | tested | 07f01fd |
+| M6 | Clients and ingress | tested | (this commit) |
 | M7 | Webhooks | planned | |
 | M8 | Security and edge TLS | planned | |
 | M9 | ACME | planned | |
@@ -188,6 +188,7 @@ Status values: `planned`, `in-progress`, `implemented`, `tested`, `externally-ve
 | 2026-10-23 | M3 | Huma admin/public APIs, auth seam, Host allowlist (DNS rebinding), CSRF header, explorer engine (direct get batch, ordered consumer, backward windows, cursors, budgets), SSE tail, `pulsed openapi` + TS types (separate TS5 apigen package), UI served from the binary. |
 | 2026-10-23 | M4 | Shell with NATS status indicator, Explorer (URL filters, virtualized table, cursor paging, budget notice, event drawer with payload views and replay command), Live tail (SSE, buffered rendering, sampling notices), Streams list/detail/create/edit/delete, consumers. vitest + Playwright (6 smoke tests vs dev stack). Seeded-data e2e waits for M6 (no client creds in the dev stack yet). |
 | 2026-10-23 | M5 | Rollup engine (headers-only ordered consumers, exactly-once with checkpoint in the same SQLite tx, per-resolution dimensions, minute cache, key sampling, pruning), overview/throughput/subject tree APIs, admin publish endpoint, Overview (KPIs, ECharts throughput, rank lists, forecast) and Subjects pages; data-seeded e2e (9 tests). |
+| 2026-10-24 | M6 | HTTP tokens (hashed, CIDR-limited), public publish/batch/request/replay/tail with grant checks and an auth-failure hook for M8, clients/tokens/audit admin APIs, Clients (grants editor, show-once creds + snippets, rotate, revoke, live connections), HTTP tokens and Audit pages; e2e publishes through the public API with an issued token. Python/TS snippets describe the M13 SDK API and must match it. |
 
 ## 6. Acceptance checklist (mapped to requirement IDs)
 
@@ -229,17 +230,17 @@ E browser E2E · C CI/static check · S spike/perf · R restore drill · X exter
 #### PL-AUTH — Tool client identity
 
 - [x] `PL-AUTH-001` Operator mode — M1 — ✅ tested: internal/clients integration tests (embedded server from generated nats.conf)
-- [ ] `PL-AUTH-002` Client records — M6
+- [x] `PL-AUTH-002` Client records — M6 — ✅ tested: internal/clients; internal/api TestClientsAndAuditAPI
 - [x] `PL-AUTH-003` Least privilege — M2 — ✅ tested: natsauth TestPermissionsNoGrants (sentinel); clients TestCredsConnectAndLeastPrivilege
-- [ ] `PL-AUTH-004` Credentials once — M6
+- [x] `PL-AUTH-004` Credentials once — M6 — ✅ tested: creds returned once by create/rotate (internal/api); seed never stored (clients table has keys only); e2e show-once modal
 - [x] `PL-AUTH-005` Grants to permissions — M2 — ✅ tested: natsauth TestPermissionsByAction; pkg/pulse durable/ordered/blobs with real permissions
 - [x] `PL-AUTH-006` Explicit denies — M2 — ✅ tested: natsauth TestPermissionsNoGrants; clients least-privilege violations ($JS stream delete, $KV)
-- [ ] `PL-AUTH-007` Revocation — M6
-- [ ] `PL-AUTH-008` Rotation — M6
-- [ ] `PL-AUTH-009` Grant edits — M6
-- [ ] `PL-AUTH-010` Connection view — M6
-- [ ] `PL-AUTH-011` Snippets — M6
-- [ ] `PL-AUTH-012` Expiry warnings — M6
+- [x] `PL-AUTH-007` Revocation — M6 — ✅ tested: internal/clients TestRevokeDisconnects (< 5 s); API + e2e revoke
+- [x] `PL-AUTH-008` Rotation — M6 — ✅ tested: internal/clients TestRotate; API + e2e rotate
+- [x] `PL-AUTH-009` Grant edits — M6 — ✅ tested: internal/clients TestGrantEditReconnectsConnectedClient; API version conflict 409; e2e grants edit
+- [x] `PL-AUTH-010` Connection view — M6 — ✅ implemented + tested: /clients/{id}/connections (CONNZ by user key), list connection counts; UI table (populated path covered by internal/clients Connections test)
+- [x] `PL-AUTH-011` Snippets — M6 — ✅ tested: web/src/lib/snippets.test.ts; e2e creds modal shows snippets
+- [ ] `PL-AUTH-012` Expiry warnings — M6 — ◐ partial: expires_soon flag in API and UI warnings; alert event arrives with M10
 
 #### PL-ADM — Dashboard access
 
@@ -276,14 +277,14 @@ E browser E2E · C CI/static check · S spike/perf · R restore drill · X exter
 
 #### PL-ING — HTTP ingress
 
-- [ ] `PL-ING-001` HTTP tokens — M6
-- [ ] `PL-ING-002` Publish — M6
-- [ ] `PL-ING-003` Batch publish — M6
-- [ ] `PL-ING-004` Request bridge — M6
-- [ ] `PL-ING-005` HTTP replay — M6
-- [ ] `PL-ING-006` SSE tail — M6
-- [ ] `PL-ING-007` Authorization — M6
-- [ ] `PL-ING-008` Audit — M6
+- [x] `PL-ING-001` HTTP tokens — M6 — ✅ tested: internal/tokens TestLifecycle/TestExpiryAndValidation (hash, prefix, CIDR, expiry, revoke)
+- [x] `PL-ING-002` Publish — M6 — ✅ tested: internal/api TestIngest (envelope headers, idempotency); e2e publish with issued token
+- [x] `PL-ING-003` Batch publish — M6 — ✅ tested: internal/api TestIngest batch (payload kinds, all-or-nothing authorization)
+- [x] `PL-ING-004` Request bridge — M6 — ✅ tested: internal/api TestIngest request bridge (reply, 503, 403)
+- [x] `PL-ING-005` HTTP replay — M6 — ✅ tested: internal/api TestIngest replay (paged, grant subset)
+- [x] `PL-ING-006` SSE tail — M6 — ✅ tested: internal/api TestPublicTailAuth (401/403 before stream, event delivery)
+- [x] `PL-ING-007` Authorization — M6 — ✅ tested: internal/api TestIngest/TestTokenCIDR (401 + WWW-Authenticate + auth-failure hook, 403)
+- [x] `PL-ING-008` Audit — M6 — ✅ tested: token create/revoke audited (internal/tokens), audit API
 
 #### PL-HOOK — Webhooks
 
@@ -356,7 +357,7 @@ E browser E2E · C CI/static check · S spike/perf · R restore drill · X exter
 - [x] `PL-DB-002` Migrations — M1 — ✅ tested: internal/store TestMigrationsAndReopen, TestRefuseNewerSchema
 - [x] `PL-DB-003` Single owner — M1 — ✅ tested: internal/store TestExclusiveLock; internal/app second Start refused
 - [ ] `PL-DB-004` No network I/O in transactions — M1 — ◐ implemented: clients service prepares keys before Write and pushes after commit; no analyzer enforces it yet
-- [ ] `PL-DB-005` Retention — M1 — ◐ partial: revocations, rollup_1m (8 d) and rollup_1h (400 d) pruning tested; delivery log/alerts/audit/bans arrive with their milestones
+- [ ] `PL-DB-005` Retention — M1 — ◐ partial: revocations, rollups (8 d / 400 d) and audit (400 d) pruned; delivery log, alerts, bans arrive with their milestones
 - [ ] `PL-DB-006` Permissions and placement — M1 — ◐ partial: 0700/0600 modes tested (TestDatabaseFileMode); Linux network-FS refusal implemented, untested
 - [x] `PL-DB-007` Integrity — M1 — ✅ tested: internal/store TestCorruptDatabaseRefused
 
@@ -369,7 +370,7 @@ E browser E2E · C CI/static check · S spike/perf · R restore drill · X exter
 - [x] `PL-UI-005` Typed API — M4 — ✅ tested: web/src/api/client.ts (openapi-fetch + generated types), typecheck in CI
 - [ ] `PL-UI-006` Charts — M4 — ◐ implemented: ECharts (SVG) themed from Mantine tokens per color scheme, palette validated with the dataviz validator (light/dark); no visual regression test
 - [x] `PL-UI-007` Large lists — M4 — ✅ implemented: VirtualTable (@tanstack/react-virtual) for explorer/tail; e2e renders it
-- [ ] `PL-UI-008` Secret display — M4 — ◐ pending M6 (creds/token display)
+- [x] `PL-UI-008` Secret display — M4 — ✅ tested: SecretModal (copy/download, dropped from state on close); e2e checks the secret disappears
 - [ ] `PL-UI-009` Tests — M12
 - [ ] `PL-UI-010` Missing UI — M0 — ◐ implemented: internal/api uiHandler serves a notice when the UI is not built; that path is untested (tests run with a built UI); SPA fallback tested
 
@@ -399,9 +400,9 @@ E browser E2E · C CI/static check · S spike/perf · R restore drill · X exter
 
 #### PL-AUD — Audit
 
-- [ ] `PL-AUD-001` Audit stream — M6
-- [ ] `PL-AUD-002` Audit page — M12
-- [ ] `PL-AUD-003` No secrets — M6
+- [x] `PL-AUD-001` Audit stream — M6 — ✅ tested: audit rows for client, token, stream, consumer, event publish and key export actions
+- [ ] `PL-AUD-002` Audit page — M12 — ◐ implemented: Audit page with action/actor/target/result filters and paging; time-range filter UI pending M12
+- [x] `PL-AUD-003` No secrets — M6 — ✅ tested: TestClientsAndAuditAPI asserts no seed in audit output; details carry names/grants/keys only
 
 #### PL-TST — Testing
 

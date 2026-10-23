@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"strings"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -23,8 +24,11 @@ import (
 	"github.com/aurimasniekis/go-pulse/internal/sysapi"
 	"github.com/aurimasniekis/go-pulse/internal/tail"
 	"github.com/aurimasniekis/go-pulse/internal/testutil/natstest"
+	"github.com/aurimasniekis/go-pulse/internal/tokens"
 	"github.com/aurimasniekis/go-pulse/pkg/pulse"
 )
+
+var authFailures atomic.Int64
 
 type harness struct {
 	admin  *httptest.Server
@@ -59,7 +63,9 @@ func newHarness(t *testing.T) *harness {
 	go func() { ro.Run(rctx); close(rdone) }()
 	t.Cleanup(func() { rcancel(); <-rdone })
 	d := &Deps{Version: "test", Profile: "dev", DB: db, NC: nc, JS: js, Sys: sys, Query: query.New(js, 4, query.DefaultBudget),
-		Tail: tail.New(js, 2, 1000), Rollup: ro, Auth: auth.None{}, Ready: func() bool { return true }}
+		Tail: tail.New(js, 2, 1000), Rollup: ro, Auth: auth.None{}, Ready: func() bool { return true },
+		Tokens: tokens.New(db), Clients: clients.New(db, env.Keys, sys, nil)}
+	d.OnAuthFailure = func(ip, source string) { authFailures.Add(1) }
 	h := &harness{admin: httptest.NewServer(NewAdmin(d)), public: httptest.NewServer(NewPublic(d)), app: app, db: db, deps: d}
 	t.Cleanup(h.admin.Close)
 	t.Cleanup(h.public.Close)
