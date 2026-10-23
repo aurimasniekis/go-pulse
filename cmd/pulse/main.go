@@ -1,4 +1,4 @@
-// Command pulse is the Pulse CLI: publish, subscribe and replay events, manage contexts.
+// Command pulse is the Pulse CLI: publish, subscribe and replay events, manage contexts (PL-SDK-006).
 package main
 
 import (
@@ -22,10 +22,12 @@ func main() {
 }
 
 func newRootCmd() *cobra.Command {
-	return &cobra.Command{
+	root := &cobra.Command{
 		Use:          "pulse",
 		Short:        "Pulse CLI",
 		Version:      app.Version,
 		SilenceUsage: true,
 	}
+	root.AddCommand(newContextCmd(), newPubCmd(), newSubCmd())
+	return root
 }

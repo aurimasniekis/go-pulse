@@ -1,0 +1,38 @@
+# M2 gate spike (PL-TST-006): init + nats under the production memory limit. Driven by scripts/spike.sh.
+x-pulse-env: &pulse-env
+  PULSE_PROFILE: dev
+  PULSE_MASTER_KEY_FILE: /run/secrets/pulse_master_key
+  PULSE_NATS_MAX_FILE_STORE: 60GiB
+
+secrets:
+  pulse_master_key:
+    file: ../.dev/master.key
+
+volumes:
+  pulsed-data:
+  nats-data:
+
+services:
+  init:
+    image: pulsed:dev
+    command: ["init"]
+    environment: *pulse-env
+    secrets: [pulse_master_key]
+    volumes: [pulsed-data:/data/pulsed, nats-data:/data/nats]
+    network_mode: none
+    healthcheck: { disable: true }
+
+  nats:
+    image: nats:2.15.1-alpine@sha256:7ae34c25dfd6fe2e01c6483eabef20d796690fdcac6c4d94ca780a6cf9877fde
+    user: "65532:65532"
+    command: ["-c", "/data/nats/nats.conf"]
+    environment: { GOMEMLIMIT: 600MiB }
+    volumes: [nats-data:/data/nats]
+    depends_on:
+      init: { condition: service_completed_successfully }
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8222/healthz?js-enabled-only=true"]
+      interval: 5s
+      retries: 60
+    mem_limit: 900m
+    cpus: 2

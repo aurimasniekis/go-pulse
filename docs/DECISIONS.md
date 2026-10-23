@@ -35,7 +35,8 @@
 - **Status:** accepted
 - **Decision:** `EVENTS` on `evt.>`: file storage, `max_age` 0 (forever), `max_msgs` −1, `max_bytes` = configured value
   (deployment computes 60% of the data disk), `discard: old`, `compression: s2`, `duplicate_window: 2m`, `allow_direct: true`,
-  1 replica, `max_msg_size` 1 MiB. Extra user streams are created from the dashboard and may not overlap `evt.>` or `_sys.>`.
+  1 replica, `max_msg_size` 1 MiB, `max_consumers` 256 (set at creation only; NATS cannot change it later — this is the
+  plan's "default_max_consumers 256", which is a stream setting, not a server option). Extra user streams are created from the dashboard and may not overlap `evt.>` or `_sys.>`.
 - **Alternatives:** `max_age` of 2 years (would drop history even with free disk); `discard: new` (stops ingest when full).
 - **Consequences:** History is bounded by disk, not time. The retention horizon (ADR-0021) tells the operator how many days fit.
   Lowering `max_bytes` deletes old data and therefore needs explicit confirmation.

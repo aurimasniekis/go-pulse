@@ -1,0 +1,124 @@
+{
+  "version": 1,
+  "description": "Envelope and subject conformance vectors shared by the Go, Python and TypeScript SDKs (PL-ENV-002, PL-SDK-004). Header names are case-sensitive. data_b64 is standard base64.",
+  "subjects": {
+    "valid": [
+      "evt.home.door.opened",
+      "evt.home.door.opened.front",
+      "evt.github.repo.push.aurimasniekis_go-pulse",
+      "evt.a-b.c_d.e1.f-2.g",
+      "evt.0.1.2"
+    ],
+    "invalid": [
+      "",
+      "evt",
+      "evt.home",
+      "evt.home.door",
+      "home.door.opened.x",
+      "evt.Home.door.opened",
+      "evt.home..opened",
+      "evt.home.door.opened.",
+      "evt.home.*.opened",
+      "evt.home.door.>",
+      "evt.home.door.op ened",
+      "evt.hóme.door.opened",
+      "_sys.alert.disk.full"
+    ]
+  },
+  "filters": {
+    "valid": ["evt.>", "evt.home.>", "evt.*.door.*", "evt.home.door.opened", "evt.*.*.*.>"],
+    "invalid": [">", "evt.>.x", "home.>", "evt.Home.>", "evt..x"]
+  },
+  "encode": [
+    {
+      "name": "typed json",
+      "event": {
+        "subject": "evt.home.door.opened",
+        "id": "01JBX3Z5S8Q1V0F6G7H8J9K0MN",
+        "type": "home.door.opened.v1",
+        "source": "home-assistant",
+        "time": "2026-10-23T10:11:12.123456789Z",
+        "content_type": "application/json",
+        "data_b64": "eyJkb29yIjoiZnJvbnQifQ=="
+      },
+      "headers": {
+        "Nats-Msg-Id": "01JBX3Z5S8Q1V0F6G7H8J9K0MN",
+        "ce-type": "home.door.opened.v1",
+        "ce-source": "home-assistant",
+        "ce-time": "2026-10-23T10:11:12.123456789Z",
+        "content-type": "application/json"
+      }
+    },
+    {
+      "name": "time is normalized to UTC and trailing zeros trimmed",
+      "event": {
+        "subject": "evt.home.door.closed",
+        "id": "01JBX3Z5S8Q1V0F6G7H8J9K0MP",
+        "type": "home.door.closed.v1",
+        "time": "2026-10-23T12:11:12.500+02:00",
+        "data_b64": ""
+      },
+      "headers": {
+        "Nats-Msg-Id": "01JBX3Z5S8Q1V0F6G7H8J9K0MP",
+        "ce-type": "home.door.closed.v1",
+        "ce-time": "2026-10-23T10:11:12.5Z"
+      }
+    },
+    {
+      "name": "blob reference",
+      "event": {
+        "subject": "evt.camera.snapshot.taken",
+        "id": "01JBX3Z5S8Q1V0F6G7H8J9K0MQ",
+        "type": "camera.snapshot.taken.v1",
+        "time": "2026-10-23T10:00:00Z",
+        "blob": {"bucket": "blobs", "name": "01JBX3Z5S8Q1V0F6G7H8J9K0MQ.jpg", "size": 2500000, "sha256": "9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08"},
+        "data_b64": ""
+      },
+      "headers": {
+        "Nats-Msg-Id": "01JBX3Z5S8Q1V0F6G7H8J9K0MQ",
+        "ce-type": "camera.snapshot.taken.v1",
+        "ce-time": "2026-10-23T10:00:00Z",
+        "pulse-blob": "blobs/01JBX3Z5S8Q1V0F6G7H8J9K0MQ.jpg",
+        "pulse-blob-size": "2500000",
+        "pulse-blob-sha256": "9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08"
+      }
+    }
+  ],
+  "encode_errors": [
+    {"name": "bad subject", "event": {"subject": "evt.home.door", "data_b64": ""}}
+  ],
+  "decode": [
+    {
+      "name": "raw nats pub is untyped",
+      "subject": "evt.raw.thing.happened",
+      "headers": {},
+      "data_b64": "aGVsbG8=",
+      "event": {"subject": "evt.raw.thing.happened", "untyped": true, "id": "", "type": "", "source": "", "time": null, "content_type": "", "data_b64": "aGVsbG8=", "extra": {}}
+    },
+    {
+      "name": "typed with extra header",
+      "subject": "evt.github.repo.push",
+      "headers": {
+        "Nats-Msg-Id": "01JBX3Z5S8Q1V0F6G7H8J9K0MR",
+        "ce-type": "github.push",
+        "ce-source": "github",
+        "ce-time": "2026-10-23T10:11:12Z",
+        "content-type": "application/json",
+        "X-GitHub-Delivery": "72d3162e-cc78-11e3-81ab-4c9367dc0958"
+      },
+      "data_b64": "e30=",
+      "event": {
+        "subject": "evt.github.repo.push", "untyped": false, "id": "01JBX3Z5S8Q1V0F6G7H8J9K0MR", "type": "github.push",
+        "source": "github", "time": "2026-10-23T10:11:12Z", "content_type": "application/json", "data_b64": "e30=",
+        "extra": {"X-GitHub-Delivery": ["72d3162e-cc78-11e3-81ab-4c9367dc0958"]}
+      }
+    },
+    {
+      "name": "malformed time is ignored",
+      "subject": "evt.x.y.z",
+      "headers": {"ce-type": "x", "ce-time": "yesterday"},
+      "data_b64": "",
+      "event": {"subject": "evt.x.y.z", "untyped": false, "id": "", "type": "x", "source": "", "time": null, "content_type": "", "data_b64": "", "extra": {}}
+    }
+  ]
+}

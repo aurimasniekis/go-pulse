@@ -11,3 +11,5 @@ versioning: [docs/VERSIONING.md](docs/VERSIONING.md).
 - M1: `pulsed init` (sealed key store, operator mode `nats.conf`, bootstrap TLS, banagent token), `pulsed serve`
   (SQLite state, SYS/APP connections, APP account sync), client identities with per-client scoped signing keys,
   `pulsed keys export`, dev compose stack, reference prod compose.
+- M2: envelope package and SDK conformance vectors, `EVENTS` and `blobs` ensured at start, Go SDK (`pkg/pulse`),
+  `pulse context|pub|sub`, sizing spike tooling (`make spike`, operator-triggered).

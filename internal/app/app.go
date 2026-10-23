@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/nats-io/nats.go"
+	"github.com/nats-io/nats.go/jetstream"
 
 	"github.com/aurimasniekis/go-pulse/internal/bootstrap"
 	"github.com/aurimasniekis/go-pulse/internal/certs"
@@ -19,6 +20,7 @@ import (
 	"github.com/aurimasniekis/go-pulse/internal/config"
 	"github.com/aurimasniekis/go-pulse/internal/natsconn"
 	"github.com/aurimasniekis/go-pulse/internal/store"
+	"github.com/aurimasniekis/go-pulse/internal/streams"
 	"github.com/aurimasniekis/go-pulse/internal/sysapi"
 )
 
@@ -30,6 +32,7 @@ type App struct {
 	Keys    *bootstrap.KeySet
 	SysConn *nats.Conn
 	AppConn *nats.Conn
+	JS      jetstream.JetStream
 	Sys     *sysapi.Client
 	Clients *clients.Service
 
@@ -113,6 +116,20 @@ func Start(ctx context.Context, cfg *config.Config, log *slog.Logger) (*App, err
 	a.AppConn, err = natsconn.Connect(ctx, natsconn.Options{URL: cfg.NATSURL, TLS: tlsConf, JWT: appJWT, Seed: appSeed, Name: "pulsed-app", Logger: log})
 	if err != nil {
 		return nil, fmt.Errorf("connect APP: %w", err)
+	}
+	a.JS, err = jetstream.New(a.AppConn)
+	if err != nil {
+		return nil, err
+	}
+	ens, err := streams.EnsureEvents(ctx, a.JS, cfg.EventsMaxBytes, false, log)
+	if err != nil {
+		return nil, err
+	}
+	for _, w := range ens.Warnings {
+		log.Warn("EVENTS stream", "warning", w)
+	}
+	if err := streams.EnsureBlobs(ctx, a.JS); err != nil {
+		return nil, fmt.Errorf("ensure blobs object store: %w", err)
 	}
 	a.goLoop(a.loopCtx, "account-sync", time.Minute, func(ctx context.Context) { //nolint:contextcheck // loops outlive startup
 		if _, err := a.Clients.Sync(ctx, false); err != nil {

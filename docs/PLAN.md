@@ -161,8 +161,8 @@ Status values: `planned`, `in-progress`, `implemented`, `tested`, `externally-ve
 | M | Title | Status | Commit |
 |---|---|---|---|
 | M0 | Skeleton | tested | 0e5611e |
-| M1 | Identity, NATS bootstrap, SQLite | tested | (this commit) |
-| M2 | Envelope, EVENTS, Go SDK, CLI | planned | |
+| M1 | Identity, NATS bootstrap, SQLite | tested | 02717c1 |
+| M2 | Envelope, EVENTS, Go SDK, CLI | tested (spike pending user run) | (this commit) |
 | M3 | API and query engine | planned | |
 | M4 | UI core | planned | |
 | M5 | Rollups | planned | |
@@ -184,6 +184,7 @@ Status values: `planned`, `in-progress`, `implemented`, `tested`, `externally-ve
 | 2026-10-23 | M0 | Planning docs written. ADR-0024 (SQLite for pulsed state) recorded per user decision. ADR-0025 (scoped signing key per client). |
 | 2026-10-23 | M0 | Skeleton done: Go module, `pulsed version|healthcheck`, UI shell, Dockerfile, CI/release. Go bumped to 1.27.3 for GO-2026-6809 (ADR-0019). `make check` green. |
 | 2026-10-23 | M1 | secretbox, natsauth (grants→permissions, scoped signers), natsconf, bootstrap, natsconn, sysapi, store (SQLite), clients service, config, `pulsed init|serve|keys export`, dev compose (init → nats → pulsed). Found and fixed: empty NATS allow list = allow all (sentinel); scoped users need zero permission sections; upstream race in embedded reload (RELOAD tests use a subprocess). |
+| 2026-10-23 | M2 | Envelope + conformance vectors, EVENTS/blobs ensure, Go SDK (publish, ordered/durable subscribe, Handle[T], blobs), CLI context/pub/sub. Spike tooling written but not run: the user decides when (heavy). |
 
 ## 6. Acceptance checklist (mapped to requirement IDs)
 
@@ -194,23 +195,23 @@ E browser E2E · C CI/static check · S spike/perf · R restore drill · X exter
 
 #### PL-BUS — Streams and subjects
 
-- [ ] `PL-BUS-001` EVENTS stream — M2
-- [ ] `PL-BUS-002` Subject grammar — M2
-- [ ] `PL-BUS-003` Raw publishes accepted — M2
-- [ ] `PL-BUS-004` Payload size — M2
+- [x] `PL-BUS-001` EVENTS stream — M2 — ✅ tested: internal/streams TestEnsureEvents (config, drift correction, grow, shrink refused/confirmed)
+- [x] `PL-BUS-002` Subject grammar — M2 — ✅ tested: pkg/pulse/envelope conformance subjects; SDK TestDeduplicationAndValidation
+- [x] `PL-BUS-003` Raw publishes accepted — M2 — ✅ tested: pkg/pulse TestRawPublishIsUntyped; envelope decode vector
+- [x] `PL-BUS-004` Payload size — M2 — ✅ tested: pkg/pulse TestBlobs (3.2 MB via Object Store, checksum, no access without grant)
 - [ ] `PL-BUS-005` Extra streams — M4
 - [ ] `PL-BUS-006` Consumers — M4
-- [ ] `PL-BUS-007` Replay by time — M2
+- [x] `PL-BUS-007` Replay by time — M2 — ✅ tested: pkg/pulse TestPublishReplaySince; cmd/pulse TestCLIPubSubFlow
 - [x] `PL-BUS-008` Internal state isolation — M1 — ✅ tested: state in SQLite (internal/store), nothing internal stored in NATS
-- [ ] `PL-BUS-009` Subject cardinality guidance — M2
+- [ ] `PL-BUS-009` Subject cardinality guidance — M2 — ◐ provisional guideline in docs/SIZING.md; to be confirmed by the spike
 
 #### PL-ENV — Envelope
 
-- [ ] `PL-ENV-001` Headers — M2
+- [x] `PL-ENV-001` Headers — M2 — ✅ tested: pkg/pulse/envelope conformance encode/decode
 - [ ] `PL-ENV-002` Shared encoder — M13
-- [ ] `PL-ENV-003` Idempotency — M2
-- [ ] `PL-ENV-004` Blob references — M2
-- [ ] `PL-ENV-005` Documentation — M2
+- [x] `PL-ENV-003` Idempotency — M2 — ✅ tested: pkg/pulse TestDeduplicationAndValidation
+- [x] `PL-ENV-004` Blob references — M2 — ✅ tested: envelope blob vector; pkg/pulse TestBlobs
+- [x] `PL-ENV-005` Documentation — M2 — ✅ documented: docs/ENVELOPE.md
 
 #### PL-KEY — Key management and bootstrap
 
@@ -226,10 +227,10 @@ E browser E2E · C CI/static check · S spike/perf · R restore drill · X exter
 
 - [x] `PL-AUTH-001` Operator mode — M1 — ✅ tested: internal/clients integration tests (embedded server from generated nats.conf)
 - [ ] `PL-AUTH-002` Client records — M6
-- [ ] `PL-AUTH-003` Least privilege — M2
+- [x] `PL-AUTH-003` Least privilege — M2 — ✅ tested: natsauth TestPermissionsNoGrants (sentinel); clients TestCredsConnectAndLeastPrivilege
 - [ ] `PL-AUTH-004` Credentials once — M6
-- [ ] `PL-AUTH-005` Grants to permissions — M2
-- [ ] `PL-AUTH-006` Explicit denies — M2
+- [x] `PL-AUTH-005` Grants to permissions — M2 — ✅ tested: natsauth TestPermissionsByAction; pkg/pulse durable/ordered/blobs with real permissions
+- [x] `PL-AUTH-006` Explicit denies — M2 — ✅ tested: natsauth TestPermissionsNoGrants; clients least-privilege violations ($JS stream delete, $KV)
 - [ ] `PL-AUTH-007` Revocation — M6
 - [ ] `PL-AUTH-008` Rotation — M6
 - [ ] `PL-AUTH-009` Grant edits — M6
@@ -371,13 +372,13 @@ E browser E2E · C CI/static check · S spike/perf · R restore drill · X exter
 
 #### PL-SDK — SDKs and CLI
 
-- [ ] `PL-SDK-001` Go SDK — M2
+- [x] `PL-SDK-001` Go SDK — M2 — ✅ tested: pkg/pulse integration tests (publish, since, durable + redelivery, Handle[T], blobs); Request untested
 - [ ] `PL-SDK-002` Python SDK — M13
 - [ ] `PL-SDK-003` TS SDK — M13
 - [ ] `PL-SDK-004` Conformance — M13
 - [ ] `PL-SDK-005` Interop e2e — M13
-- [ ] `PL-SDK-006` CLI — M2
-- [ ] `PL-SDK-007` Inbox prefix — M2
+- [ ] `PL-SDK-006` CLI — M2 — ◐ partial: `context`, `pub`, `sub --since/--seq/--new/--durable/--json` tested (cmd/pulse); `req`, `streams`, `tail`, `clients`, `backup` pending
+- [x] `PL-SDK-007` Inbox prefix — M2 — ✅ tested: pkg/pulse (inbox prefix from creds tag; client permissions only allow _INBOX_<id>)
 
 #### PL-OPS — Packaging and operations
 
@@ -389,7 +390,7 @@ E browser E2E · C CI/static check · S spike/perf · R restore drill · X exter
 - [ ] `PL-OPS-006` Reference prod compose — M1 — ◐ implemented: deploy/examples/compose.yaml; banagent service depends on M8
 - [ ] `PL-OPS-007` CI — M0 — ◐ implemented: .github/workflows/ci.yaml (SHA-pinned, GOTOOLCHAIN=local); `make check` green locally; never run on GitHub (no remote)
 - [ ] `PL-OPS-008` Release — M0 — ◐ implemented: .github/workflows/release.yaml; not externally verified (no remote, no tag)
-- [ ] `PL-OPS-009` Memory budget — M2
+- [ ] `PL-OPS-009` Memory budget — M2 — ◐ limits configured (deploy/examples, deploy/compose.dev.yaml); measurement pending the operator-triggered spike (docs/SIZING.md)
 - [ ] `PL-OPS-010` Graceful shutdown — M1 — ◐ partial: listeners and NATS drain on SIGTERM; rollup/consumer flushing arrives with M5
 - [x] `PL-OPS-011` Versioning — M0 — ✅ tested: cmd/pulsed/main_test.go TestVersionJSON; docs/VERSIONING.md
 
@@ -406,22 +407,22 @@ E browser E2E · C CI/static check · S spike/perf · R restore drill · X exter
 - [x] `PL-TST-003` Bootstrap tests — M1 — ✅ tested: internal/clients (creds connect, AUTH.ERR host, revoke → disconnect < 5 s, restart persistence, RELOAD new cert)
 - [ ] `PL-TST-004` Query tests — M3
 - [ ] `PL-TST-005` E2E — M4
-- [ ] `PL-TST-006` Gate spike — M2
+- [ ] `PL-TST-006` Gate spike — M2 — ◐ tooling ready: cmd/pulse-spike, scripts/spike.sh, `make spike`; not run — the user triggers it
 - [ ] `PL-TST-007` Restore drill — M11
 
 #### PL-DOC — Documentation
 
 - [ ] `PL-DOC-001` Operator docs — M12
 - [ ] `PL-DOC-002` API docs — M3
-- [ ] `PL-DOC-003` Envelope docs — M2
-- [ ] `PL-DOC-004` Sizing — M2
+- [x] `PL-DOC-003` Envelope docs — M2 — ✅ documented: docs/ENVELOPE.md
+- [ ] `PL-DOC-004` Sizing — M2 — ◐ docs/SIZING.md procedure + budget; results pending the spike run
 - [ ] `PL-DOC-005` Backups — M11
 
 ## 7. Risks
 
 | # | Risk | Check | Fallback |
 |---|---|---|---|
-| K-1 | NATS memory with a large file store and many subjects on 2 GB. | M2 spike (PL-TST-006). | Subject cardinality guideline; lower `max_bytes`; bigger VPS. |
+| K-1 | NATS memory with a large file store and many subjects on 2 GB. | M2 spike (PL-TST-006): tooling ready (`make spike`), run is operator-triggered. | Subject cardinality guideline; lower `max_bytes`; bigger VPS. |
 | K-2 | Restored segments lose `Nats-Time-Stamp`. | M11 drill (PL-BAK-007). | Full snapshots only (ADR). |
 | K-3 | Docker + nftables interplay, real client IP on IPv6. | M14 on the test VM. | nats with `network_mode: host`. |
 | K-4 | CF free-plan limits (custom rules, one rate-limit rule with a 10 s period, one IP list). | M15 module design. | R-03. |
