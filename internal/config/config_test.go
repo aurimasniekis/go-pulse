@@ -91,3 +91,42 @@ func TestParseBytes(t *testing.T) {
 		}
 	}
 }
+
+func TestACME(t *testing.T) {
+	kf := keyFile(t)
+	tok := filepath.Join(t.TempDir(), "cf")
+	if err := os.WriteFile(tok, []byte("cf-dns-token\n"), 0o600); err != nil { // gitleaks:allow (test literal)
+		t.Fatal(err)
+	}
+	base := func(kv ...string) map[string]string {
+		m := map[string]string{"PULSE_MASTER_KEY_FILE": kf, "PULSE_PUBLIC_ADDR": "off", "PULSE_ACME_ENABLED": "true", "PULSE_RAW_HOST": "r.example.test"}
+		for i := 0; i+1 < len(kv); i += 2 {
+			m[kv[i]] = kv[i+1]
+		}
+		return m
+	}
+	c, err := Load(env(base("PULSE_ACME_CF_TOKEN_FILE", tok)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if c.ACMECFToken != "cf-dns-token" || c.ACMEDNSProvider != "cloudflare" || !strings.Contains(c.ACMEDirectory, "letsencrypt.org") {
+		t.Fatalf("%+v", c)
+	}
+	refused := map[string]map[string]string{
+		"cloudflare without token": base(),
+		"plain token in prod":      base("PULSE_ACME_CF_TOKEN", "x"),
+		"raw host missing":         base("PULSE_ACME_CF_TOKEN_FILE", tok, "PULSE_RAW_HOST", ""),
+		"raw host localhost":       base("PULSE_ACME_CF_TOKEN_FILE", tok, "PULSE_RAW_HOST", "localhost"),
+		"challtestsrv in prod":     base("PULSE_ACME_DNS_PROVIDER", "challtestsrv", "PULSE_ACME_CHALLTESTSRV_URL", "http://c:8055"),
+		"challtestsrv without url": base("PULSE_PROFILE", "dev", "PULSE_ACME_DNS_PROVIDER", "challtestsrv"),
+		"unknown provider":         base("PULSE_PROFILE", "dev", "PULSE_ACME_DNS_PROVIDER", "route53"),
+	}
+	for name, m := range refused {
+		if _, err := Load(env(m)); err == nil {
+			t.Errorf("%s: accepted", name)
+		}
+	}
+	if _, err := Load(env(base("PULSE_PROFILE", "dev", "PULSE_ACME_DNS_PROVIDER", "challtestsrv", "PULSE_ACME_CHALLTESTSRV_URL", "http://c:8055"))); err != nil {
+		t.Fatalf("dev challtestsrv refused: %v", err)
+	}
+}

@@ -560,6 +560,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/system/certificates": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** TLS certificates and ACME status */
+        get: operations["get-certificates"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/system/info": {
         parameters: {
             query?: never;
@@ -656,6 +673,21 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        ACMEStatus: {
+            directory: string;
+            domain: string;
+            issuer?: string;
+            /** Format: date-time */
+            last_attempt?: string;
+            last_error?: string;
+            /** Format: date-time */
+            last_success?: string;
+            /** Format: date-time */
+            not_after?: string;
+            serial?: string;
+            /** @description NATS was seen serving this certificate after the last reload */
+            verified: boolean;
+        };
         "Add-allowRequest": {
             /**
              * Format: uri
@@ -716,6 +748,33 @@ export interface components {
             sha256: string;
             /** Format: int64 */
             size: number;
+        };
+        CertificateInfo: {
+            /** Format: int64 */
+            days_left: number;
+            dns_names: string[];
+            error?: string;
+            issuer?: string;
+            name: string;
+            /** Format: date-time */
+            not_after?: string;
+            /** Format: date-time */
+            not_before?: string;
+            present: boolean;
+            purpose: string;
+            serial?: string;
+            subject?: string;
+        };
+        Certificates: {
+            /**
+             * Format: uri
+             * @description A URL to the JSON Schema for this object.
+             * @example /api/admin/v1/schemas/Certificates.json
+             */
+            readonly $schema?: string;
+            /** @description Present when ACME is enabled */
+            acme?: components["schemas"]["ACMEStatus"];
+            certificates: components["schemas"]["CertificateInfo"][];
         };
         ClientDTO: {
             /**
@@ -2993,6 +3052,35 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Get-subject-treeResponse"];
+                };
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
+    "get-certificates": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Certificates"];
                 };
             };
             /** @description Error */

@@ -16,10 +16,11 @@ func (l Layout) CACertFile() string        { return filepath.Join(l.DataDir, "tl
 func (l Layout) BanagentTokenFile() string { return filepath.Join(l.DataDir, "banagent", "token") }
 func (l Layout) DatabaseFile() string      { return filepath.Join(l.DataDir, "pulse.db") }
 func (l Layout) LockFile() string          { return filepath.Join(l.DataDir, "pulsed.lock") }
-func (l Layout) ACMEDir() string           { return filepath.Join(l.DataDir, "acme") }
 func (l Layout) NATSConf() string          { return filepath.Join(l.NATSDir, "nats.conf") }
 func (l Layout) OperatorJWT() string       { return filepath.Join(l.NATSDir, "operator.jwt") }
 func (l Layout) ServerCert() string        { return filepath.Join(l.NATSDir, "tls", "server.crt") }
 func (l Layout) ServerKey() string         { return filepath.Join(l.NATSDir, "tls", "server.key") }
+func (l Layout) ACMECert() string          { return filepath.Join(l.NATSDir, "tls", "acme.crt") }
+func (l Layout) ACMEKey() string           { return filepath.Join(l.NATSDir, "tls", "acme.key") }
 func (l Layout) ResolverDir() string       { return filepath.Join(l.NATSDir, "jwt") }
 func (l Layout) JetStreamDir() string      { return filepath.Join(l.NATSDir, "js") }

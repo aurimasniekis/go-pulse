@@ -1,6 +1,48 @@
 {
   "components": {
     "schemas": {
+      "ACMEStatus": {
+        "additionalProperties": false,
+        "properties": {
+          "directory": {
+            "type": "string"
+          },
+          "domain": {
+            "type": "string"
+          },
+          "issuer": {
+            "type": "string"
+          },
+          "last_attempt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "last_error": {
+            "type": "string"
+          },
+          "last_success": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "not_after": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "serial": {
+            "type": "string"
+          },
+          "verified": {
+            "description": "NATS was seen serving this certificate after the last reload",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "domain",
+          "directory",
+          "verified"
+        ],
+        "type": "object"
+      },
       "Add-allowRequest": {
         "additionalProperties": false,
         "properties": {
@@ -161,6 +203,86 @@
           "name",
           "size",
           "sha256"
+        ],
+        "type": "object"
+      },
+      "CertificateInfo": {
+        "additionalProperties": false,
+        "properties": {
+          "days_left": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "dns_names": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "error": {
+            "type": "string"
+          },
+          "issuer": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "not_after": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "not_before": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "present": {
+            "type": "boolean"
+          },
+          "purpose": {
+            "type": "string"
+          },
+          "serial": {
+            "type": "string"
+          },
+          "subject": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "purpose",
+          "present",
+          "dns_names",
+          "days_left"
+        ],
+        "type": "object"
+      },
+      "Certificates": {
+        "additionalProperties": false,
+        "properties": {
+          "$schema": {
+            "description": "A URL to the JSON Schema for this object.",
+            "examples": [
+              "/api/admin/v1/schemas/Certificates.json"
+            ],
+            "format": "uri",
+            "readOnly": true,
+            "type": "string"
+          },
+          "acme": {
+            "$ref": "#/components/schemas/ACMEStatus",
+            "description": "Present when ACME is enabled"
+          },
+          "certificates": {
+            "items": {
+              "$ref": "#/components/schemas/CertificateInfo"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "certificates"
         ],
         "type": "object"
       },
@@ -4642,6 +4764,37 @@
         "summary": "Subject tree level",
         "tags": [
           "rollups"
+        ]
+      }
+    },
+    "/system/certificates": {
+      "get": {
+        "operationId": "get-certificates",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Certificates"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "TLS certificates and ACME status",
+        "tags": [
+          "system"
         ]
       }
     },

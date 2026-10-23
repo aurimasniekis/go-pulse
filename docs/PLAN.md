@@ -168,8 +168,8 @@ Status values: `planned`, `in-progress`, `implemented`, `tested`, `externally-ve
 | M5 | Rollups | tested | 07f01fd |
 | M6 | Clients and ingress | tested | 2378428 |
 | M7 | Webhooks | tested | 26c5b2f |
-| M8 | Security and edge TLS | tested (VM/Cloudflare pending) | (this commit) |
-| M9 | ACME | planned | |
+| M8 | Security and edge TLS | tested (VM/Cloudflare pending) | bb92060 |
+| M9 | ACME | tested against pebble (Let's Encrypt/Cloudflare pending) | (this commit) |
 | M10 | Observability | planned | |
 | M11 | Backups | planned | |
 | M12 | Remaining UI | planned | |
@@ -191,6 +191,7 @@ Status values: `planned`, `in-progress`, `implemented`, `tested`, `externally-ve
 | 2026-10-24 | M6 | HTTP tokens (hashed, CIDR-limited), public publish/batch/request/replay/tail with grant checks and an auth-failure hook for M8, clients/tokens/audit admin APIs, Clients (grants editor, show-once creds + snippets, rotate, revoke, live connections), HTTP tokens and Audit pages; e2e publishes through the public API with an issued token. Python/TS snippets describe the M13 SDK API and must match it. |
 | 2026-10-24 | M7 | Inbound hooks (GitHub, Stripe, HMAC, shared secret; sealed secrets; 401 feeds the ban hook), outbound dispatcher (ordered, backoff 1 s–1 h, 12 attempts, dead letters, HMAC signing, SSRF guard checked at dial time, delivery log, pause/resume, retry, test), admin API and Webhooks page; e2e covers inbound delivery and outbound test/pause/delete. |
 | 2026-10-24 | M8 | Ban detector (NATS AUTH.ERR, HTTP 401, webhook signatures; window, ×4 escalation, never-ban), SQLite bans/allowlist, HTTP 403 middleware, banagent (long-poll feed, nftables interval sets with timeouts; real nft tested in a privileged container), Cloudflare IP-list reconciler (fake API), origin cert hot reload, AOP mTLS (handshake tests), Cloudflare-aware real IP, /ws proxy (NATS over websocket through the proxy), Security page. |
+| 2026-10-24 | M9 | ACME manager on lego (account by key from `keys.enc`, DNS-01 via Cloudflare or challtestsrv), ACME pair listed before the internal leaf in `nats.conf` and selected by SNI (ADR-0032 amends ADR-0023), atomic write → re-render → RELOAD → served-serial check over a raw INFO/TLS handshake, renewal at min(30 d, lifetime/3) (found with pebble's 6-day certificates), `GET /system/certificates`, System page (server, NATS, JetStream, certificates, ACME status). `make test-acme` runs pebble + challtestsrv in Docker against a real nats-server. Canceled requests now return 499 instead of logging a 500. `make secrets` was scanning 0 commits locally (global `color.ui=always` breaks gitleaks' log parser); it now runs with `GIT_CONFIG_GLOBAL=/dev/null` and scans all 9 commits clean. |
 
 ## 6. Acceptance checklist (mapped to requirement IDs)
 
@@ -259,7 +260,7 @@ E browser E2E · C CI/static check · S spike/perf · R restore drill · X exter
 - [x] `PL-EDGE-003` Authenticated Origin Pulls — M8 — ✅ tested: internal/edge TestAuthenticatedOriginPulls (no cert / foreign CA rejected), internal/app TestPublicTLSWithAOPAndAuthErrors; real Cloudflare pending (X)
 - [x] `PL-EDGE-004` Real client IP — M8 — ✅ tested: internal/edge TestRealIP (CF peer + verified mTLS only)
 - [x] `PL-EDGE-005` WebSocket proxy — M8 — ✅ tested: internal/edge TestWSProxyRewritesForwardedFor; internal/api TestWebSocketProxy (NATS client over /ws)
-- [ ] `PL-EDGE-006` Raw NATS TLS — M9
+- [x] `PL-EDGE-006` Raw NATS TLS — M9 — ◐ tested against pebble: internal/acme TestPebbleObtainInstallReload (`make test-acme`: DNS-01 obtain, nats.conf re-render, RELOAD of a real nats-server, served serial for the raw host, internal leaf still served for SNI `nats`, no re-issue when fresh, renewal), TestDue (30 d / lifetime-third window), internal/bootstrap TestACMEPairListedFirst, internal/config TestACME (prod refuses challtestsrv), internal/api TestCertificates; Let's Encrypt + Cloudflare DNS pending (X, M15)
 - [x] `PL-EDGE-007` Bootstrap TLS — M1 — ✅ tested: internal/bootstrap TestBootstrapLeafRenewal; internal/clients TestReloadServesNewCert
 - [x] `PL-EDGE-008` Cloudflare ranges — M8 — ✅ tested: embedded ranges, FetchCloudflare validation (internal/edge); daily refresh loop wired
 - [x] `PL-EDGE-009` Timeouts and limits — M3 — ✅ tested: timeouts, body limits, per-IP token bucket on the real client IP (internal/api)
@@ -392,7 +393,7 @@ E browser E2E · C CI/static check · S spike/perf · R restore drill · X exter
 - [ ] `PL-OPS-002` Commands — M0 — ◐ partial: version, healthcheck, init, serve, keys export, openapi, banagent implemented; banagent only unit/nft-container tested
 - [x] `PL-OPS-003` Configuration — M1 — ✅ tested: internal/config tests; docs/operator/configuration.md
 - [ ] `PL-OPS-004` Profiles — M1 — ◐ partial: prod refusals for admin exposure, plain master key, missing key, plain-HTTP public listener and missing AOP CA tested (internal/config); dev master key detection not applicable (prod requires *_FILE)
-- [ ] `PL-OPS-005` Dev stack — M1 — ◐ partial: deploy/compose.dev.yaml runs init → nats → pulsed (verified locally); SeaweedFS (M11) and pebble (M9) pending
+- [ ] `PL-OPS-005` Dev stack — M1 — ◐ partial: deploy/compose.dev.yaml runs init → nats → pulsed (verified locally); SeaweedFS (M11) pending; pebble runs in `make test-acme`, not in the dev stack (ADR-0032)
 - [ ] `PL-OPS-006` Reference prod compose — M1 — ◐ implemented: deploy/examples/compose.yaml; banagent service depends on M8
 - [ ] `PL-OPS-007` CI — M0 — ◐ implemented: .github/workflows/ci.yaml (SHA-pinned, GOTOOLCHAIN=local); `make check` green locally; never run on GitHub (no remote)
 - [ ] `PL-OPS-008` Release — M0 — ◐ implemented: .github/workflows/release.yaml; not externally verified (no remote, no tag)

@@ -24,9 +24,18 @@ type Params struct {
 	MaxMemoryStore  int64 // bytes
 	TLSCertFile     string
 	TLSKeyFile      string
-	MaxPayload      int64 // bytes
-	PingInterval    string
-	MaxPingsOut     int
+	// ExtraCerts are served before the main pair; the server picks a certificate by SNI (an ACME certificate for the
+	// public hostname first, the internal leaf for "nats").
+	ExtraCerts   []CertPair
+	MaxPayload   int64 // bytes
+	PingInterval string
+	MaxPingsOut  int
+}
+
+// CertPair is one certificate and key file.
+type CertPair struct {
+	CertFile string
+	KeyFile  string
 }
 
 // Defaults fills unset fields with production defaults.
@@ -82,8 +91,17 @@ write_deadline: "10s"
 max_control_line: 4096
 
 tls {
+{{- if .ExtraCerts}}
+  certs: [
+{{- range .ExtraCerts}}
+    { cert_file: {{q .CertFile}}, key_file: {{q .KeyFile}} }
+{{- end}}
+    { cert_file: {{q .TLSCertFile}}, key_file: {{q .TLSKeyFile}} }
+  ]
+{{- else}}
   cert_file: {{q .TLSCertFile}}
   key_file: {{q .TLSKeyFile}}
+{{- end}}
   timeout: 5
 }
 {{if .WebsocketListen}}

@@ -72,8 +72,20 @@ test('live tail: starts and stops', async ({ page }) => {
 })
 
 test('placeholder pages render', async ({ page }) => {
-  for (const path of ['/system', '/settings', '/alerts']) {
+  for (const path of ['/settings', '/alerts']) {
     await page.goto(path)
     await expect(page.getByText('Not built yet')).toBeVisible()
   }
+})
+
+test('system: server status and certificates', async ({ page }) => {
+  await page.goto('/system')
+  await expect(page.getByRole('heading', { name: 'System' })).toBeVisible()
+  await expect(page.getByText('connected', { exact: true })).toBeVisible()
+  const certs = page.getByTestId('certificates')
+  await expect(certs.getByRole('row', { name: /Internal CA/ })).toContainText('d left')
+  await expect(certs.getByRole('row', { name: /NATS internal leaf/ })).toContainText('nats')
+  // The dev stack runs without ACME: the Let's Encrypt row is listed as not present and no ACME card is shown.
+  await expect(certs.getByRole('row', { name: /Let's Encrypt/ })).toContainText('not present')
+  await expect(page.getByTestId('acme-status')).toHaveCount(0)
 })

@@ -30,6 +30,7 @@ Every other path on the public listener returns 404 (PL-EDGE-001). The public li
 | Method | Path | Purpose |
 |---|---|---|
 | GET | `/system/info` | Version, profile, auth mode, NATS connection, JetStream usage |
+| GET | `/system/certificates` | Internal CA, NATS leaf, Let's Encrypt, origin and AOP CA certificates (names, issuer, serial, expiry, days left) plus ACME status when enabled (ADR-0032) |
 | GET | `/streams` | Streams in the APP account (`kind`: stream, kv, object; `managed` for EVENTS and blobs) |
 | GET/PUT/DELETE | `/streams/{name}` | Read, update, delete a user stream (EVENTS and blobs are managed) |
 | POST | `/streams` | Create a user stream; subjects may not overlap `evt.>`, `_sys.>`, `$…`, `_INBOX.>` |

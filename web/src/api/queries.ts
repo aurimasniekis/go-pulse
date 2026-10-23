@@ -198,3 +198,7 @@ export function useDeliveries(id: string | null) {
 export function useSecurity() {
   return useQuery({ queryKey: ['security'], queryFn: async () => unwrap(await admin.GET('/security')), refetchInterval: 5_000 })
 }
+
+export function useCertificates() {
+  return useQuery({ queryKey: ['certificates'], queryFn: async () => unwrap(await admin.GET('/system/certificates')), refetchInterval: 30_000 })
+}

@@ -23,7 +23,7 @@
 | PL-DB | U/I (pragmas on every connection, migrations, lock contention, prune) |
 | PL-EXP | Table-driven I tests for each read mode, cursor tampering, budgets |
 | PL-ROLL | I (exactly-once over crash/restart, dimension counts, forecast math U) |
-| PL-EDGE | I (AOP with a locally generated CA and client cert, real-IP rules, XFF rewrite, route allowlist) + X |
+| PL-EDGE | I (AOP with a locally generated CA and client cert, real-IP rules, XFF rewrite, route allowlist) + Docker ACME test against pebble/challtestsrv with a real nats-server (`make test-acme`) + X |
 | PL-BAN | U (windows, escalation, never-ban) + I (advisory → ban) + Linux-only nft test (privileged container) + X |
 | PL-HOOK | U (GitHub/Stripe doc vectors, HMAC, tolerance) + I (dispatcher retries against httptest, SSRF dialer) |
 | PL-BAK | R (restore drill incl. timestamp preservation) |
@@ -34,7 +34,7 @@
 ## 3. Rules
 
 - Tests generate their own keys, certificates and secrets at runtime. No secret fixtures.
-- Integration tests use random ports and temp dirs; no reliance on Docker except where noted (`make e2e`, `make drill`).
+- Integration tests use random ports and temp dirs; no reliance on Docker except where noted (`make e2e`, `make drill`, `make test-nft`, `make test-acme`).
 - Every bug fix adds a regression test.
 - Tests that issue `$SYS.REQ.SERVER.<id>.RELOAD` run a real `nats-server` subprocess built from the version pinned in
   `go.mod` (`natstest.Options{Process: true}`): the embedded server has an internal data race during config reload with

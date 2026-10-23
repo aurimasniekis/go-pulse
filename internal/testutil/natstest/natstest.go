@@ -31,13 +31,18 @@ type Env struct {
 	Keys      *bootstrap.KeySet
 	Server    *server.Server // nil when running as a subprocess
 	ClientURL string
-	proc      *exec.Cmd
-	process   bool
-	WSPort    int
-	port      int
-	wsPort    int
-	monPort   int
+	// InitOptions are the bootstrap options the environment was created with (re-run Init to re-render nats.conf).
+	InitOptions bootstrap.Options
+	proc        *exec.Cmd
+	process     bool
+	WSPort      int
+	port        int
+	wsPort      int
+	monPort     int
 }
+
+// RawHost is the public NATS hostname the environment is initialised with.
+const RawHost = "r.pulse.test"
 
 // FreePort returns an unused TCP port on 127.0.0.1.
 func FreePort(t testing.TB) int {
@@ -85,14 +90,15 @@ func Start(t testing.TB, opts ...Options) *Env {
 		e.WSPort = e.wsPort
 		ws = fmt.Sprintf("127.0.0.1:%d", e.wsPort)
 	}
-	if _, err := bootstrap.Init(bootstrap.Options{
+	e.InitOptions = bootstrap.Options{
 		Layout:          e.Layout,
 		MasterKey:       master,
-		RawHost:         "r.pulse.test",
+		RawHost:         RawHost,
 		ClientListen:    fmt.Sprintf("127.0.0.1:%d", e.port),
 		MonitorListen:   fmt.Sprintf("127.0.0.1:%d", e.monPort),
 		WebsocketListen: ws,
-	}); err != nil {
+	}
+	if _, err := bootstrap.Init(e.InitOptions); err != nil {
 		t.Fatal(err)
 	}
 	e.Keys, err = bootstrap.LoadKeySet(e.Layout.KeysFile(), master)

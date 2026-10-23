@@ -115,7 +115,12 @@ func Init(o Options) (*Result, error) {
 	if err := write(l.OperatorJWT(), []byte(ks.OperatorJWT), 0o644); err != nil {
 		return nil, err
 	}
+	var extra []natsconf.CertPair
+	if fileExists(l.ACMECert()) && fileExists(l.ACMEKey()) {
+		extra = append(extra, natsconf.CertPair{CertFile: l.ACMECert(), KeyFile: l.ACMEKey()})
+	}
 	conf, err := natsconf.Render(natsconf.Params{
+		ExtraCerts:      extra,
 		ClientListen:    o.ClientListen,
 		MonitorListen:   o.MonitorListen,
 		WebsocketListen: o.WebsocketListen,
@@ -170,6 +175,11 @@ func Init(o Options) (*Result, error) {
 		return nil, err
 	}
 	return res, nil
+}
+
+func fileExists(p string) bool {
+	_, err := os.Stat(p)
+	return err == nil
 }
 
 // needsBootstrapLeaf reports whether the 4222 certificate must be (re)issued from the internal CA. A certificate that

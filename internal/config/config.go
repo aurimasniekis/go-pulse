@@ -66,6 +66,17 @@ type Config struct {
 	OriginCertFile         string // public listener TLS certificate (Cloudflare Origin CA), PEM
 	OriginKeyFile          string
 
+	// ACME for the raw NATS hostname (PL-EDGE-006)
+	ACMEEnabled      bool
+	ACMEDirectory    string
+	ACMEEmail        string
+	ACMEDNSProvider  string // cloudflare | challtestsrv (dev/tests)
+	ACMECFToken      string
+	ACMEChallTestSrv string   // challtestsrv management URL
+	ACMEDNSResolvers []string // resolvers lego uses for its own checks
+	ACMECAFile       string   // extra roots for the ACME directory's TLS (pebble)
+	ACMENATSAddr     string   // host:port to verify the served certificate on (default: from PULSE_NATS_URL)
+
 	ShutdownTimeout time.Duration
 }
 
@@ -118,6 +129,21 @@ func Load(getenv Getenv) (*Config, error) {
 		OriginCertFile:         e.str("PULSE_ORIGIN_CERT_FILE", ""),
 		OriginKeyFile:          e.str("PULSE_ORIGIN_KEY_FILE", ""),
 		ShutdownTimeout:        e.dur("PULSE_SHUTDOWN_TIMEOUT", 20*time.Second),
+		ACMEEnabled:            e.bool("PULSE_ACME_ENABLED", false),
+		ACMEDirectory:          e.str("PULSE_ACME_DIRECTORY", "https://acme-v02.api.letsencrypt.org/directory"),
+		ACMEEmail:              e.str("PULSE_ACME_EMAIL", ""),
+		ACMEDNSProvider:        e.str("PULSE_ACME_DNS_PROVIDER", "cloudflare"),
+		ACMEChallTestSrv:       e.str("PULSE_ACME_CHALLTESTSRV_URL", ""),
+		ACMEDNSResolvers:       e.list("PULSE_ACME_DNS_RESOLVERS"),
+		ACMECAFile:             e.str("PULSE_ACME_CA_FILE", ""),
+		ACMENATSAddr:           e.str("PULSE_ACME_NATS_ADDR", ""),
+	}
+	if c.ACMEEnabled && c.ACMEDNSProvider == "cloudflare" {
+		if tok, err := e.secret("PULSE_ACME_CF_TOKEN", c.Profile == ProfileProd); err != nil {
+			e.errs = append(e.errs, err)
+		} else {
+			c.ACMECFToken = tok
+		}
 	}
 	if tok, err := e.secret("PULSE_CF_BANLIST_TOKEN", c.Profile == ProfileProd); err != nil {
 		e.errs = append(e.errs, err)
@@ -188,6 +214,26 @@ func (c *Config) Validate() error {
 	}
 	if (c.CFAccountID != "" || c.CFBanListID != "" || c.CFBanListToken != "") && (c.CFAccountID == "" || c.CFBanListID == "" || c.CFBanListToken == "") {
 		errs = append(errs, errors.New("the Cloudflare ban list sync needs PULSE_CF_ACCOUNT_ID, PULSE_CF_BANLIST_ID and PULSE_CF_BANLIST_TOKEN_FILE together"))
+	}
+	if c.ACMEEnabled {
+		if c.RawHost == "" || c.RawHost == "localhost" {
+			errs = append(errs, errors.New("PULSE_ACME_ENABLED needs PULSE_RAW_HOST set to the public NATS hostname"))
+		}
+		switch c.ACMEDNSProvider {
+		case "cloudflare":
+			if c.ACMECFToken == "" {
+				errs = append(errs, errors.New("PULSE_ACME_DNS_PROVIDER=cloudflare needs PULSE_ACME_CF_TOKEN_FILE"))
+			}
+		case "challtestsrv":
+			if c.Profile == ProfileProd {
+				errs = append(errs, errors.New("the prod profile refuses PULSE_ACME_DNS_PROVIDER=challtestsrv (a test-only DNS server)"))
+			}
+			if c.ACMEChallTestSrv == "" {
+				errs = append(errs, errors.New("PULSE_ACME_DNS_PROVIDER=challtestsrv needs PULSE_ACME_CHALLTESTSRV_URL"))
+			}
+		default:
+			errs = append(errs, fmt.Errorf("PULSE_ACME_DNS_PROVIDER must be cloudflare or challtestsrv, got %q", c.ACMEDNSProvider))
+		}
 	}
 	if c.BanThreshold < 2 || c.BanWindow < time.Minute || c.BanDuration < time.Minute || c.BanMax < c.BanDuration {
 		errs = append(errs, errors.New("ban settings out of range (threshold ≥ 2, window ≥ 1m, duration ≥ 1m, max ≥ duration)"))

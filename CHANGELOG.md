@@ -25,3 +25,10 @@ versioning: [docs/VERSIONING.md](docs/VERSIONING.md).
 - M8: automatic bans (NATS, HTTP, webhooks) enforced over HTTP, in nftables (`pulsed banagent`) and optionally in a
   Cloudflare IP list; origin TLS with hot reload and Authenticated Origin Pulls; Cloudflare-aware client IP; `/ws`
   proxy; Security page. Prod now requires `PULSE_AOP_CA_FILE` for the public listener.
+- M9: Let's Encrypt for raw NATS (`PULSE_ACME_*`): DNS-01 via Cloudflare, served next to the internal leaf by SNI,
+  verified after reload, renewed early; `GET /system/certificates`; System page with server, NATS, JetStream and
+  certificate status; `make test-acme` (pebble).
+
+### Fixed
+- Admin API requests canceled by the browser return 499 instead of logging an internal error.
+- `make secrets` ignores the user's git config: a global `color.ui=always` made gitleaks parse no commits locally.

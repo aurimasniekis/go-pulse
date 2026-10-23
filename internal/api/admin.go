@@ -13,6 +13,7 @@ import (
 	"github.com/nats-io/nats.go"
 	"github.com/nats-io/nats.go/jetstream"
 
+	"github.com/aurimasniekis/go-pulse/internal/acme"
 	"github.com/aurimasniekis/go-pulse/internal/audit"
 	"github.com/aurimasniekis/go-pulse/internal/auth"
 	"github.com/aurimasniekis/go-pulse/internal/ban"
@@ -66,6 +67,9 @@ type Deps struct {
 	Auth          auth.Authenticator
 	AdminHosts    []string
 	Ready         func() bool
+	// CertSources are the certificates shown on the System page; ACME returns the renewal status (nil when disabled).
+	CertSources []CertSource
+	ACME        func() acme.Status
 }
 
 func (d *Deps) log() *slog.Logger {
@@ -96,6 +100,10 @@ func withClientIP(next http.Handler) http.Handler {
 
 // internalErr logs err and returns an opaque 500 (PL-API-003).
 func (d *Deps) internalErr(op string, err error) error {
+	if errors.Is(err, context.Canceled) {
+		// The client went away (navigation, closed tab): not a server error.
+		return huma.NewError(499, "client closed request")
+	}
 	d.log().Error("api error", "op", op, "err", err)
 	return huma.Error500InternalServerError("internal error")
 }
@@ -113,6 +121,7 @@ func adminConfig(version string) huma.Config {
 func NewAdminAPI(mux *http.ServeMux, d *Deps) huma.API {
 	api := humago.NewWithPrefix(mux, AdminPrefix, adminConfig(d.Version))
 	registerSystem(api, d)
+	registerCertificates(api, d)
 	registerStreams(api, d)
 	registerEvents(api, d)
 	registerRollups(api, d)

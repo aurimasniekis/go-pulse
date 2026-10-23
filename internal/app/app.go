@@ -15,6 +15,7 @@ import (
 	"github.com/nats-io/nats.go"
 	"github.com/nats-io/nats.go/jetstream"
 
+	"github.com/aurimasniekis/go-pulse/internal/acme"
 	"github.com/aurimasniekis/go-pulse/internal/api"
 	"github.com/aurimasniekis/go-pulse/internal/audit"
 	"github.com/aurimasniekis/go-pulse/internal/auth"
@@ -41,6 +42,7 @@ type App struct {
 	Log      *slog.Logger
 	DB       *store.DB
 	Keys     *bootstrap.KeySet
+	ACME     *acme.Manager
 	SysConn  *nats.Conn
 	AppConn  *nats.Conn
 	JS       jetstream.JetStream
@@ -62,15 +64,7 @@ type App struct {
 
 // Init runs `pulsed init` with the configuration.
 func Init(cfg *config.Config, log *slog.Logger) error {
-	res, err := bootstrap.Init(bootstrap.Options{
-		Layout:          cfg.Layout,
-		MasterKey:       cfg.MasterKey,
-		RawHost:         cfg.RawHost,
-		ClientListen:    cfg.NATSClientListen,
-		MonitorListen:   cfg.NATSMonitorListen,
-		WebsocketListen: cfg.NATSWebsocketListen,
-		MaxFileStore:    cfg.NATSMaxFileStore,
-	})
+	res, err := bootstrap.Init(initOptions(cfg))
 	if err != nil {
 		return err
 	}
@@ -81,6 +75,18 @@ func Init(cfg *config.Config, log *slog.Logger) error {
 		log.Info("init: wrote", "path", p)
 	}
 	return nil
+}
+
+func initOptions(cfg *config.Config) bootstrap.Options {
+	return bootstrap.Options{
+		Layout:          cfg.Layout,
+		MasterKey:       cfg.MasterKey,
+		RawHost:         cfg.RawHost,
+		ClientListen:    cfg.NATSClientListen,
+		MonitorListen:   cfg.NATSMonitorListen,
+		WebsocketListen: cfg.NATSWebsocketListen,
+		MaxFileStore:    cfg.NATSMaxFileStore,
+	}
 }
 
 // Start opens state, connects to NATS, syncs accounts and starts listeners. It returns once ready or failed.
@@ -175,6 +181,9 @@ func Start(ctx context.Context, cfg *config.Config, log *slog.Logger) (*App, err
 	ep, err := a.setupEdge(ctx, cfg, deps, hookSvc)
 	if err != nil {
 		return nil, err
+	}
+	if err := a.setupACME(cfg, deps); err != nil {
+		return nil, fmt.Errorf("acme: %w", err)
 	}
 	if err := a.serve(ctx, "admin", cfg.AdminAddr, api.NewAdmin(deps)); err != nil {
 		return nil, err

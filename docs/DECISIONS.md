@@ -201,11 +201,12 @@
   (50k msgs, 64 MB, 3 s, 4 concurrent queries).
 
 ### ADR-0023 — pulsed's own NATS connections use TLS with the internal CA plus system roots
-- **Status:** accepted
+- **Status:** accepted; the ACME sentence is amended by ADR-0032
 - **Context:** 4222 requires TLS for every client. pulsed reaches NATS over the compose network as `nats`.
 - **Decision:** The bootstrap leaf has SANs `nats`, `localhost`, `127.0.0.1` and the raw hostname. pulsed verifies with a pool
-  of system roots + the internal CA and `ServerName = PULSE_NATS_TLS_NAME` (default `nats`). After ACME replaces the leaf,
-  pulsed sets the server name to the raw hostname automatically. No `InsecureSkipVerify` anywhere.
+  of system roots + the internal CA and `ServerName = PULSE_NATS_TLS_NAME` (default `nats`). ~~After ACME replaces the leaf,
+  pulsed sets the server name to the raw hostname automatically.~~ (ADR-0032: ACME adds a certificate, it does not replace
+  the leaf.) No `InsecureSkipVerify` anywhere.
 
 ### ADR-0024 — pulsed state in SQLite; JetStream holds events only — supersedes ADR-0002
 - **Status:** accepted (user decision during M0, 2026-10-23)
@@ -292,6 +293,34 @@
 - **Consequences:**
   - A pulsed restart forgets partial failure windows. That is accepted: an attacker gets at most `threshold − 1` extra attempts per restart.
   - Restarting nftables empties the sets until the next banagent poll (≤ 5 minutes, usually immediate).
+
+### ADR-0032 — ACME certificate served next to the internal leaf, selected by SNI — amends ADR-0010, ADR-0023
+- **Status:** accepted (M9)
+- **Context:** ADR-0023 planned to replace the bootstrap leaf with the Let's Encrypt certificate and switch pulsed's
+  server name to the raw hostname. That couples pulsed's own connection to public DNS and to the Let's Encrypt chain, and
+  a failed renewal would also break pulsed.
+- **Decision:**
+  - `nats.conf` lists both pairs in `tls { certs: [...] }`: the ACME pair (`tls/acme.crt|key`) first, then the internal
+    leaf. NATS (Go `crypto/tls`) picks the first certificate whose names match the client's SNI and falls back to the first
+    entry. Tools on `r.events.wan.lt` get Let's Encrypt; pulsed keeps SNI `nats` and the internal CA.
+  - pulsed runs lego with the account key from `keys.enc` (resolve by key, else register). It uses DNS-01 only:
+    Cloudflare with a scoped token, or pebble's challtestsrv in dev and tests. The prod profile refuses challtestsrv.
+  - Renewal starts at `min(30 days, lifetime / 3)` before expiry. For 90-day certificates that is 30 days; for the
+    shorter Let's Encrypt profiles (45 and 6 days) it avoids renewing on every check. pulsed checks 10 s after start and
+    then every 12 h, and retries after 1 h on failure.
+  - Order of operations: write the key, then the certificate, both atomically. Re-render `nats.conf` (`bootstrap.Init`,
+    idempotent), send `$SYS.REQ.SERVER.<id>.RELOAD`, then verify. Verification connects to the client port, reads INFO,
+    upgrades to TLS with SNI = raw host and checks the served serial against the system roots plus the issuer
+    certificates from the obtained bundle. It does not authenticate.
+  - Status (serial, issuer, expiry, last attempt/success/error, verified) is in memory and shown on the System page with
+    every other certificate (`GET /system/certificates`).
+- **Consequences:**
+  - A failed renewal leaves the old certificate served and pulsed's own connection unaffected.
+  - Status history is lost on restart. The file on disk is the source of truth for serial and expiry; the M10 alert rule
+    reads expiry from it.
+  - The dev compose stack does not run pebble. ACME needs a non-localhost raw hostname. The pebble profile is the
+    integration test `make test-acme` (Docker), which drives a real nats-server subprocess through obtain → install →
+    reload → verify and renewal.
 
 ## 2. Open review items
 

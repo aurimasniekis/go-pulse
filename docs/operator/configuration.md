@@ -34,7 +34,7 @@
 |---|---|---|
 | `PULSE_NATS_URL` | `tls://nats:4222` | pulsed's own connection. |
 | `PULSE_NATS_TLS_NAME` | `nats` | Name verified on the 4222 certificate (internal CA leaf has `nats`, `localhost`, `127.0.0.1`, `::1`, raw host). |
-| `PULSE_RAW_HOST` | — | Public raw NATS hostname (e.g. `r.events.wan.lt`); SAN on the bootstrap leaf, ACME name (M9). |
+| `PULSE_RAW_HOST` | — | Public raw NATS hostname (e.g. `r.events.wan.lt`); SAN on the bootstrap leaf and the ACME certificate name. |
 | `PULSE_PUBLIC_HOST` | — | Public HTTPS hostname behind Cloudflare (e.g. `events.wan.lt`). |
 | `PULSE_PUBLIC_NATS_URL` | `tls://<PULSE_RAW_HOST or localhost>:4222` | NATS URL shown in client snippets. |
 | `PULSE_PUBLIC_URL` | `https://<PULSE_PUBLIC_HOST>` | Public HTTP base URL shown in token snippets. |
@@ -58,7 +58,7 @@
 | `PULSE_BAN_ALLOW` | — | Comma-separated IPs/CIDRs never banned. |
 | `PULSE_HOST_IPS` | — | The VPS's own public addresses (never banned). |
 | `PULSE_CF_RANGES_REFRESH` | `true` | Refresh Cloudflare ranges daily from api.cloudflare.com (the embedded list is the fallback). |
-| `PULSE_CF_ACCOUNT_ID`, `PULSE_CF_BANLIST_ID`, `PULSE_CF_BANLIST_TOKEN_FILE` | — | Optional: mirror bans ≥ 1 h into a Cloudflare IP list (Terraform outputs `ban_list_id`, `ban_sync_token`). |
+| `PULSE_CF_ACCOUNT_ID`, `PULSE_CF_BANLIST_ID`, `PULSE_CF_BANLIST_TOKEN_FILE` | — | Optional: mirror bans ≥ 1 h into a Cloudflare IP list (Terraform outputs `ban_list_id`, `ban_sync_api_token`). |
 | `PULSE_OUTBOUND_ALLOW` | — | Comma-separated IPs/CIDRs outbound webhooks may reach although they are internal (e.g. a LAN service). |
 | `PULSE_ADMIN_HOSTS` | — | Extra comma-separated Host names the admin listener accepts (besides 127.0.0.1, localhost, ::1). |
 | `PULSE_ADMIN_PUBLISHED_LOOPBACK` | `false` | Set `true` when the admin port binds inside a container and compose publishes it only on host loopback. Required in prod for a non-loopback `PULSE_ADMIN_ADDR` with auth none (ADR-0008). |
@@ -66,6 +66,23 @@
 | `PULSE_AUTH_MODE` | `none` | `none`; `oidc` refuses to start until implemented (R-02). |
 | `PULSE_METRICS_ADDR` | `127.0.0.1:9464` | `/metrics` (M10), `/healthz`, `/readyz`, `/internal/v1/bans` (M8). |
 | `PULSE_HEALTHCHECK_URL` | `http://127.0.0.1:9464/readyz` | Probed by `pulsed healthcheck`. |
+
+## ACME (Let's Encrypt for raw NATS, PL-EDGE-006, ADR-0032)
+
+| Variable | Default | Meaning |
+|---|---|---|
+| `PULSE_ACME_ENABLED` | `false` | Obtain and renew a certificate for `PULSE_RAW_HOST` with DNS-01. Needs a real (non-localhost) raw host. |
+| `PULSE_ACME_DIRECTORY` | Let's Encrypt production | ACME directory URL. Use `https://acme-staging-v02.api.letsencrypt.org/directory` for a first dry run. |
+| `PULSE_ACME_EMAIL` | — | Optional account contact. |
+| `PULSE_ACME_DNS_PROVIDER` | `cloudflare` | `cloudflare`, or `challtestsrv` (pebble's test DNS; refused in prod). |
+| `PULSE_ACME_CF_TOKEN_FILE` | — | Cloudflare API token with Zone.DNS edit + Zone read on the zone (Terraform output `acme_dns_api_token`). Required for `cloudflare`. |
+| `PULSE_ACME_CHALLTESTSRV_URL` | — | challtestsrv management URL (dev/tests). |
+| `PULSE_ACME_DNS_RESOLVERS` | system | Comma-separated `host:port` resolvers lego uses for its own propagation checks. |
+| `PULSE_ACME_CA_FILE` | — | Extra roots for the ACME directory's HTTPS (pebble's minica, `deploy/dev/pebble-minica.pem`). |
+| `PULSE_ACME_NATS_ADDR` | host of `PULSE_NATS_URL` | `host:port` where pulsed checks the served certificate after a reload. |
+
+The certificate and key are written to `<PULSE_NATS_DIR>/tls/acme.crt|key`, so pulsed needs the NATS volume mounted
+read-write (as in the reference compose). Status and expiry appear on the System page.
 
 ## Files the deployment provides
 
@@ -75,5 +92,6 @@
 | origin certificate + key | pulsed | `PULSE_ORIGIN_CERT_FILE`/`PULSE_ORIGIN_KEY_FILE`; reloaded when the files change. |
 | AOP CA certificate | pulsed | `PULSE_AOP_CA_FILE`. |
 | Cloudflare ban-list token | pulsed | optional, `PULSE_CF_BANLIST_TOKEN_FILE`. |
+| Cloudflare ACME DNS token | pulsed | with ACME, `PULSE_ACME_CF_TOKEN_FILE`. |
 
-More secrets (Cloudflare origin cert/key, AOP CA, DNS token, S3, age recipients, notifier tokens) are added with M7–M11.
+More secrets (S3, age recipients, notifier tokens) are added with M10–M11.

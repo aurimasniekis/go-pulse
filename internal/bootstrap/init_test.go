@@ -111,3 +111,32 @@ func TestBootstrapLeafRenewal(t *testing.T) {
 		t.Fatal("init replaced a non-internal (ACME) certificate")
 	}
 }
+
+func TestACMEPairListedFirst(t *testing.T) {
+	o := testOpts(t)
+	if _, err := Init(o); err != nil {
+		t.Fatal(err)
+	}
+	conf, _ := os.ReadFile(o.Layout.NATSConf())
+	if strings.Contains(string(conf), "certs:") {
+		t.Fatal("certs list without an ACME certificate")
+	}
+	// Once ACME files exist, init re-renders nats.conf with the ACME pair first and the internal leaf second.
+	ca, _ := certs.NewCA("acme stand-in", time.Now())
+	leaf, _ := ca.IssueServer([]string{"r.example.test"}, time.Hour, time.Now())
+	_ = os.WriteFile(o.Layout.ACMECert(), leaf.CertPEM, 0o644)
+	_ = os.WriteFile(o.Layout.ACMEKey(), leaf.KeyPEM, 0o600)
+	r, err := Init(o)
+	if err != nil {
+		t.Fatal(err)
+	}
+	conf, _ = os.ReadFile(o.Layout.NATSConf())
+	s := string(conf)
+	a, b := strings.Index(s, "acme.crt"), strings.Index(s, "server.crt")
+	if !strings.Contains(s, "certs: [") || a < 0 || b < 0 || a > b || len(r.Changed) != 1 {
+		t.Fatalf("conf:\n%s\nchanged %v", s, r.Changed)
+	}
+	if r, _ := Init(o); len(r.Changed) != 0 {
+		t.Fatalf("not idempotent: %v", r.Changed)
+	}
+}
