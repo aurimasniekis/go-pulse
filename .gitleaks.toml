@@ -1,0 +1,4 @@
+title = "pulse gitleaks config"
+
+[extend]
+useDefault = true

@@ -1,0 +1,12 @@
+:root {
+  --pulse-mono: var(--mantine-font-family-monospace);
+}
+
+body {
+  font-feature-settings: 'cv11', 'ss01', 'tnum';
+}
+
+.mono {
+  font-family: var(--pulse-mono);
+  font-size: var(--mantine-font-size-sm);
+}

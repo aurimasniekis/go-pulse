@@ -1,0 +1,37 @@
+# Build output
+/bin/
+/dist/
+*.test
+*.out
+coverage.*
+
+# Embedded UI build output (README.txt placeholder is tracked)
+/internal/ui/dist/*
+!/internal/ui/dist/README.txt
+
+# Local runtime data and secrets — never commit
+/tmp/
+/.data/
+*.creds
+*.nk
+keys.enc
+master.key
+*.db
+*.db-wal
+*.db-shm
+
+# Frontend
+node_modules/
+/web/test-results/
+/web/playwright-report/
+/web/blob-report/
+
+# Python
+__pycache__/
+*.egg-info/
+.venv/
+
+# Editors / OS
+.idea/
+.vscode/
+.DS_Store

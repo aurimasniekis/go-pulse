@@ -1,0 +1,178 @@
+name: release
+
+# PL-OPS-008: v* tags build, scan and push a multi-arch image to GHCR with SBOM and provenance.
+# A manual dispatch from a branch builds and scans but publishes nothing.
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  GOTOOLCHAIN: local
+  GO_VERSION: "1.27.3"
+  TRIVY_VERSION: v0.70.0
+
+jobs:
+  meta:
+    name: release metadata
+    runs-on: ubuntu-24.04
+    outputs:
+      version: ${{ steps.meta.outputs.version }}
+      publish: ${{ steps.meta.outputs.publish }}
+      prerelease: ${{ steps.meta.outputs.prerelease }}
+      build_date: ${{ steps.meta.outputs.build_date }}
+      image: ${{ steps.meta.outputs.image }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - id: meta
+        env:
+          REF_TYPE: ${{ github.ref_type }}
+          REF_NAME: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          semver='^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-[0-9A-Za-z.-]+)?$'
+          if [[ "$REF_TYPE" == "tag" ]]; then
+            [[ "$REF_NAME" =~ $semver ]] || { echo "::error::tag '$REF_NAME' is not vMAJOR.MINOR.PATCH[-PRE] (docs/VERSIONING.md)"; exit 1; }
+            version="$REF_NAME"; publish=true
+          else
+            version="v0.0.0-dev.${GITHUB_SHA:0:12}"; publish=false
+          fi
+          prerelease=false; [[ "$version" == *-* ]] && prerelease=true
+          {
+            echo "version=$version"
+            echo "publish=$publish"
+            echo "prerelease=$prerelease"
+            echo "build_date=$(date -u -d "@$(git log -1 --format=%ct)" +%Y-%m-%dT%H:%M:%SZ)"
+            echo "image=ghcr.io/aurimasniekis/pulsed"
+          } >>"$GITHUB_OUTPUT"
+
+  test:
+    name: vet and race tests (release gate)
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version: ${{ env.GO_VERSION }}
+      - run: make test
+
+  image-scan:
+    name: image build + Trivy (no push)
+    needs: [meta, test]
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: true
+      matrix:
+        arch: [amd64, arm64]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+      - uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          platforms: linux/${{ matrix.arch }}
+          push: false
+          outputs: type=docker,dest=${{ runner.temp }}/image-${{ matrix.arch }}.tar
+          tags: pulsed:scan-${{ matrix.arch }}
+          build-args: |
+            VERSION=${{ needs.meta.outputs.version }}
+            COMMIT=${{ github.sha }}
+            BUILD_DATE=${{ needs.meta.outputs.build_date }}
+          cache-from: type=gha,scope=image-${{ matrix.arch }}
+          cache-to: type=gha,mode=max,scope=image-${{ matrix.arch }}
+          provenance: false
+          sbom: false
+      - name: Trivy (fail on fixable HIGH/CRITICAL)
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          version: ${{ env.TRIVY_VERSION }}
+          input: ${{ runner.temp }}/image-${{ matrix.arch }}.tar
+          scanners: vuln
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          exit-code: "1"
+
+  image-publish:
+    name: publish multi-arch image to GHCR
+    needs: [meta, image-scan]
+    if: needs.meta.outputs.publish == 'true'
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+      attestations: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+      - uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: image tags
+        id: tags
+        env:
+          IMAGE: ${{ needs.meta.outputs.image }}
+          VERSION: ${{ needs.meta.outputs.version }}
+          PRERELEASE: ${{ needs.meta.outputs.prerelease }}
+        run: |
+          tags="${IMAGE}:${VERSION#v}"
+          [[ "$PRERELEASE" == "true" ]] || tags="${tags},${IMAGE}:latest"
+          echo "tags=$tags" >>"$GITHUB_OUTPUT"
+      - name: build and push linux/amd64,linux/arm64
+        id: push
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.tags.outputs.tags }}
+          build-args: |
+            VERSION=${{ needs.meta.outputs.version }}
+            COMMIT=${{ github.sha }}
+            BUILD_DATE=${{ needs.meta.outputs.build_date }}
+          cache-from: |
+            type=gha,scope=image-amd64
+            type=gha,scope=image-arm64
+          provenance: mode=max
+          sbom: true
+      - name: Trivy on the pushed digest
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        env:
+          TRIVY_USERNAME: ${{ github.actor }}
+          TRIVY_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          version: ${{ env.TRIVY_VERSION }}
+          image-ref: ${{ needs.meta.outputs.image }}@${{ steps.push.outputs.digest }}
+          scanners: vuln
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          exit-code: "1"
+      - name: build provenance attestation
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-name: ${{ needs.meta.outputs.image }}
+          subject-digest: ${{ steps.push.outputs.digest }}
+          push-to-registry: true
+      - name: digest summary (pin this in events-wan-lt)
+        env:
+          IMAGE: ${{ needs.meta.outputs.image }}
+          DIGEST: ${{ steps.push.outputs.digest }}
+        run: echo "### ${IMAGE}@${DIGEST}" >>"$GITHUB_STEP_SUMMARY"
