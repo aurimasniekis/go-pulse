@@ -44,9 +44,9 @@ Start order: `init` (completed) → `nats` (healthy) → `pulsed` (healthy) → 
   keys.enc              sealed key set (ADR-0017)
   pulse.db[-wal,-shm]   SQLite state (ADR-0024)
   pulsed.lock           flock
-  creds/internal-app.creds, creds/internal-sys.creds   minted by init (0600)
-  banagent.token        bearer token for the loopback ban endpoint (0600)
+  banagent/token        bearer token for the loopback ban endpoint (0600); banagent mounts only this subpath
   tls/ca.crt            internal CA certificate (public)
+  (internal user JWTs are minted in memory at start from keys.enc; no internal creds files on disk)
   acme/                 lego account + issued certs
 /data/nats              (shared with nats, read-only for nats except jwt/ and js/)
   nats.conf  operator.jwt  tls/server.crt  tls/server.key  jwt/ (resolver dir)  js/ (JetStream store)
@@ -160,8 +160,8 @@ Status values: `planned`, `in-progress`, `implemented`, `tested`, `externally-ve
 
 | M | Title | Status | Commit |
 |---|---|---|---|
-| M0 | Skeleton | tested | (this commit) |
-| M1 | Identity, NATS bootstrap, SQLite | planned | |
+| M0 | Skeleton | tested | 0e5611e |
+| M1 | Identity, NATS bootstrap, SQLite | tested | (this commit) |
 | M2 | Envelope, EVENTS, Go SDK, CLI | planned | |
 | M3 | API and query engine | planned | |
 | M4 | UI core | planned | |
@@ -183,6 +183,7 @@ Status values: `planned`, `in-progress`, `implemented`, `tested`, `externally-ve
 |---|---|---|
 | 2026-10-23 | M0 | Planning docs written. ADR-0024 (SQLite for pulsed state) recorded per user decision. ADR-0025 (scoped signing key per client). |
 | 2026-10-23 | M0 | Skeleton done: Go module, `pulsed version|healthcheck`, UI shell, Dockerfile, CI/release. Go bumped to 1.27.3 for GO-2026-6809 (ADR-0019). `make check` green. |
+| 2026-10-23 | M1 | secretbox, natsauth (grants→permissions, scoped signers), natsconf, bootstrap, natsconn, sysapi, store (SQLite), clients service, config, `pulsed init|serve|keys export`, dev compose (init → nats → pulsed). Found and fixed: empty NATS allow list = allow all (sentinel); scoped users need zero permission sections; upstream race in embedded reload (RELOAD tests use a subprocess). |
 
 ## 6. Acceptance checklist (mapped to requirement IDs)
 
@@ -200,7 +201,7 @@ E browser E2E · C CI/static check · S spike/perf · R restore drill · X exter
 - [ ] `PL-BUS-005` Extra streams — M4
 - [ ] `PL-BUS-006` Consumers — M4
 - [ ] `PL-BUS-007` Replay by time — M2
-- [ ] `PL-BUS-008` Internal state isolation — M1
+- [x] `PL-BUS-008` Internal state isolation — M1 — ✅ tested: state in SQLite (internal/store), nothing internal stored in NATS
 - [ ] `PL-BUS-009` Subject cardinality guidance — M2
 
 #### PL-ENV — Envelope
@@ -213,17 +214,17 @@ E browser E2E · C CI/static check · S spike/perf · R restore drill · X exter
 
 #### PL-KEY — Key management and bootstrap
 
-- [ ] `PL-KEY-001` Sealed key store — M1
-- [ ] `PL-KEY-002` Master key handling — M1
-- [ ] `PL-KEY-003` Idempotent init — M1
-- [ ] `PL-KEY-004` Bootstrap artifacts — M1
-- [ ] `PL-KEY-005` Account sync — M1
-- [ ] `PL-KEY-006` Signing keys — M1
-- [ ] `PL-KEY-007` Key export — M1
+- [x] `PL-KEY-001` Sealed key store — M1 — ✅ tested: internal/secretbox (round trip, tamper, wrong key), internal/bootstrap keyset
+- [x] `PL-KEY-002` Master key handling — M1 — ✅ tested: internal/config (prod file-only, missing key), bootstrap TestInitWrongMasterKeyFailsClosed
+- [x] `PL-KEY-003` Idempotent init — M1 — ✅ tested: internal/bootstrap TestInitIdempotent; dev stack `docker compose run init` → "nothing to do"
+- [x] `PL-KEY-004` Bootstrap artifacts — M1 — ✅ tested: internal/bootstrap TestInitIdempotent (conf, modes, banagent token), TestBootstrapLeafRenewal
+- [x] `PL-KEY-005` Account sync — M1 — ✅ tested: internal/app TestStartReadyShutdown, internal/clients TestAccountsPersistOverRestart
+- [x] `PL-KEY-006` Signing keys — M1 — ✅ tested: operator JWT has strict signing key usage; every integration test connects through signing-key-signed accounts/users
+- [x] `PL-KEY-007` Key export — M1 — ✅ tested: cmd/pulsed TestInitAndKeysExport (confirmation flag, audit record)
 
 #### PL-AUTH — Tool client identity
 
-- [ ] `PL-AUTH-001` Operator mode — M1
+- [x] `PL-AUTH-001` Operator mode — M1 — ✅ tested: internal/clients integration tests (embedded server from generated nats.conf)
 - [ ] `PL-AUTH-002` Client records — M6
 - [ ] `PL-AUTH-003` Least privilege — M2
 - [ ] `PL-AUTH-004` Credentials once — M6
@@ -252,7 +253,7 @@ E browser E2E · C CI/static check · S spike/perf · R restore drill · X exter
 - [ ] `PL-EDGE-004` Real client IP — M8
 - [ ] `PL-EDGE-005` WebSocket proxy — M8
 - [ ] `PL-EDGE-006` Raw NATS TLS — M9
-- [ ] `PL-EDGE-007` Bootstrap TLS — M1
+- [x] `PL-EDGE-007` Bootstrap TLS — M1 — ✅ tested: internal/bootstrap TestBootstrapLeafRenewal; internal/clients TestReloadServesNewCert
 - [ ] `PL-EDGE-008` Cloudflare ranges — M8
 - [ ] `PL-EDGE-009` Timeouts and limits — M3
 - [ ] `PL-EDGE-010` Dev mode — M3
@@ -324,9 +325,9 @@ E browser E2E · C CI/static check · S spike/perf · R restore drill · X exter
 
 #### PL-OBS — Observability
 
-- [ ] `PL-OBS-001` Logs — M1
+- [ ] `PL-OBS-001` Logs — M1 — ◐ implemented: internal/logging (slog JSON); redaction review pending
 - [ ] `PL-OBS-002` Metrics — M10
-- [ ] `PL-OBS-003` Health — M1
+- [x] `PL-OBS-003` Health — M1 — ✅ tested: internal/app TestStartReadyShutdown (/healthz, /readyz); dev stack container health
 - [ ] `PL-OBS-004` Alert rules — M10
 - [ ] `PL-OBS-005` Alert events — M10
 - [ ] `PL-OBS-006` Notifiers — M10
@@ -347,13 +348,13 @@ E browser E2E · C CI/static check · S spike/perf · R restore drill · X exter
 
 #### PL-DB — pulsed state database
 
-- [ ] `PL-DB-001` Driver and durability — M1
-- [ ] `PL-DB-002` Migrations — M1
-- [ ] `PL-DB-003` Single owner — M1
-- [ ] `PL-DB-004` No network I/O in transactions — M1
-- [ ] `PL-DB-005` Retention — M1
-- [ ] `PL-DB-006` Permissions and placement — M1
-- [ ] `PL-DB-007` Integrity — M1
+- [x] `PL-DB-001` Driver and durability — M1 — ✅ tested: internal/store TestPragmasOnEveryConnection
+- [x] `PL-DB-002` Migrations — M1 — ✅ tested: internal/store TestMigrationsAndReopen, TestRefuseNewerSchema
+- [x] `PL-DB-003` Single owner — M1 — ✅ tested: internal/store TestExclusiveLock; internal/app second Start refused
+- [ ] `PL-DB-004` No network I/O in transactions — M1 — ◐ implemented: clients service prepares keys before Write and pushes after commit; no analyzer enforces it yet
+- [ ] `PL-DB-005` Retention — M1 — ◐ partial: revocation pruning only; other tables arrive with their milestones
+- [ ] `PL-DB-006` Permissions and placement — M1 — ◐ partial: 0700/0600 modes tested (TestDatabaseFileMode); Linux network-FS refusal implemented, untested
+- [x] `PL-DB-007` Integrity — M1 — ✅ tested: internal/store TestCorruptDatabaseRefused
 
 #### PL-UI — Dashboard
 
@@ -381,15 +382,15 @@ E browser E2E · C CI/static check · S spike/perf · R restore drill · X exter
 #### PL-OPS — Packaging and operations
 
 - [x] `PL-OPS-001` Image — M0 — ✅ tested (local): `make image` builds distroless static-debian13, digests pinned, user 65532:65532; CI image job implemented, not yet run on GitHub
-- [ ] `PL-OPS-002` Commands — M0 — ◐ partial: `version`, `healthcheck` implemented and tested (cmd/pulsed/main_test.go); `serve`, `init`, `banagent`, `openapi`, `keys export` pending M1–M8
-- [ ] `PL-OPS-003` Configuration — M1
-- [ ] `PL-OPS-004` Profiles — M1
-- [ ] `PL-OPS-005` Dev stack — M1
-- [ ] `PL-OPS-006` Reference prod compose — M1
+- [ ] `PL-OPS-002` Commands — M0 — ◐ partial: `version`, `healthcheck`, `init`, `serve`, `keys export` implemented and tested; `banagent` (M8), `openapi` (M3) pending
+- [x] `PL-OPS-003` Configuration — M1 — ✅ tested: internal/config tests; docs/operator/configuration.md
+- [ ] `PL-OPS-004` Profiles — M1 — ◐ partial: prod refusals for admin exposure, plain master key, missing key tested (internal/config); plain-HTTP public listener and AOP checks arrive in M3/M8
+- [ ] `PL-OPS-005` Dev stack — M1 — ◐ partial: deploy/compose.dev.yaml runs init → nats → pulsed (verified locally); SeaweedFS (M11) and pebble (M9) pending
+- [ ] `PL-OPS-006` Reference prod compose — M1 — ◐ implemented: deploy/examples/compose.yaml; banagent service depends on M8
 - [ ] `PL-OPS-007` CI — M0 — ◐ implemented: .github/workflows/ci.yaml (SHA-pinned, GOTOOLCHAIN=local); `make check` green locally; never run on GitHub (no remote)
 - [ ] `PL-OPS-008` Release — M0 — ◐ implemented: .github/workflows/release.yaml; not externally verified (no remote, no tag)
 - [ ] `PL-OPS-009` Memory budget — M2
-- [ ] `PL-OPS-010` Graceful shutdown — M1
+- [ ] `PL-OPS-010` Graceful shutdown — M1 — ◐ partial: listeners and NATS drain on SIGTERM; rollup/consumer flushing arrives with M5
 - [x] `PL-OPS-011` Versioning — M0 — ✅ tested: cmd/pulsed/main_test.go TestVersionJSON; docs/VERSIONING.md
 
 #### PL-AUD — Audit
@@ -400,9 +401,9 @@ E browser E2E · C CI/static check · S spike/perf · R restore drill · X exter
 
 #### PL-TST — Testing
 
-- [ ] `PL-TST-001` Embedded server tests — M1
-- [ ] `PL-TST-002` Race — M1
-- [ ] `PL-TST-003` Bootstrap tests — M1
+- [x] `PL-TST-001` Embedded server tests — M1 — ✅ tested: internal/testutil/natstest
+- [x] `PL-TST-002` Race — M1 — ✅ tested: `make test` (-race) green
+- [x] `PL-TST-003` Bootstrap tests — M1 — ✅ tested: internal/clients (creds connect, AUTH.ERR host, revoke → disconnect < 5 s, restart persistence, RELOAD new cert)
 - [ ] `PL-TST-004` Query tests — M3
 - [ ] `PL-TST-005` E2E — M4
 - [ ] `PL-TST-006` Gate spike — M2

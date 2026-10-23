@@ -160,7 +160,7 @@ Requirement IDs are stable: `PL-<AREA>-NNN`. They are never reused or renumbered
 | PL-AUTH-006 | **Explicit denies.** Every client JWT denies stream administration, unfiltered direct get and message get, `$KV.>`, `$SYS.>`, and `$O.>` unless the client has a `blobs` grant. |
 | PL-AUTH-007 | **Revocation.** Revoking a client adds it to the APP account's revocation list, re-pushes the account JWT and disconnects the client within 5 s. |
 | PL-AUTH-008 | **Rotation.** Rotating credentials mints a new user key and JWT and revokes the previous one. |
-| PL-AUTH-009 | **Grant edits.** Editing grants updates the client's permissions without issuing new credentials, by rewriting the client's scoped signing key in the APP account JWT. The effect on already connected clients is tested and shown in the UI; the dashboard can kick the client to force a reconnect. |
+| PL-AUTH-009 | **Grant edits.** Editing grants updates the client's permissions without issuing new credentials, by rewriting the client's scoped signing key in the APP account JWT. NATS disconnects the client's live connections when its scope changes; clients reconnect automatically with the new permissions and the same creds (tested). The dashboard can also kick a client to force a reconnect. |
 | PL-AUTH-010 | **Connection view.** The dashboard shows live connections per client (IP, RTT, subs, in/out msgs and bytes, uptime, version) from `CONNZ`. |
 | PL-AUTH-011 | **Snippets.** The client page shows ready-to-use snippets for Go, Python, TS, curl and the `nats` CLI. |
 | PL-AUTH-012 | **Expiry warnings.** Clients expiring in under 30 days raise a warning and an alert event. |

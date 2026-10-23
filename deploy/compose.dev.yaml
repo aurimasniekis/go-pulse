@@ -1,0 +1,87 @@
+# Local development stack (PL-OPS-005): init → nats → pulsed.
+# Host ports are overridable with PULSE_DEV_{NATS,ADMIN,METRICS,PUBLIC}_PORT when the defaults are taken.
+# `make dev-up` generates deploy/.dev/master.key (gitignored) and builds pulsed:dev from the repo.
+# SeaweedFS (S3, M11) and pebble (ACME, M9) join this file in their milestones.
+
+x-pulse-env: &pulse-env
+  PULSE_PROFILE: dev
+  PULSE_LOG_LEVEL: debug
+  PULSE_MASTER_KEY_FILE: /run/secrets/pulse_master_key
+  PULSE_RAW_HOST: localhost
+  PULSE_NATS_URL: tls://nats:4222
+  PULSE_NATS_TLS_NAME: nats
+  PULSE_NATS_WEBSOCKET_URL: http://nats:8080
+  PULSE_ADMIN_ADDR: 0.0.0.0:8080
+  PULSE_ADMIN_PUBLISHED_LOOPBACK: "true"
+  PULSE_METRICS_ADDR: 0.0.0.0:9464
+  PULSE_HEALTHCHECK_URL: http://127.0.0.1:9464/readyz
+  PULSE_PUBLIC_ADDR: 0.0.0.0:8443
+  PULSE_EVENTS_MAX_BYTES: 2GiB
+
+secrets:
+  pulse_master_key:
+    file: ./.dev/master.key
+
+volumes:
+  pulsed-data:
+  nats-data:
+
+services:
+  init:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+      args:
+        VERSION: dev
+    image: pulsed:dev
+    command: ["init"]
+    environment: *pulse-env
+    secrets: [pulse_master_key]
+    volumes:
+      - pulsed-data:/data/pulsed
+      - nats-data:/data/nats
+    network_mode: none
+    healthcheck:
+      disable: true
+    mem_limit: 128m
+
+  nats:
+    image: nats:2.15.1-alpine@sha256:7ae34c25dfd6fe2e01c6483eabef20d796690fdcac6c4d94ca780a6cf9877fde
+    user: "65532:65532"
+    command: ["-c", "/data/nats/nats.conf"]
+    environment:
+      GOMEMLIMIT: 600MiB
+    volumes:
+      - nats-data:/data/nats
+    ports:
+      - "127.0.0.1:${PULSE_DEV_NATS_PORT:-4222}:4222"
+    depends_on:
+      init:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8222/healthz?js-enabled-only=true"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    mem_limit: 900m
+    restart: unless-stopped
+
+  pulsed:
+    image: pulsed:dev
+    command: ["serve"]
+    environment:
+      <<: *pulse-env
+      GOMEMLIMIT: 300MiB
+    secrets: [pulse_master_key]
+    volumes:
+      - pulsed-data:/data/pulsed
+      - nats-data:/data/nats
+    ports:
+      - "127.0.0.1:${PULSE_DEV_ADMIN_PORT:-8080}:8080"
+      - "127.0.0.1:${PULSE_DEV_METRICS_PORT:-9464}:9464"
+      - "127.0.0.1:${PULSE_DEV_PUBLIC_PORT:-8443}:8443"
+    depends_on:
+      nats:
+        condition: service_healthy
+    mem_limit: 448m
+    restart: unless-stopped

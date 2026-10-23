@@ -36,4 +36,7 @@
 - Tests generate their own keys, certificates and secrets at runtime. No secret fixtures.
 - Integration tests use random ports and temp dirs; no reliance on Docker except where noted (`make e2e`, `make drill`).
 - Every bug fix adds a regression test.
+- Tests that issue `$SYS.REQ.SERVER.<id>.RELOAD` run a real `nats-server` subprocess built from the version pinned in
+  `go.mod` (`natstest.Options{Process: true}`): the embedded server has an internal data race during config reload with
+  the full resolver (nats-server 2.15.1, `diffOptions` vs. `DirJWTStore` expiry), which `-race` reports.
 - `go test -race` must pass; goroutine leaks in long-running components are checked with `goleak` where feasible.

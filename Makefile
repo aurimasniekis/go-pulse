@@ -58,7 +58,12 @@ check: lint test web-test vuln secrets ## Everything CI runs (except e2e)
 
 # ---- dev stack ---------------------------------------------------------------
 
-dev-up: ## Start the dev stack (init, nats, pulsed, SeaweedFS, pebble)
+deploy/.dev/master.key:
+	@mkdir -p deploy/.dev
+	@umask 022; openssl rand -hex 32 > $@
+	@echo "generated dev master key $@ (dev only, gitignored)"
+
+dev-up: deploy/.dev/master.key ## Start the dev stack (init, nats, pulsed)
 	$(DEV) up -d --build --wait
 
 dev-down: ## Stop the dev stack

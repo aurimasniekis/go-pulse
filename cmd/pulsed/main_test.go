@@ -8,6 +8,9 @@ import (
 	"net/http/httptest"
 	"testing"
 	"time"
+
+	"github.com/aurimasniekis/go-pulse/internal/secretbox"
+	"github.com/aurimasniekis/go-pulse/internal/store"
 )
 
 func TestVersionJSON(t *testing.T) {
@@ -37,5 +40,46 @@ func TestProbe(t *testing.T) {
 	status = http.StatusServiceUnavailable
 	if err := probe(context.Background(), srv.URL, time.Second); err == nil {
 		t.Fatal("expected error when not ready")
+	}
+}
+
+func TestInitAndKeysExport(t *testing.T) {
+	dir := t.TempDir()
+	t.Setenv("PULSE_PROFILE", "dev")
+	t.Setenv("PULSE_MASTER_KEY", secretbox.GenerateMasterKey())
+	t.Setenv("PULSE_DATA_DIR", dir+"/pulsed")
+	t.Setenv("PULSE_NATS_DIR", dir+"/nats")
+	run := func(args ...string) (string, error) {
+		cmd := newRootCmd()
+		var out bytes.Buffer
+		cmd.SetOut(&out)
+		cmd.SetErr(&out)
+		cmd.SetArgs(args)
+		err := cmd.ExecuteContext(context.Background())
+		return out.String(), err
+	}
+	if _, err := run("init"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := run("keys", "export"); err == nil {
+		t.Fatal("export without confirmation succeeded")
+	}
+	out, err := run("keys", "export", "--yes-i-understand")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var ks map[string]any
+	if err := json.Unmarshal([]byte(out), &ks); err != nil || ks["operator"] == "" {
+		t.Fatalf("export output: %v", err)
+	}
+	db, err := store.Open(context.Background(), store.Options{Path: dir + "/pulsed/pulse.db"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+	var n int
+	_ = db.R().QueryRow("SELECT COUNT(*) FROM audit WHERE action = 'keys.export'").Scan(&n)
+	if n != 1 {
+		t.Fatalf("audit records: %d", n)
 	}
 }

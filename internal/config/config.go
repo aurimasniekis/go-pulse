@@ -1,0 +1,252 @@
+// Package config loads pulsed configuration from PULSE_* environment variables, with *_FILE variants for secrets
+// (PL-OPS-003/004). docs/operator/configuration.md documents every variable and is the contract with deployments.
+package config
+
+import (
+	"errors"
+	"fmt"
+	"net"
+	"os"
+	"strconv"
+	"strings"
+	"time"
+
+	"github.com/aurimasniekis/go-pulse/internal/bootstrap"
+	"github.com/aurimasniekis/go-pulse/internal/secretbox"
+)
+
+// Profiles.
+const (
+	ProfileDev  = "dev"
+	ProfileProd = "prod"
+)
+
+// Config is the full pulsed configuration.
+type Config struct {
+	Profile  string
+	LogLevel string
+	Layout   bootstrap.Layout
+
+	MasterKey []byte
+
+	// NATS
+	NATSURL             string // pulsed's own connection, e.g. tls://nats:4222
+	NATSTLSName         string // server name verified on the NATS TLS cert (ADR-0023)
+	NATSClientListen    string // rendered into nats.conf by init
+	NATSMonitorListen   string
+	NATSWebsocketListen string
+	NATSWebsocketURL    string // where pulsed proxies /ws to
+	NATSMaxFileStore    int64
+	RawHost             string // r.events.wan.lt
+	PublicHost          string // events.wan.lt
+	EventsMaxBytes      int64
+
+	// Listeners
+	PublicAddr             string
+	AdminAddr              string
+	MetricsAddr            string
+	AdminPublishedLoopback bool // compose publishes the admin port only on host loopback (ADR-0008)
+	AdminPublic            bool
+	AuthMode               string // none | oidc
+
+	ShutdownTimeout time.Duration
+}
+
+// Getenv abstracts os.Getenv for tests.
+type Getenv func(string) string
+
+// Load reads the configuration from the environment.
+func Load(getenv Getenv) (*Config, error) {
+	if getenv == nil {
+		getenv = os.Getenv
+	}
+	e := envReader{get: getenv}
+	c := &Config{
+		Profile:  e.str("PULSE_PROFILE", ProfileProd),
+		LogLevel: e.str("PULSE_LOG_LEVEL", "info"),
+		Layout: bootstrap.Layout{
+			DataDir: e.str("PULSE_DATA_DIR", "/data/pulsed"),
+			NATSDir: e.str("PULSE_NATS_DIR", "/data/nats"),
+		},
+		NATSURL:                e.str("PULSE_NATS_URL", "tls://nats:4222"),
+		NATSTLSName:            e.str("PULSE_NATS_TLS_NAME", "nats"),
+		NATSClientListen:       e.str("PULSE_NATS_CLIENT_LISTEN", "0.0.0.0:4222"),
+		NATSMonitorListen:      e.str("PULSE_NATS_MONITOR_LISTEN", "0.0.0.0:8222"),
+		NATSWebsocketListen:    e.str("PULSE_NATS_WEBSOCKET_LISTEN", "0.0.0.0:8080"),
+		NATSWebsocketURL:       e.str("PULSE_NATS_WEBSOCKET_URL", "http://nats:8080"),
+		NATSMaxFileStore:       e.bytes("PULSE_NATS_MAX_FILE_STORE", 0),
+		RawHost:                e.str("PULSE_RAW_HOST", ""),
+		PublicHost:             e.str("PULSE_PUBLIC_HOST", ""),
+		EventsMaxBytes:         e.bytes("PULSE_EVENTS_MAX_BYTES", 10<<30),
+		PublicAddr:             e.str("PULSE_PUBLIC_ADDR", ":8443"),
+		AdminAddr:              e.str("PULSE_ADMIN_ADDR", "127.0.0.1:8080"),
+		MetricsAddr:            e.str("PULSE_METRICS_ADDR", "127.0.0.1:9464"),
+		AdminPublishedLoopback: e.bool("PULSE_ADMIN_PUBLISHED_LOOPBACK", false),
+		AdminPublic:            e.bool("PULSE_ADMIN_PUBLIC", false),
+		AuthMode:               e.str("PULSE_AUTH_MODE", "none"),
+		ShutdownTimeout:        e.dur("PULSE_SHUTDOWN_TIMEOUT", 20*time.Second),
+	}
+	mk, err := e.secret("PULSE_MASTER_KEY", c.Profile == ProfileProd)
+	if err != nil {
+		e.errs = append(e.errs, err)
+	} else if mk != "" {
+		c.MasterKey, err = secretbox.ParseMasterKey(mk)
+		if err != nil {
+			e.errs = append(e.errs, fmt.Errorf("PULSE_MASTER_KEY: %w", err))
+		}
+	}
+	if len(e.errs) > 0 {
+		return nil, errors.Join(e.errs...)
+	}
+	return c, c.Validate()
+}
+
+// Validate enforces profile rules (PL-OPS-004, PL-ADM-003).
+func (c *Config) Validate() error {
+	var errs []error
+	switch c.Profile {
+	case ProfileDev, ProfileProd:
+	default:
+		errs = append(errs, fmt.Errorf("PULSE_PROFILE must be dev or prod, got %q", c.Profile))
+	}
+	switch c.AuthMode {
+	case "none":
+	case "oidc":
+		errs = append(errs, errors.New("PULSE_AUTH_MODE=oidc is not implemented yet (DECISIONS.md R-02)"))
+	default:
+		errs = append(errs, fmt.Errorf("PULSE_AUTH_MODE must be none or oidc, got %q", c.AuthMode))
+	}
+	if len(c.MasterKey) == 0 {
+		errs = append(errs, errors.New("a master key is required: set PULSE_MASTER_KEY_FILE"))
+	}
+	if c.Profile == ProfileProd && c.AuthMode == "none" {
+		if c.AdminPublic {
+			errs = append(errs, errors.New("refusing PULSE_ADMIN_PUBLIC=true with PULSE_AUTH_MODE=none in the prod profile (ADR-0008)"))
+		}
+		if !isLoopback(c.AdminAddr) && !c.AdminPublishedLoopback {
+			errs = append(errs, fmt.Errorf("refusing admin listener %q with PULSE_AUTH_MODE=none in the prod profile: bind a loopback "+
+				"address, or bind inside a container and publish only on host loopback with PULSE_ADMIN_PUBLISHED_LOOPBACK=true (ADR-0008)", c.AdminAddr))
+		}
+	}
+	if c.EventsMaxBytes < 64<<20 {
+		errs = append(errs, errors.New("PULSE_EVENTS_MAX_BYTES must be at least 64MiB"))
+	}
+	return errors.Join(errs...)
+}
+
+func isLoopback(addr string) bool {
+	host, _, err := net.SplitHostPort(addr)
+	if err != nil {
+		return false
+	}
+	if host == "localhost" {
+		return true
+	}
+	ip := net.ParseIP(host)
+	return ip != nil && ip.IsLoopback()
+}
+
+// Dev reports whether the dev profile is active.
+func (c *Config) Dev() bool { return c.Profile == ProfileDev }
+
+type envReader struct {
+	get  Getenv
+	errs []error
+}
+
+func (e *envReader) str(k, def string) string {
+	if v := strings.TrimSpace(e.get(k)); v != "" {
+		return v
+	}
+	return def
+}
+
+func (e *envReader) bool(k string, def bool) bool {
+	v := e.get(k)
+	if v == "" {
+		return def
+	}
+	b, err := strconv.ParseBool(v)
+	if err != nil {
+		e.errs = append(e.errs, fmt.Errorf("%s: %w", k, err))
+	}
+	return b
+}
+
+func (e *envReader) dur(k string, def time.Duration) time.Duration {
+	v := e.get(k)
+	if v == "" {
+		return def
+	}
+	d, err := time.ParseDuration(v)
+	if err != nil {
+		e.errs = append(e.errs, fmt.Errorf("%s: %w", k, err))
+	}
+	return d
+}
+
+// bytes parses sizes like 1073741824, 10GiB, 512MiB, 60G.
+func (e *envReader) bytes(k string, def int64) int64 {
+	v := strings.TrimSpace(e.get(k))
+	if v == "" {
+		return def
+	}
+	n, err := ParseBytes(v)
+	if err != nil {
+		e.errs = append(e.errs, fmt.Errorf("%s: %w", k, err))
+	}
+	return n
+}
+
+// ParseBytes parses a byte size with an optional K/M/G/T (decimal) or KiB/MiB/GiB/TiB (binary) suffix.
+func ParseBytes(v string) (int64, error) {
+	units := []struct {
+		suffix string
+		mult   int64
+	}{
+		{"TiB", 1 << 40}, {"GiB", 1 << 30}, {"MiB", 1 << 20}, {"KiB", 1 << 10},
+		{"TB", 1e12}, {"GB", 1e9}, {"MB", 1e6}, {"KB", 1e3},
+		{"T", 1e12}, {"G", 1e9}, {"M", 1e6}, {"K", 1e3}, {"B", 1},
+	}
+	for _, u := range units {
+		if strings.HasSuffix(v, u.suffix) {
+			n, err := strconv.ParseFloat(strings.TrimSpace(strings.TrimSuffix(v, u.suffix)), 64)
+			if err != nil || n < 0 {
+				return 0, fmt.Errorf("invalid size %q", v)
+			}
+			return int64(n * float64(u.mult)), nil
+		}
+	}
+	n, err := strconv.ParseInt(v, 10, 64)
+	if err != nil || n < 0 {
+		return 0, fmt.Errorf("invalid size %q", v)
+	}
+	return n, nil
+}
+
+// secret reads NAME_FILE (preferred) or NAME. With fileOnly, the plain variable is refused (prod).
+func (e *envReader) secret(name string, fileOnly bool) (string, error) {
+	if p := e.get(name + "_FILE"); p != "" {
+		b, err := os.ReadFile(p) //nolint:gosec // operator-supplied secret path
+		if err != nil {
+			return "", fmt.Errorf("%s_FILE: %w", name, err)
+		}
+		return strings.TrimSpace(string(b)), nil
+	}
+	if v := e.get(name); v != "" {
+		if fileOnly {
+			return "", fmt.Errorf("%s must be supplied as a file (%s_FILE) in the prod profile", name, name)
+		}
+		return v, nil
+	}
+	return "", nil
+}
+
+// Secret is the exported form of secret for feature packages (Cloudflare tokens, notifier tokens, …).
+func Secret(getenv Getenv, name string, prod bool) (string, error) {
+	if getenv == nil {
+		getenv = os.Getenv
+	}
+	e := envReader{get: getenv}
+	return e.secret(name, prod)
+}

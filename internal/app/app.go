@@ -1,0 +1,222 @@
+package app
+
+import (
+	"context"
+	"errors"
+	"fmt"
+	"log/slog"
+	"net"
+	"net/http"
+	"sync"
+	"sync/atomic"
+	"time"
+
+	"github.com/nats-io/nats.go"
+
+	"github.com/aurimasniekis/go-pulse/internal/bootstrap"
+	"github.com/aurimasniekis/go-pulse/internal/certs"
+	"github.com/aurimasniekis/go-pulse/internal/clients"
+	"github.com/aurimasniekis/go-pulse/internal/config"
+	"github.com/aurimasniekis/go-pulse/internal/natsconn"
+	"github.com/aurimasniekis/go-pulse/internal/store"
+	"github.com/aurimasniekis/go-pulse/internal/sysapi"
+)
+
+// App is a running pulsed.
+type App struct {
+	Cfg     *config.Config
+	Log     *slog.Logger
+	DB      *store.DB
+	Keys    *bootstrap.KeySet
+	SysConn *nats.Conn
+	AppConn *nats.Conn
+	Sys     *sysapi.Client
+	Clients *clients.Service
+
+	ready     atomic.Bool
+	listeners []*http.Server
+	wg        sync.WaitGroup
+	loopCtx   context.Context
+	stopLoops context.CancelFunc
+}
+
+// Init runs `pulsed init` with the configuration.
+func Init(cfg *config.Config, log *slog.Logger) error {
+	res, err := bootstrap.Init(bootstrap.Options{
+		Layout:          cfg.Layout,
+		MasterKey:       cfg.MasterKey,
+		RawHost:         cfg.RawHost,
+		ClientListen:    cfg.NATSClientListen,
+		MonitorListen:   cfg.NATSMonitorListen,
+		WebsocketListen: cfg.NATSWebsocketListen,
+		MaxFileStore:    cfg.NATSMaxFileStore,
+	})
+	if err != nil {
+		return err
+	}
+	if len(res.Changed) == 0 {
+		log.Info("init: nothing to do")
+	}
+	for _, p := range res.Changed {
+		log.Info("init: wrote", "path", p)
+	}
+	return nil
+}
+
+// Start opens state, connects to NATS, syncs accounts and starts listeners. It returns once ready or failed.
+func Start(ctx context.Context, cfg *config.Config, log *slog.Logger) (*App, error) {
+	a := &App{Cfg: cfg, Log: log}
+	// Background loops outlive Start's ctx (which only bounds startup) and stop on Close.
+	a.loopCtx, a.stopLoops = context.WithCancel(context.WithoutCancel(ctx))
+	ok := false
+	defer func() {
+		if !ok {
+			a.Close()
+		}
+	}()
+	var err error
+	a.DB, err = store.Open(ctx, store.Options{Path: cfg.Layout.DatabaseFile(), LockPath: cfg.Layout.LockFile()})
+	if err != nil {
+		return nil, err
+	}
+	a.Keys, err = bootstrap.LoadKeySet(cfg.Layout.KeysFile(), cfg.MasterKey)
+	if err != nil {
+		return nil, err
+	}
+	// Health listener first so the container healthcheck can report "starting" vs "not ready".
+	if err := a.startMetrics(ctx); err != nil {
+		return nil, err
+	}
+	tlsConf, err := certs.ClientTLS(cfg.NATSTLSName, []byte(a.Keys.CACert))
+	if err != nil {
+		return nil, err
+	}
+	sysJWT, sysSeed, err := a.Keys.SysUser()
+	if err != nil {
+		return nil, err
+	}
+	a.SysConn, err = natsconn.Connect(ctx, natsconn.Options{URL: cfg.NATSURL, TLS: tlsConf, JWT: sysJWT, Seed: sysSeed, Name: "pulsed-sys", Logger: log})
+	if err != nil {
+		return nil, fmt.Errorf("connect SYS: %w", err)
+	}
+	a.Sys = sysapi.New(a.SysConn)
+	a.Clients = clients.New(a.DB, a.Keys, a.Sys, log)
+	if pushed, err := a.Clients.Sync(ctx, false); err != nil {
+		return nil, fmt.Errorf("sync APP account: %w", err)
+	} else if pushed {
+		log.Info("APP account pushed to the resolver")
+	}
+	appJWT, appSeed, err := a.Keys.AppUser()
+	if err != nil {
+		return nil, err
+	}
+	a.AppConn, err = natsconn.Connect(ctx, natsconn.Options{URL: cfg.NATSURL, TLS: tlsConf, JWT: appJWT, Seed: appSeed, Name: "pulsed-app", Logger: log})
+	if err != nil {
+		return nil, fmt.Errorf("connect APP: %w", err)
+	}
+	a.goLoop(a.loopCtx, "account-sync", time.Minute, func(ctx context.Context) { //nolint:contextcheck // loops outlive startup
+		if _, err := a.Clients.Sync(ctx, false); err != nil {
+			log.Warn("account sync", "err", err)
+		}
+		if n, err := a.Clients.PruneRevocations(ctx); err == nil && n > 0 {
+			log.Info("pruned expired revocations", "count", n)
+		}
+	})
+	a.ready.Store(true)
+	ok = true
+	log.Info("pulsed ready", "version", Version)
+	return a, nil
+}
+
+// goLoop runs fn every interval until ctx ends. ctx is the app's loop context, deliberately not the startup ctx.
+func (a *App) goLoop(ctx context.Context, name string, every time.Duration, fn func(context.Context)) {
+	a.wg.Add(1)
+	go func() {
+		defer a.wg.Done()
+		t := time.NewTicker(every)
+		defer t.Stop()
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-t.C:
+				func() {
+					defer func() {
+						if r := recover(); r != nil {
+							a.Log.Error("loop panic", "loop", name, "panic", r)
+						}
+					}()
+					fn(ctx)
+				}()
+			}
+		}
+	}()
+}
+
+func (a *App) startMetrics(ctx context.Context) error {
+	mux := http.NewServeMux()
+	mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, _ *http.Request) { _, _ = w.Write([]byte("ok\n")) })
+	mux.HandleFunc("GET /readyz", func(w http.ResponseWriter, _ *http.Request) {
+		if !a.Ready() {
+			http.Error(w, "not ready\n", http.StatusServiceUnavailable)
+			return
+		}
+		_, _ = w.Write([]byte("ready\n"))
+	})
+	return a.serve(ctx, "metrics", a.Cfg.MetricsAddr, mux)
+}
+
+func (a *App) serve(ctx context.Context, name, addr string, h http.Handler) error {
+	var lc net.ListenConfig
+	ln, err := lc.Listen(ctx, "tcp", addr)
+	if err != nil {
+		return fmt.Errorf("%s listener %s: %w", name, addr, err)
+	}
+	srv := &http.Server{Handler: h, ReadHeaderTimeout: 10 * time.Second, IdleTimeout: 120 * time.Second}
+	a.listeners = append(a.listeners, srv)
+	a.wg.Add(1)
+	go func() {
+		defer a.wg.Done()
+		a.Log.Info("listening", "listener", name, "addr", ln.Addr().String())
+		if err := srv.Serve(ln); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			a.Log.Error("listener failed", "listener", name, "err", err)
+		}
+	}()
+	return nil
+}
+
+// Ready reports readiness (PL-OBS-003).
+func (a *App) Ready() bool {
+	return a.ready.Load() && a.SysConn != nil && a.SysConn.IsConnected() && a.AppConn != nil && a.AppConn.IsConnected()
+}
+
+// Shutdown drains listeners and connections within the configured timeout (PL-OPS-010).
+func (a *App) Shutdown(ctx context.Context) {
+	a.ready.Store(false)
+	ctx, cancel := context.WithTimeout(ctx, a.Cfg.ShutdownTimeout)
+	defer cancel()
+	for _, s := range a.listeners {
+		_ = s.Shutdown(ctx)
+	}
+	a.Close()
+}
+
+// Close releases everything without draining.
+func (a *App) Close() {
+	if a.stopLoops != nil {
+		a.stopLoops()
+	}
+	for _, s := range a.listeners {
+		_ = s.Close()
+	}
+	for _, nc := range []*nats.Conn{a.AppConn, a.SysConn} {
+		if nc != nil {
+			_ = nc.Drain()
+		}
+	}
+	a.wg.Wait()
+	if a.DB != nil {
+		_ = a.DB.Close()
+		a.DB = nil
+	}
+}

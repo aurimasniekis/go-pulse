@@ -1,0 +1,99 @@
+# Reference production topology (PL-OPS-006). The deployment repository (events-wan-lt) renders its own copy of this
+# file from docs/operator/configuration.md and pins the pulsed image by digest.
+#
+# Host prerequisites (see events-wan-lt): Docker with userland-proxy=false and ip6tables=true; nftables table
+# inet pulse_edge (CF-only 443, ban sets); secrets under /srv/pulse/secrets owned by uid 65532, mode 0400.
+#
+# Services marked (Mx) depend on features that land in that milestone.
+
+x-pulse-env: &pulse-env
+  PULSE_PROFILE: prod
+  PULSE_MASTER_KEY_FILE: /run/secrets/pulse_master_key
+  PULSE_PUBLIC_HOST: events.example.com
+  PULSE_RAW_HOST: r.events.example.com
+  PULSE_NATS_URL: tls://nats:4222
+  PULSE_NATS_TLS_NAME: nats
+  PULSE_ADMIN_ADDR: 0.0.0.0:8080
+  PULSE_ADMIN_PUBLISHED_LOOPBACK: "true"
+  PULSE_METRICS_ADDR: 0.0.0.0:9464
+  PULSE_PUBLIC_ADDR: 0.0.0.0:8443
+  PULSE_EVENTS_MAX_BYTES: 30GiB # deployment computes 60% of the data disk
+
+secrets:
+  pulse_master_key:
+    file: /srv/pulse/secrets/master.key
+
+networks:
+  pulse:
+    enable_ipv6: true
+
+volumes:
+  pulsed-data:
+  nats-data:
+
+services:
+  init:
+    image: ghcr.io/aurimasniekis/pulsed@sha256:<digest>
+    command: ["init"]
+    environment: *pulse-env
+    secrets: [pulse_master_key]
+    volumes: [pulsed-data:/data/pulsed, nats-data:/data/nats]
+    network_mode: none
+    healthcheck: { disable: true }
+    mem_limit: 128m
+
+  nats:
+    image: nats:2.15.1-alpine@sha256:7ae34c25dfd6fe2e01c6483eabef20d796690fdcac6c4d94ca780a6cf9877fde
+    user: "65532:65532"
+    command: ["-c", "/data/nats/nats.conf"]
+    environment: { GOMEMLIMIT: 600MiB }
+    volumes: [nats-data:/data/nats]
+    networks: [pulse]
+    ports:
+      - "4222:4222"           # public, IPv4 and IPv6 (raw NATS TLS)
+    depends_on:
+      init: { condition: service_completed_successfully }
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8222/healthz?js-enabled-only=true"]
+      interval: 10s
+      timeout: 3s
+      retries: 12
+    mem_limit: 900m
+    restart: unless-stopped
+
+  pulsed:
+    image: ghcr.io/aurimasniekis/pulsed@sha256:<digest>
+    command: ["serve"]
+    environment:
+      <<: *pulse-env
+      GOMEMLIMIT: 300MiB
+    secrets: [pulse_master_key]
+    volumes: [pulsed-data:/data/pulsed, nats-data:/data/nats]
+    networks: [pulse]
+    ports:
+      - "443:8443"            # public, Cloudflare ranges only (nftables), AOP mTLS (M8)
+      - "127.0.0.1:8080:8080" # admin UI + API: host loopback only (ADR-0008)
+      - "127.0.0.1:9464:9464" # metrics, health, banagent endpoint: host loopback only
+    depends_on:
+      nats: { condition: service_healthy }
+    mem_limit: 448m
+    restart: unless-stopped
+
+  banagent: # (M8)
+    image: ghcr.io/aurimasniekis/pulsed@sha256:<digest>
+    command: ["banagent"]
+    network_mode: host
+    cap_add: [NET_ADMIN]
+    environment:
+      PULSE_BANAGENT_URL: http://127.0.0.1:9464/internal/v1/bans
+      PULSE_BANAGENT_TOKEN_FILE: /run/pulse-banagent/token
+    volumes:
+      - type: volume
+        source: pulsed-data
+        target: /run/pulse-banagent
+        read_only: true
+        volume: { subpath: banagent }
+    depends_on:
+      pulsed: { condition: service_healthy }
+    mem_limit: 48m
+    restart: unless-stopped

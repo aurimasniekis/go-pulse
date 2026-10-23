@@ -72,6 +72,9 @@
   `$JS.API.CONSUMER.CREATE.<stream>.*.<filter>`, consumer info/next/ack subjects, and fixed denies (stream admin,
   unfiltered `$JS.API.DIRECT.GET.<stream>`, `$JS.API.STREAM.MSG.GET.>`, `$KV.>`, `$SYS.>`, and `$O.>` unless a `blobs` grant exists).
   NATS validates that a consumer's filter matches the filter token in the create subject, which makes the scoping sound.
+  **NATS treats an empty allow list as "allow everything not denied"**, so a client without publish grants gets a single
+  sentinel allow entry (`_pulse.no_publish_grants`) that matches nothing useful (found and tested at M1). Subscribe permissions
+  always contain the client's inbox, so they are never empty.
 - **Consequences:** Durable consumer names cannot be namespaced by token wildcards; see THREAT_MODEL.md T-12.
 
 ### ADR-0008 — Dashboard auth `none` behind an Authenticator seam, loopback only — **security-relevant**
@@ -157,7 +160,7 @@
 - **Status:** accepted
 - **Decision:** `keys.enc` = magic `PULSEKS1` ‖ version ‖ 24-byte nonce ‖ AEAD(JSON key set). The AEAD key is
   HKDF-SHA256(master key, salt = random 32 bytes stored in the header, info = `pulse keystore v1`). The header is AAD.
-  `golang.org/x/crypto/chacha20poly1305` and `hkdf` only. The master key is a compose secret from ansible-vault and never
+  `golang.org/x/crypto/chacha20poly1305` and the standard library `crypto/hkdf` only. The master key is a compose secret from ansible-vault and never
   stored on the data volume. Writes are atomic (temp file + fsync + rename) with mode 0600.
 - **Alternatives:** age for the key store (fine, but a symmetric AEAD with a fixed header is simpler to reason about here).
 
@@ -229,7 +232,9 @@
   the scoped key (which invalidates every JWT it signed) and also adds the user key to `revocations`, then KICKs connections.
 - **Alternatives:** permissions inside the user JWT (every grant edit needs new creds); auth callout (pulsed outage blocks logins).
 - **Consequences:** The APP account JWT grows by roughly 0.5–2 KB per client; fine for hundreds of clients. Pushes are serialized
-  in pulsed. Whether connected clients pick up a changed scope without reconnecting is verified by test (M6).
+  in pulsed. Verified at M1 (`internal/clients/integration_test.go`): a scope change makes the server drop that client's
+  live connections; auto-reconnecting clients come back with the new permissions and the same creds. User JWTs signed by a
+  scoped key must carry a zero-valued permissions/limits section (jwt `HasEmptyPermissions`), not `NewUserClaims` defaults.
 
 ## 2. Open review items
 

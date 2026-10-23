@@ -12,6 +12,7 @@ coverage.*
 # Local runtime data and secrets — never commit
 /tmp/
 /.data/
+/deploy/.dev/
 *.creds
 *.nk
 keys.enc

@@ -50,6 +50,7 @@ linters:
     gosec:
       excludes:
         - G104 # covered by errcheck
+        - G304 # file paths come from operator configuration (PULSE_*_DIR, *_FILE), never from requests
     revive:
       rules:
         - name: exported
