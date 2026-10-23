@@ -171,7 +171,7 @@ export interface components {
             delivered_stream_seq: number;
             description: string;
             durable: boolean;
-            filter_subjects: string[] | null;
+            filter_subjects: string[];
             /** @description Created by pulsed (rollups, tail, explorer, webhooks) */
             internal: boolean;
             /** Format: date-time */
@@ -208,7 +208,7 @@ export interface components {
              */
             detail?: string;
             /** @description Optional list of individual error details */
-            errors?: components["schemas"]["ErrorDetail"][] | null;
+            errors?: components["schemas"]["ErrorDetail"][];
             /**
              * Format: uri
              * @description A URI reference that identifies the specific occurrence of the problem.
@@ -252,7 +252,7 @@ export interface components {
              */
             event_time?: string;
             headers: {
-                [key: string]: string[] | null;
+                [key: string]: string[];
             };
             id?: string;
             /** Format: int64 */
@@ -279,7 +279,7 @@ export interface components {
              * @example /api/admin/v1/schemas/EventsPage.json
              */
             readonly $schema?: string;
-            events: components["schemas"]["EventDTO"][] | null;
+            events: components["schemas"]["EventDTO"][];
             /** Format: int64 */
             first_seq: number;
             /** Format: int64 */
@@ -365,7 +365,7 @@ export interface components {
             retention: string;
             state: components["schemas"]["StreamState"];
             storage: string;
-            subjects: string[] | null;
+            subjects: string[];
         };
         StreamInput: {
             /**
@@ -398,7 +398,7 @@ export interface components {
              * @enum {string}
              */
             storage: "file" | "memory";
-            subjects: string[] | null;
+            subjects: string[];
         };
         StreamState: {
             /** Format: int64 */
@@ -455,7 +455,7 @@ export interface operations {
             query?: {
                 stream?: string;
                 /** @description Subject filter; repeat for several (wildcards allowed) */
-                subject?: string[] | null;
+                subject?: string[];
                 /** @description backward = newest first */
                 dir?: "forward" | "backward";
                 /** @description forward: first sequence; backward: last sequence (inclusive) */
@@ -466,7 +466,7 @@ export interface operations {
                 /** @description Exact ce-type, or (untyped) */
                 type?: string;
                 /** @description key=value, repeatable */
-                header?: string[] | null;
+                header?: string[];
                 /** @description Payload substring */
                 contains?: string;
                 /** @description Dot path into a JSON payload */
@@ -548,7 +548,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["StreamDTO"][] | null;
+                    "application/json": components["schemas"]["StreamDTO"][];
                 };
             };
             /** @description Error */
@@ -709,7 +709,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ConsumerDTO"][] | null;
+                    "application/json": components["schemas"]["ConsumerDTO"][];
                 };
             };
             /** @description Error */
@@ -788,7 +788,7 @@ export interface operations {
         parameters: {
             query?: {
                 stream?: string;
-                subject?: string[] | null;
+                subject?: string[];
                 /** @description Replay from this time before going live */
                 since?: string;
             };

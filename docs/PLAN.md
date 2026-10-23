@@ -163,8 +163,8 @@ Status values: `planned`, `in-progress`, `implemented`, `tested`, `externally-ve
 | M0 | Skeleton | tested | 0e5611e |
 | M1 | Identity, NATS bootstrap, SQLite | tested | 02717c1 |
 | M2 | Envelope, EVENTS, Go SDK, CLI | tested (spike pending user run) | 1e417c0 |
-| M3 | API and query engine | tested | (this commit) |
-| M4 | UI core | planned | |
+| M3 | API and query engine | tested | 9e15025 |
+| M4 | UI core | tested | (this commit) |
 | M5 | Rollups | planned | |
 | M6 | Clients and ingress | planned | |
 | M7 | Webhooks | planned | |
@@ -186,6 +186,7 @@ Status values: `planned`, `in-progress`, `implemented`, `tested`, `externally-ve
 | 2026-10-23 | M1 | secretbox, natsauth (grants→permissions, scoped signers), natsconf, bootstrap, natsconn, sysapi, store (SQLite), clients service, config, `pulsed init|serve|keys export`, dev compose (init → nats → pulsed). Found and fixed: empty NATS allow list = allow all (sentinel); scoped users need zero permission sections; upstream race in embedded reload (RELOAD tests use a subprocess). |
 | 2026-10-23 | M2 | Envelope + conformance vectors, EVENTS/blobs ensure, Go SDK (publish, ordered/durable subscribe, Handle[T], blobs), CLI context/pub/sub. Spike tooling written but not run: the user decides when (heavy). |
 | 2026-10-23 | M3 | Huma admin/public APIs, auth seam, Host allowlist (DNS rebinding), CSRF header, explorer engine (direct get batch, ordered consumer, backward windows, cursors, budgets), SSE tail, `pulsed openapi` + TS types (separate TS5 apigen package), UI served from the binary. |
+| 2026-10-23 | M4 | Shell with NATS status indicator, Explorer (URL filters, virtualized table, cursor paging, budget notice, event drawer with payload views and replay command), Live tail (SSE, buffered rendering, sampling notices), Streams list/detail/create/edit/delete, consumers. vitest + Playwright (6 smoke tests vs dev stack). Seeded-data e2e waits for M6 (no client creds in the dev stack yet). |
 
 ## 6. Acceptance checklist (mapped to requirement IDs)
 
@@ -200,8 +201,8 @@ E browser E2E · C CI/static check · S spike/perf · R restore drill · X exter
 - [x] `PL-BUS-002` Subject grammar — M2 — ✅ tested: pkg/pulse/envelope conformance subjects; SDK TestDeduplicationAndValidation
 - [x] `PL-BUS-003` Raw publishes accepted — M2 — ✅ tested: pkg/pulse TestRawPublishIsUntyped; envelope decode vector
 - [x] `PL-BUS-004` Payload size — M2 — ✅ tested: pkg/pulse TestBlobs (3.2 MB via Object Store, checksum, no access without grant)
-- [ ] `PL-BUS-005` Extra streams — M4
-- [ ] `PL-BUS-006` Consumers — M4
+- [x] `PL-BUS-005` Extra streams — M4 — ✅ tested: internal/api TestStreamsCRUD; e2e streams create/delete and overlap rejection
+- [x] `PL-BUS-006` Consumers — M4 — ✅ tested: internal/api TestStreamsCRUD (list/delete consumer); UI consumers table
 - [x] `PL-BUS-007` Replay by time — M2 — ✅ tested: pkg/pulse TestPublishReplaySince; cmd/pulse TestCLIPubSubFlow
 - [x] `PL-BUS-008` Internal state isolation — M1 — ✅ tested: state in SQLite (internal/store), nothing internal stored in NATS
 - [ ] `PL-BUS-009` Subject cardinality guidance — M2 — ◐ provisional guideline in docs/SIZING.md; to be confirmed by the spike
@@ -313,7 +314,7 @@ E browser E2E · C CI/static check · S spike/perf · R restore drill · X exter
 - [x] `PL-EXP-005` Server-side filters — M3 — ✅ tested: internal/query TestQueries (type, untyped, header, contains, json path)
 - [x] `PL-EXP-006` Budgets — M3 — ✅ tested: internal/query TestBudgetPartialAndResume, TestConcurrencyLimit
 - [x] `PL-EXP-007` Live tail — M3 — ✅ tested: internal/api TestTailSSE (session cap, resume); rate-limit notices implemented, not load-tested
-- [ ] `PL-EXP-008` Message view — M4
+- [x] `PL-EXP-008` Message view — M4 — ✅ tested: PayloadView vitest (JSON/text/hex); EventDrawer with copyable `pulse sub … --seq`; e2e explorer render
 
 #### PL-ROLL — Rollups
 
@@ -360,14 +361,14 @@ E browser E2E · C CI/static check · S spike/perf · R restore drill · X exter
 
 #### PL-UI — Dashboard
 
-- [ ] `PL-UI-001` Stack — M0 — ◐ implemented: web/ builds with Vite 8 + router plugin + Mantine PostCSS (risk K-6 cleared); embedded via internal/ui; ECharts/Table/Virtual wired in M4/M5
-- [ ] `PL-UI-002` Look — M0 — ◐ implemented: web/src/theme/theme.ts, collapsible sidebar, light/dark; no visual test yet (M4)
-- [ ] `PL-UI-003` Shell — M4
+- [ ] `PL-UI-001` Stack — M0 — ◐ implemented: Vite 8 + Mantine 8 + TanStack Router/Query/Table-ready/Virtual + embed; ECharts arrives with M5 charts
+- [ ] `PL-UI-002` Look — M0 — ◐ implemented: theme (4px radius, compact inputs, Inter/JetBrains Mono, indigo, light/dark), checked by screenshots; no visual regression test
+- [x] `PL-UI-003` Shell — M4 — ✅ tested: e2e shell (status indicator, theme toggle, Cmd-K navigation); collapsible sidebar
 - [ ] `PL-UI-004` Pages — M12
-- [ ] `PL-UI-005` Typed API — M4
-- [ ] `PL-UI-006` Charts — M4
-- [ ] `PL-UI-007` Large lists — M4
-- [ ] `PL-UI-008` Secret display — M4
+- [x] `PL-UI-005` Typed API — M4 — ✅ tested: web/src/api/client.ts (openapi-fetch + generated types), typecheck in CI
+- [ ] `PL-UI-006` Charts — M4 — ◐ pending M5 (ECharts theming)
+- [x] `PL-UI-007` Large lists — M4 — ✅ implemented: VirtualTable (@tanstack/react-virtual) for explorer/tail; e2e renders it
+- [ ] `PL-UI-008` Secret display — M4 — ◐ pending M6 (creds/token display)
 - [ ] `PL-UI-009` Tests — M12
 - [ ] `PL-UI-010` Missing UI — M0 — ◐ implemented: internal/api uiHandler serves a notice when the UI is not built; that path is untested (tests run with a built UI); SPA fallback tested
 
@@ -407,7 +408,7 @@ E browser E2E · C CI/static check · S spike/perf · R restore drill · X exter
 - [x] `PL-TST-002` Race — M1 — ✅ tested: `make test` (-race) green
 - [x] `PL-TST-003` Bootstrap tests — M1 — ✅ tested: internal/clients (creds connect, AUTH.ERR host, revoke → disconnect < 5 s, restart persistence, RELOAD new cert)
 - [x] `PL-TST-004` Query tests — M3 — ✅ tested: internal/query (72 table-driven subtests)
-- [ ] `PL-TST-005` E2E — M4
+- [x] `PL-TST-005` E2E — M4 — ✅ tested: web/e2e/smoke.spec.ts (6 tests) vs `make dev-up`; .github/workflows/e2e.yaml (not yet run on GitHub)
 - [ ] `PL-TST-006` Gate spike — M2 — ◐ tooling ready: cmd/pulse-spike, scripts/spike.sh, `make spike`; not run — the user triggers it
 - [ ] `PL-TST-007` Restore drill — M11
 

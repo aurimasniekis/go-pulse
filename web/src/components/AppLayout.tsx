@@ -6,6 +6,7 @@ import { Link, useRouterState } from '@tanstack/react-router'
 import type { ReactNode } from 'react'
 import { brandIcon as Brand, nav } from '@/lib/nav'
 import { CommandPalette } from './CommandPalette'
+import { StatusIndicator } from './StatusIndicator'
 
 export function AppLayout({ children }: { children: ReactNode }) {
   const [collapsed, setCollapsed] = useLocalStorage({ key: 'pulse.sidebar.collapsed', defaultValue: false })
@@ -32,6 +33,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
             <Text fw={600} size="md">Pulse</Text>
           </Group>
           <Group gap="xs" wrap="nowrap">
+            <StatusIndicator />
             <UnstyledButton onClick={() => spotlight.open()} aria-label="Search">
               <Group gap={6} px="xs" py={2} style={{ border: '1px solid var(--mantine-color-default-border)', borderRadius: 4 }}>
                 <IconSearch size={14} />

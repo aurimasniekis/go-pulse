@@ -20,6 +20,11 @@ import (
 	"github.com/aurimasniekis/go-pulse/internal/tail"
 )
 
+func init() {
+	// Every handler returns non-nil slices, so the spec (and the generated TS types) can say arrays are never null.
+	huma.DefaultArrayNullable = false
+}
+
 // AdminPrefix is the admin API base path (PL-API-005).
 const AdminPrefix = "/api/admin/v1"
 

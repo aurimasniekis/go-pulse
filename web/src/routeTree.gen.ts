@@ -18,12 +18,13 @@ import { Route as ExplorerRouteImport } from './routes/explorer'
 import { Route as KvRouteImport } from './routes/kv'
 import { Route as SecurityRouteImport } from './routes/security'
 import { Route as SettingsRouteImport } from './routes/settings'
-import { Route as StreamsRouteImport } from './routes/streams'
 import { Route as SubjectsRouteImport } from './routes/subjects'
 import { Route as SystemRouteImport } from './routes/system'
 import { Route as TailRouteImport } from './routes/tail'
 import { Route as TokensRouteImport } from './routes/tokens'
 import { Route as WebhooksRouteImport } from './routes/webhooks'
+import { Route as StreamsIndexRouteImport } from './routes/streams/index'
+import { Route as StreamsNameRouteImport } from './routes/streams/$name'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -70,11 +71,6 @@ const SettingsRoute = SettingsRouteImport.update({
   path: '/settings',
   getParentRoute: () => rootRouteImport,
 } as any)
-const StreamsRoute = StreamsRouteImport.update({
-  id: '/streams',
-  path: '/streams',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const SubjectsRoute = SubjectsRouteImport.update({
   id: '/subjects',
   path: '/subjects',
@@ -100,6 +96,16 @@ const WebhooksRoute = WebhooksRouteImport.update({
   path: '/webhooks',
   getParentRoute: () => rootRouteImport,
 } as any)
+const StreamsIndexRoute = StreamsIndexRouteImport.update({
+  id: '/streams/',
+  path: '/streams/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const StreamsNameRoute = StreamsNameRouteImport.update({
+  id: '/streams/$name',
+  path: '/streams/$name',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -111,12 +117,13 @@ export interface FileRoutesByFullPath {
   '/kv': typeof KvRoute
   '/security': typeof SecurityRoute
   '/settings': typeof SettingsRoute
-  '/streams': typeof StreamsRoute
   '/subjects': typeof SubjectsRoute
   '/system': typeof SystemRoute
   '/tail': typeof TailRoute
   '/tokens': typeof TokensRoute
   '/webhooks': typeof WebhooksRoute
+  '/streams/$name': typeof StreamsNameRoute
+  '/streams/': typeof StreamsIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -128,12 +135,13 @@ export interface FileRoutesByTo {
   '/kv': typeof KvRoute
   '/security': typeof SecurityRoute
   '/settings': typeof SettingsRoute
-  '/streams': typeof StreamsRoute
   '/subjects': typeof SubjectsRoute
   '/system': typeof SystemRoute
   '/tail': typeof TailRoute
   '/tokens': typeof TokensRoute
   '/webhooks': typeof WebhooksRoute
+  '/streams/$name': typeof StreamsNameRoute
+  '/streams': typeof StreamsIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -146,12 +154,13 @@ export interface FileRoutesById {
   '/kv': typeof KvRoute
   '/security': typeof SecurityRoute
   '/settings': typeof SettingsRoute
-  '/streams': typeof StreamsRoute
   '/subjects': typeof SubjectsRoute
   '/system': typeof SystemRoute
   '/tail': typeof TailRoute
   '/tokens': typeof TokensRoute
   '/webhooks': typeof WebhooksRoute
+  '/streams/$name': typeof StreamsNameRoute
+  '/streams/': typeof StreamsIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -165,12 +174,13 @@ export interface FileRouteTypes {
     | '/kv'
     | '/security'
     | '/settings'
-    | '/streams'
     | '/subjects'
     | '/system'
     | '/tail'
     | '/tokens'
     | '/webhooks'
+    | '/streams/$name'
+    | '/streams/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -182,12 +192,13 @@ export interface FileRouteTypes {
     | '/kv'
     | '/security'
     | '/settings'
-    | '/streams'
     | '/subjects'
     | '/system'
     | '/tail'
     | '/tokens'
     | '/webhooks'
+    | '/streams/$name'
+    | '/streams'
   id:
     | '__root__'
     | '/'
@@ -199,12 +210,13 @@ export interface FileRouteTypes {
     | '/kv'
     | '/security'
     | '/settings'
-    | '/streams'
     | '/subjects'
     | '/system'
     | '/tail'
     | '/tokens'
     | '/webhooks'
+    | '/streams/$name'
+    | '/streams/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -217,12 +229,13 @@ export interface RootRouteChildren {
   KvRoute: typeof KvRoute
   SecurityRoute: typeof SecurityRoute
   SettingsRoute: typeof SettingsRoute
-  StreamsRoute: typeof StreamsRoute
   SubjectsRoute: typeof SubjectsRoute
   SystemRoute: typeof SystemRoute
   TailRoute: typeof TailRoute
   TokensRoute: typeof TokensRoute
   WebhooksRoute: typeof WebhooksRoute
+  StreamsNameRoute: typeof StreamsNameRoute
+  StreamsIndexRoute: typeof StreamsIndexRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -290,13 +303,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SettingsRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/streams': {
-      id: '/streams'
-      path: '/streams'
-      fullPath: '/streams'
-      preLoaderRoute: typeof StreamsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/subjects': {
       id: '/subjects'
       path: '/subjects'
@@ -332,6 +338,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof WebhooksRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/streams/': {
+      id: '/streams/'
+      path: '/streams'
+      fullPath: '/streams/'
+      preLoaderRoute: typeof StreamsIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/streams/$name': {
+      id: '/streams/$name'
+      path: '/streams/$name'
+      fullPath: '/streams/$name'
+      preLoaderRoute: typeof StreamsNameRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -345,12 +365,13 @@ const rootRouteChildren: RootRouteChildren = {
   KvRoute: KvRoute,
   SecurityRoute: SecurityRoute,
   SettingsRoute: SettingsRoute,
-  StreamsRoute: StreamsRoute,
   SubjectsRoute: SubjectsRoute,
   SystemRoute: SystemRoute,
   TailRoute: TailRoute,
   TokensRoute: TokensRoute,
   WebhooksRoute: WebhooksRoute,
+  StreamsNameRoute: StreamsNameRoute,
+  StreamsIndexRoute: StreamsIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

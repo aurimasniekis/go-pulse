@@ -59,10 +59,7 @@
             "items": {
               "type": "string"
             },
-            "type": [
-              "array",
-              "null"
-            ]
+            "type": "array"
           },
           "internal": {
             "description": "Created by pulsed (rollups, tail, explorer, webhooks)",
@@ -156,10 +153,7 @@
             "items": {
               "$ref": "#/components/schemas/ErrorDetail"
             },
-            "type": [
-              "array",
-              "null"
-            ]
+            "type": "array"
           },
           "instance": {
             "description": "A URI reference that identifies the specific occurrence of the problem.",
@@ -234,10 +228,7 @@
               "items": {
                 "type": "string"
               },
-              "type": [
-                "array",
-                "null"
-              ]
+              "type": "array"
             },
             "type": "object"
           },
@@ -308,10 +299,7 @@
             "items": {
               "$ref": "#/components/schemas/EventDTO"
             },
-            "type": [
-              "array",
-              "null"
-            ]
+            "type": "array"
           },
           "first_seq": {
             "format": "int64",
@@ -549,10 +537,7 @@
             "items": {
               "type": "string"
             },
-            "type": [
-              "array",
-              "null"
-            ]
+            "type": "array"
           }
         },
         "required": [
@@ -651,10 +636,7 @@
             },
             "maxItems": 32,
             "minItems": 1,
-            "type": [
-              "array",
-              "null"
-            ]
+            "type": "array"
           }
         },
         "required": [
@@ -819,10 +801,7 @@
               "items": {
                 "type": "string"
               },
-              "type": [
-                "array",
-                "null"
-              ]
+              "type": "array"
             }
           },
           {
@@ -895,10 +874,7 @@
               "items": {
                 "type": "string"
               },
-              "type": [
-                "array",
-                "null"
-              ]
+              "type": "array"
             }
           },
           {
@@ -1035,10 +1011,7 @@
                   "items": {
                     "$ref": "#/components/schemas/StreamDTO"
                   },
-                  "type": [
-                    "array",
-                    "null"
-                  ]
+                  "type": "array"
                 }
               }
             },
@@ -1257,10 +1230,7 @@
                   "items": {
                     "$ref": "#/components/schemas/ConsumerDTO"
                   },
-                  "type": [
-                    "array",
-                    "null"
-                  ]
+                  "type": "array"
                 }
               }
             },
@@ -1390,10 +1360,7 @@
               "items": {
                 "type": "string"
               },
-              "type": [
-                "array",
-                "null"
-              ]
+              "type": "array"
             }
           },
           {
