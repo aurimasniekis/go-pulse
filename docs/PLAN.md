@@ -164,8 +164,8 @@ Status values: `planned`, `in-progress`, `implemented`, `tested`, `externally-ve
 | M1 | Identity, NATS bootstrap, SQLite | tested | 02717c1 |
 | M2 | Envelope, EVENTS, Go SDK, CLI | tested (spike pending user run) | 1e417c0 |
 | M3 | API and query engine | tested | 9e15025 |
-| M4 | UI core | tested | (this commit) |
-| M5 | Rollups | planned | |
+| M4 | UI core | tested | 4d21daf |
+| M5 | Rollups | tested | (this commit) |
 | M6 | Clients and ingress | planned | |
 | M7 | Webhooks | planned | |
 | M8 | Security and edge TLS | planned | |
@@ -187,6 +187,7 @@ Status values: `planned`, `in-progress`, `implemented`, `tested`, `externally-ve
 | 2026-10-23 | M2 | Envelope + conformance vectors, EVENTS/blobs ensure, Go SDK (publish, ordered/durable subscribe, Handle[T], blobs), CLI context/pub/sub. Spike tooling written but not run: the user decides when (heavy). |
 | 2026-10-23 | M3 | Huma admin/public APIs, auth seam, Host allowlist (DNS rebinding), CSRF header, explorer engine (direct get batch, ordered consumer, backward windows, cursors, budgets), SSE tail, `pulsed openapi` + TS types (separate TS5 apigen package), UI served from the binary. |
 | 2026-10-23 | M4 | Shell with NATS status indicator, Explorer (URL filters, virtualized table, cursor paging, budget notice, event drawer with payload views and replay command), Live tail (SSE, buffered rendering, sampling notices), Streams list/detail/create/edit/delete, consumers. vitest + Playwright (6 smoke tests vs dev stack). Seeded-data e2e waits for M6 (no client creds in the dev stack yet). |
+| 2026-10-23 | M5 | Rollup engine (headers-only ordered consumers, exactly-once with checkpoint in the same SQLite tx, per-resolution dimensions, minute cache, key sampling, pruning), overview/throughput/subject tree APIs, admin publish endpoint, Overview (KPIs, ECharts throughput, rank lists, forecast) and Subjects pages; data-seeded e2e (9 tests). |
 
 ## 6. Acceptance checklist (mapped to requirement IDs)
 
@@ -318,13 +319,13 @@ E browser E2E · C CI/static check · S spike/perf · R restore drill · X exter
 
 #### PL-ROLL — Rollups
 
-- [ ] `PL-ROLL-001` Headers-only counting — M5
-- [ ] `PL-ROLL-002` Dimensions — M5
-- [ ] `PL-ROLL-003` Storage — M5
-- [ ] `PL-ROLL-004` Subject index — M5
-- [ ] `PL-ROLL-005` Forecast — M5
-- [ ] `PL-ROLL-006` Overview — M5
-- [ ] `PL-ROLL-007` Subject tree — M5
+- [x] `PL-ROLL-001` Headers-only counting — M5 — ✅ tested: internal/rollup TestCountsExactlyOnceAcrossRestart (headers-only, checkpoint resume)
+- [x] `PL-ROLL-002` Dimensions — M5 — ✅ tested: internal/rollup (totals, p1–p4 per resolution, types incl. untyped)
+- [x] `PL-ROLL-003` Storage — M5 — ✅ tested: internal/rollup restart + TestCrashLosesNothingAndCountsOnce; minute cache
+- [x] `PL-ROLL-004` Subject index — M5 — ✅ tested: internal/rollup TestSubjectCapAndTree (cap + overflow), TestSampleKeysAndPrune (JSON keys)
+- [x] `PL-ROLL-005` Forecast — M5 — ✅ tested: internal/rollup TestComputeForecast; Overview forecast card (horizon shown after ≥ 1 day)
+- [x] `PL-ROLL-006` Overview — M5 — ✅ tested: internal/api TestRollupEndpoints; e2e overview with seeded data
+- [x] `PL-ROLL-007` Subject tree — M5 — ✅ tested: internal/rollup TestSubjectCapAndTree; e2e subject tree expand + detail
 
 #### PL-OBS — Observability
 
@@ -355,7 +356,7 @@ E browser E2E · C CI/static check · S spike/perf · R restore drill · X exter
 - [x] `PL-DB-002` Migrations — M1 — ✅ tested: internal/store TestMigrationsAndReopen, TestRefuseNewerSchema
 - [x] `PL-DB-003` Single owner — M1 — ✅ tested: internal/store TestExclusiveLock; internal/app second Start refused
 - [ ] `PL-DB-004` No network I/O in transactions — M1 — ◐ implemented: clients service prepares keys before Write and pushes after commit; no analyzer enforces it yet
-- [ ] `PL-DB-005` Retention — M1 — ◐ partial: revocation pruning only; other tables arrive with their milestones
+- [ ] `PL-DB-005` Retention — M1 — ◐ partial: revocations, rollup_1m (8 d) and rollup_1h (400 d) pruning tested; delivery log/alerts/audit/bans arrive with their milestones
 - [ ] `PL-DB-006` Permissions and placement — M1 — ◐ partial: 0700/0600 modes tested (TestDatabaseFileMode); Linux network-FS refusal implemented, untested
 - [x] `PL-DB-007` Integrity — M1 — ✅ tested: internal/store TestCorruptDatabaseRefused
 
@@ -366,7 +367,7 @@ E browser E2E · C CI/static check · S spike/perf · R restore drill · X exter
 - [x] `PL-UI-003` Shell — M4 — ✅ tested: e2e shell (status indicator, theme toggle, Cmd-K navigation); collapsible sidebar
 - [ ] `PL-UI-004` Pages — M12
 - [x] `PL-UI-005` Typed API — M4 — ✅ tested: web/src/api/client.ts (openapi-fetch + generated types), typecheck in CI
-- [ ] `PL-UI-006` Charts — M4 — ◐ pending M5 (ECharts theming)
+- [ ] `PL-UI-006` Charts — M4 — ◐ implemented: ECharts (SVG) themed from Mantine tokens per color scheme, palette validated with the dataviz validator (light/dark); no visual regression test
 - [x] `PL-UI-007` Large lists — M4 — ✅ implemented: VirtualTable (@tanstack/react-virtual) for explorer/tail; e2e renders it
 - [ ] `PL-UI-008` Secret display — M4 — ◐ pending M6 (creds/token display)
 - [ ] `PL-UI-009` Tests — M12
@@ -393,7 +394,7 @@ E browser E2E · C CI/static check · S spike/perf · R restore drill · X exter
 - [ ] `PL-OPS-007` CI — M0 — ◐ implemented: .github/workflows/ci.yaml (SHA-pinned, GOTOOLCHAIN=local); `make check` green locally; never run on GitHub (no remote)
 - [ ] `PL-OPS-008` Release — M0 — ◐ implemented: .github/workflows/release.yaml; not externally verified (no remote, no tag)
 - [ ] `PL-OPS-009` Memory budget — M2 — ◐ limits configured (deploy/examples, deploy/compose.dev.yaml); measurement pending the operator-triggered spike (docs/SIZING.md)
-- [ ] `PL-OPS-010` Graceful shutdown — M1 — ◐ partial: listeners and NATS drain on SIGTERM; rollup/consumer flushing arrives with M5
+- [ ] `PL-OPS-010` Graceful shutdown — M1 — ◐ partial: listeners and NATS drain; rollup workers flush on shutdown before the DB closes (internal/app); outbound consumers arrive with M7
 - [x] `PL-OPS-011` Versioning — M0 — ✅ tested: cmd/pulsed/main_test.go TestVersionJSON; docs/VERSIONING.md
 
 #### PL-AUD — Audit

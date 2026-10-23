@@ -182,6 +182,11 @@
   prefix depths 1–4, `ce-type`) flush every 10 s: one SQLite transaction upserts `rollup_1m`, `rollup_1h`, `rollup_1d`, the
   subject index and the checkpoint together. `rollup_1m` is pruned after 8 days. The last 48 h of minute buckets are cached in RAM.
 - **Consequences:** Exactly-once counting (the checkpoint and the counts commit atomically), bounded memory, no payload reads.
+- **Amendment (M5):** To bound row counts, each resolution keeps a subset of prefix depths: `rollup_1m` total, p1, p2,
+  type (pruned after 8 days); `rollup_1h` total, p1–p3, type (pruned after 400 days); `rollup_1d` all dimensions including
+  p4 (kept). Throughput charts switch to a coarser resolution when a deeper prefix is requested. Subject JSON keys are
+  sampled from each subject's last message (direct get), at most 50 subjects per minute, so payload reads stay bounded.
+  The minute cache is rebuilt from `rollup_1m` at start and fed by the consumers.
 
 ### ADR-0021 — Retention horizon and disk forecast from rollups
 - **Status:** accepted

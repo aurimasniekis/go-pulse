@@ -22,6 +22,10 @@ export const qk = {
   stream: (name: string) => ['streams', name] as const,
   consumers: (name: string) => ['streams', name, 'consumers'] as const,
   events: (q: EventsQuery) => ['events', q] as const,
+  overview: (stream: string) => ['overview', stream] as const,
+  throughput: (stream: string, range: string, dim: string) => ['throughput', stream, range, dim] as const,
+  tree: (stream: string, prefix: string) => ['subjects', stream, prefix] as const,
+  subject: (stream: string, subject: string) => ['subject', stream, subject] as const,
 }
 
 export function useSystemInfo() {
@@ -96,4 +100,38 @@ export function useStreamMutations() {
       onSuccess: (_d, v) => qc.invalidateQueries({ queryKey: qk.consumers(v.stream) }),
     }),
   }
+}
+
+export function useOverview(stream = 'EVENTS') {
+  return useQuery({
+    queryKey: qk.overview(stream),
+    queryFn: async () => unwrap(await admin.GET('/overview', { params: { query: { stream } } })),
+    refetchInterval: 15_000,
+  })
+}
+
+export function useThroughput(stream: string, range: '1h' | '24h' | '7d' | '30d' | '1y', dim: 'total' | 'type' | 'p1' | 'p2' | 'p3' | 'p4') {
+  return useQuery({
+    queryKey: qk.throughput(stream, range, dim),
+    queryFn: async () => unwrap(await admin.GET('/throughput', { params: { query: { stream, range, dim, top: 6 } } })),
+    refetchInterval: range === '1h' ? 15_000 : 60_000,
+    placeholderData: keepPreviousData,
+  })
+}
+
+export function useSubjectTree(stream: string, prefix: string, enabled = true) {
+  return useQuery({
+    queryKey: qk.tree(stream, prefix),
+    queryFn: async () => unwrap(await admin.GET('/subjects/tree', { params: { query: { stream, prefix } } })),
+    enabled,
+    staleTime: 15_000,
+  })
+}
+
+export function useSubjectInfo(stream: string, subject: string | null) {
+  return useQuery({
+    queryKey: qk.subject(stream, subject ?? ''),
+    queryFn: async () => unwrap(await admin.GET('/subjects/info', { params: { query: { stream, subject: subject ?? '' } } })),
+    enabled: !!subject,
+  })
 }

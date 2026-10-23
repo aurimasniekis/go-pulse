@@ -1,5 +1,5 @@
 import { Badge, Button, Group, NumberInput, Paper, SegmentedControl, Select, SimpleGrid, Stack, TagsInput, Text, TextInput, Tooltip } from '@mantine/core'
-import { IconFilter, IconRefresh, IconX } from '@tabler/icons-react'
+import { IconFilter, IconRefresh, IconSend, IconX } from '@tabler/icons-react'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useEffect, useMemo, useState } from 'react'
 import type { EventDTO } from '@/api/client'
@@ -8,6 +8,7 @@ import { ErrorAlert } from '@/components/ErrorAlert'
 import { EventDrawer } from '@/components/EventDrawer'
 import { eventColumns } from '@/components/eventColumns'
 import { PageHeader } from '@/components/PageHeader'
+import { PublishModal } from '@/components/PublishModal'
 import { VirtualTable } from '@/components/VirtualTable'
 import { formatNumber } from '@/lib/format'
 import { parseEventsSearch } from '@/lib/search'
@@ -65,6 +66,7 @@ function Explorer() {
   const query = useMemo(() => ({ ...search, limit: 100 }), [search])
   const events = useEvents(query)
   const [selected, setSelected] = useState<EventDTO | null>(null)
+  const [publishing, setPublishing] = useState(false)
   const rows = useMemo(() => events.data?.pages.flatMap((p) => p.events) ?? [], [events.data])
   const last = events.data?.pages.at(-1)
   const scanned = events.data?.pages.reduce((n, p) => n + p.scanned, 0) ?? 0
@@ -75,6 +77,10 @@ function Explorer() {
         title="Explorer"
         description="Browse stored events. Filters on type, headers and payload run in pulsed within a scan budget."
         actions={
+          <>
+          <Button variant="default" leftSection={<IconSend size={14} />} onClick={() => setPublishing(true)}>
+            Publish event
+          </Button>
           <Button
             leftSection={<IconRefresh size={14} />}
             variant="default"
@@ -83,6 +89,7 @@ function Explorer() {
           >
             Refresh
           </Button>
+          </>
         }
       />
       <Paper withBorder p="sm" mb="sm">
@@ -207,6 +214,7 @@ function Explorer() {
         }
       />
       <EventDrawer event={selected} onClose={() => setSelected(null)} />
+      <PublishModal opened={publishing} onClose={() => setPublishing(false)} />
     </>
   )
 }

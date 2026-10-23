@@ -15,6 +15,7 @@ import (
 	"github.com/aurimasniekis/go-pulse/internal/audit"
 	"github.com/aurimasniekis/go-pulse/internal/auth"
 	"github.com/aurimasniekis/go-pulse/internal/query"
+	"github.com/aurimasniekis/go-pulse/internal/rollup"
 	"github.com/aurimasniekis/go-pulse/internal/store"
 	"github.com/aurimasniekis/go-pulse/internal/sysapi"
 	"github.com/aurimasniekis/go-pulse/internal/tail"
@@ -39,6 +40,7 @@ type Deps struct {
 	Sys        *sysapi.Client
 	Query      *query.Engine
 	Tail       *tail.Manager
+	Rollup     *rollup.Engine
 	Auth       auth.Authenticator
 	AdminHosts []string
 	Ready      func() bool
@@ -91,6 +93,7 @@ func NewAdminAPI(mux *http.ServeMux, d *Deps) huma.API {
 	registerSystem(api, d)
 	registerStreams(api, d)
 	registerEvents(api, d)
+	registerRollups(api, d)
 	return api
 }
 

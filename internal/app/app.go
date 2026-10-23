@@ -23,6 +23,7 @@ import (
 	"github.com/aurimasniekis/go-pulse/internal/config"
 	"github.com/aurimasniekis/go-pulse/internal/natsconn"
 	"github.com/aurimasniekis/go-pulse/internal/query"
+	"github.com/aurimasniekis/go-pulse/internal/rollup"
 	"github.com/aurimasniekis/go-pulse/internal/store"
 	"github.com/aurimasniekis/go-pulse/internal/streams"
 	"github.com/aurimasniekis/go-pulse/internal/sysapi"
@@ -42,6 +43,7 @@ type App struct {
 	Clients *clients.Service
 	Query   *query.Engine
 	Tail    *tail.Manager
+	Rollup  *rollup.Engine
 
 	ready     atomic.Bool
 	listeners []*http.Server
@@ -140,12 +142,18 @@ func Start(ctx context.Context, cfg *config.Config, log *slog.Logger) (*App, err
 	}
 	a.Query = query.New(a.JS, 4, query.DefaultBudget)
 	a.Tail = tail.New(a.JS, tail.DefaultMaxSessions, tail.DefaultRate)
+	a.Rollup = rollup.New(a.JS, a.DB, rollup.Options{Log: log})
+	a.wg.Add(1)
+	go func() {
+		defer a.wg.Done()
+		a.Rollup.Run(a.loopCtx) //nolint:contextcheck // runs until Close; flushes on exit
+	}()
 	authn, err := auth.New(cfg.AuthMode)
 	if err != nil {
 		return nil, err
 	}
 	deps := &api.Deps{Log: log, Version: Version, Profile: cfg.Profile, DB: a.DB, NC: a.AppConn, JS: a.JS, Sys: a.Sys,
-		Query: a.Query, Tail: a.Tail, Auth: authn, AdminHosts: cfg.AdminHosts, Ready: a.Ready}
+		Query: a.Query, Tail: a.Tail, Rollup: a.Rollup, Auth: authn, AdminHosts: cfg.AdminHosts, Ready: a.Ready}
 	if err := a.serve(ctx, "admin", cfg.AdminAddr, api.NewAdmin(deps)); err != nil {
 		return nil, err
 	}

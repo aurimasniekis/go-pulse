@@ -346,6 +346,107 @@
         ],
         "type": "object"
       },
+      "Forecast": {
+        "additionalProperties": false,
+        "properties": {
+          "avg_daily_bytes": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "current_bytes": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "discarding_old": {
+            "description": "The stream is at its limit and drops its oldest events",
+            "type": "boolean"
+          },
+          "full_at": {
+            "description": "When max_bytes is reached at the current rate (absent once full or with no traffic)",
+            "format": "date-time",
+            "type": "string"
+          },
+          "horizon_days": {
+            "description": "max_bytes / average daily bytes",
+            "format": "double",
+            "type": "number"
+          },
+          "max_bytes": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "sample_days": {
+            "description": "How much history the average is based on",
+            "format": "double",
+            "type": "number"
+          },
+          "used_ratio": {
+            "format": "double",
+            "type": "number"
+          }
+        },
+        "required": [
+          "current_bytes",
+          "max_bytes",
+          "used_ratio",
+          "avg_daily_bytes",
+          "sample_days",
+          "discarding_old"
+        ],
+        "type": "object"
+      },
+      "Get-subject-treeResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "$schema": {
+            "description": "A URL to the JSON Schema for this object.",
+            "examples": [
+              "/api/admin/v1/schemas/Get-subject-treeResponse.json"
+            ],
+            "format": "uri",
+            "readOnly": true,
+            "type": "string"
+          },
+          "index": {
+            "$ref": "#/components/schemas/IndexStats"
+          },
+          "nodes": {
+            "items": {
+              "$ref": "#/components/schemas/Node"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "nodes",
+          "index"
+        ],
+        "type": "object"
+      },
+      "IndexStats": {
+        "additionalProperties": false,
+        "properties": {
+          "cap": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "dropped": {
+            "description": "Subject updates not indexed because the cap was reached",
+            "format": "int64",
+            "type": "integer"
+          },
+          "indexed": {
+            "format": "int64",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "indexed",
+          "cap",
+          "dropped"
+        ],
+        "type": "object"
+      },
       "Jsz": {
         "additionalProperties": false,
         "properties": {
@@ -438,6 +539,79 @@
         ],
         "type": "object"
       },
+      "KeyCount": {
+        "additionalProperties": false,
+        "properties": {
+          "bytes": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "key": {
+            "type": "string"
+          },
+          "msgs": {
+            "format": "int64",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "key",
+          "msgs",
+          "bytes"
+        ],
+        "type": "object"
+      },
+      "Node": {
+        "additionalProperties": false,
+        "properties": {
+          "bytes": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "children": {
+            "description": "Distinct next tokens below this path",
+            "format": "int64",
+            "type": "integer"
+          },
+          "last_seen": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "last_type": {
+            "type": "string"
+          },
+          "leaf": {
+            "description": "An exact subject exists at this path",
+            "type": "boolean"
+          },
+          "msgs": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "path": {
+            "type": "string"
+          },
+          "subjects": {
+            "description": "Indexed subjects at or below this path",
+            "format": "int64",
+            "type": "integer"
+          },
+          "token": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "token",
+          "path",
+          "leaf",
+          "children",
+          "subjects",
+          "msgs",
+          "bytes",
+          "last_seen"
+        ],
+        "type": "object"
+      },
       "Notice": {
         "additionalProperties": false,
         "properties": {
@@ -457,6 +631,272 @@
           "dropped",
           "reason",
           "rate"
+        ],
+        "type": "object"
+      },
+      "Overview": {
+        "additionalProperties": false,
+        "properties": {
+          "$schema": {
+            "description": "A URL to the JSON Schema for this object.",
+            "examples": [
+              "/api/admin/v1/schemas/Overview.json"
+            ],
+            "format": "uri",
+            "readOnly": true,
+            "type": "string"
+          },
+          "bytes": {
+            "format": "int64",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "first_time": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "forecast": {
+            "$ref": "#/components/schemas/Forecast"
+          },
+          "index": {
+            "$ref": "#/components/schemas/IndexStats"
+          },
+          "last_1h": {
+            "$ref": "#/components/schemas/KeyCount"
+          },
+          "last_24h": {
+            "$ref": "#/components/schemas/KeyCount"
+          },
+          "last_time": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "msgs": {
+            "format": "int64",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "num_subjects": {
+            "format": "int64",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "stream": {
+            "type": "string"
+          },
+          "top_prefixes_24h": {
+            "description": "Depth-2 prefixes (evt.\u003cdomain\u003e)",
+            "items": {
+              "$ref": "#/components/schemas/KeyCount"
+            },
+            "type": "array"
+          },
+          "top_subjects_7d": {
+            "description": "Depth-4 prefixes (evt.\u003cdomain\u003e.\u003centity\u003e.\u003caction\u003e)",
+            "items": {
+              "$ref": "#/components/schemas/KeyCount"
+            },
+            "type": "array"
+          },
+          "top_types_24h": {
+            "items": {
+              "$ref": "#/components/schemas/KeyCount"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "stream",
+          "msgs",
+          "bytes",
+          "num_subjects",
+          "first_time",
+          "last_time",
+          "last_1h",
+          "last_24h",
+          "top_types_24h",
+          "top_prefixes_24h",
+          "top_subjects_7d",
+          "forecast",
+          "index"
+        ],
+        "type": "object"
+      },
+      "Point": {
+        "additionalProperties": false,
+        "properties": {
+          "bytes": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "msgs": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "t": {
+            "format": "int64",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "t",
+          "msgs",
+          "bytes"
+        ],
+        "type": "object"
+      },
+      "PublishInput": {
+        "additionalProperties": false,
+        "properties": {
+          "$schema": {
+            "description": "A URL to the JSON Schema for this object.",
+            "examples": [
+              "/api/admin/v1/schemas/PublishInput.json"
+            ],
+            "format": "uri",
+            "readOnly": true,
+            "type": "string"
+          },
+          "content_type": {
+            "maxLength": 128,
+            "type": "string"
+          },
+          "data": {
+            "description": "UTF-8 payload",
+            "maxLength": 1048576,
+            "type": "string"
+          },
+          "headers": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object"
+          },
+          "id": {
+            "description": "Nats-Msg-Id; default a new ULID",
+            "maxLength": 128,
+            "type": "string"
+          },
+          "source": {
+            "description": "ce-source; default dashboard",
+            "maxLength": 256,
+            "type": "string"
+          },
+          "subject": {
+            "description": "evt.\u003cdomain\u003e.\u003centity\u003e.\u003caction\u003e[.\u003ckey\u003e]",
+            "maxLength": 256,
+            "type": "string"
+          },
+          "type": {
+            "description": "ce-type; empty publishes an untyped event",
+            "maxLength": 256,
+            "type": "string"
+          }
+        },
+        "required": [
+          "subject"
+        ],
+        "type": "object"
+      },
+      "PublishResult": {
+        "additionalProperties": false,
+        "properties": {
+          "$schema": {
+            "description": "A URL to the JSON Schema for this object.",
+            "examples": [
+              "/api/admin/v1/schemas/PublishResult.json"
+            ],
+            "format": "uri",
+            "readOnly": true,
+            "type": "string"
+          },
+          "duplicate": {
+            "type": "boolean"
+          },
+          "id": {
+            "type": "string"
+          },
+          "seq": {
+            "format": "int64",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "stream": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "stream",
+          "seq",
+          "id",
+          "duplicate"
+        ],
+        "type": "object"
+      },
+      "Series": {
+        "additionalProperties": false,
+        "properties": {
+          "key": {
+            "type": "string"
+          },
+          "points": {
+            "items": {
+              "$ref": "#/components/schemas/Point"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "key",
+          "points"
+        ],
+        "type": "object"
+      },
+      "SeriesSet": {
+        "additionalProperties": false,
+        "properties": {
+          "$schema": {
+            "description": "A URL to the JSON Schema for this object.",
+            "examples": [
+              "/api/admin/v1/schemas/SeriesSet.json"
+            ],
+            "format": "uri",
+            "readOnly": true,
+            "type": "string"
+          },
+          "dim": {
+            "type": "string"
+          },
+          "from": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "range": {
+            "type": "string"
+          },
+          "series": {
+            "items": {
+              "$ref": "#/components/schemas/Series"
+            },
+            "type": "array"
+          },
+          "step": {
+            "description": "Bucket size in seconds",
+            "format": "int64",
+            "type": "integer"
+          },
+          "to": {
+            "format": "int64",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "range",
+          "step",
+          "from",
+          "to",
+          "dim",
+          "series"
         ],
         "type": "object"
       },
@@ -703,6 +1143,68 @@
         ],
         "type": "object"
       },
+      "SubjectInfo": {
+        "additionalProperties": false,
+        "properties": {
+          "$schema": {
+            "description": "A URL to the JSON Schema for this object.",
+            "examples": [
+              "/api/admin/v1/schemas/SubjectInfo.json"
+            ],
+            "format": "uri",
+            "readOnly": true,
+            "type": "string"
+          },
+          "bytes": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "first_seen": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "json_keys": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "keys_sampled_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "last_seen": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "last_seq": {
+            "format": "int64",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "last_type": {
+            "type": "string"
+          },
+          "msgs": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "subject": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "subject",
+          "first_seen",
+          "last_seen",
+          "last_seq",
+          "last_type",
+          "msgs",
+          "bytes",
+          "json_keys"
+        ],
+        "type": "object"
+      },
       "SystemInfo": {
         "additionalProperties": false,
         "properties": {
@@ -946,6 +1448,46 @@
         "tags": [
           "events"
         ]
+      },
+      "post": {
+        "description": "Publishes one event into EVENTS as the operator (audited).",
+        "operationId": "publish-event",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PublishInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublishResult"
+                }
+              }
+            },
+            "description": "Created"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Publish an event",
+        "tags": [
+          "events"
+        ]
       }
     },
     "/events/{stream}/{seq}": {
@@ -997,6 +1539,49 @@
         "summary": "Get one event by sequence",
         "tags": [
           "events"
+        ]
+      }
+    },
+    "/overview": {
+      "get": {
+        "operationId": "get-overview",
+        "parameters": [
+          {
+            "explode": false,
+            "in": "query",
+            "name": "stream",
+            "schema": {
+              "default": "EVENTS",
+              "pattern": "^[A-Za-z0-9_-]{1,64}$",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Overview"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Overview KPIs and forecast",
+        "tags": [
+          "rollups"
         ]
       }
     },
@@ -1306,6 +1891,113 @@
         ]
       }
     },
+    "/subjects/info": {
+      "get": {
+        "operationId": "get-subject",
+        "parameters": [
+          {
+            "explode": false,
+            "in": "query",
+            "name": "stream",
+            "schema": {
+              "default": "EVENTS",
+              "pattern": "^[A-Za-z0-9_-]{1,64}$",
+              "type": "string"
+            }
+          },
+          {
+            "explode": false,
+            "in": "query",
+            "name": "subject",
+            "required": true,
+            "schema": {
+              "maxLength": 256,
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SubjectInfo"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "One indexed subject",
+        "tags": [
+          "rollups"
+        ]
+      }
+    },
+    "/subjects/tree": {
+      "get": {
+        "operationId": "get-subject-tree",
+        "parameters": [
+          {
+            "explode": false,
+            "in": "query",
+            "name": "stream",
+            "schema": {
+              "default": "EVENTS",
+              "pattern": "^[A-Za-z0-9_-]{1,64}$",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Parent path; empty for the roots",
+            "explode": false,
+            "in": "query",
+            "name": "prefix",
+            "schema": {
+              "description": "Parent path; empty for the roots",
+              "maxLength": 256,
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Get-subject-treeResponse"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Subject tree level",
+        "tags": [
+          "rollups"
+        ]
+      }
+    },
     "/system/info": {
       "get": {
         "operationId": "get-system-info",
@@ -1469,6 +2161,96 @@
         "summary": "Live tail (SSE)",
         "tags": [
           "events"
+        ]
+      }
+    },
+    "/throughput": {
+      "get": {
+        "operationId": "get-throughput",
+        "parameters": [
+          {
+            "explode": false,
+            "in": "query",
+            "name": "stream",
+            "schema": {
+              "default": "EVENTS",
+              "pattern": "^[A-Za-z0-9_-]{1,64}$",
+              "type": "string"
+            }
+          },
+          {
+            "explode": false,
+            "in": "query",
+            "name": "range",
+            "schema": {
+              "default": "24h",
+              "enum": [
+                "1h",
+                "24h",
+                "7d",
+                "30d",
+                "1y"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "explode": false,
+            "in": "query",
+            "name": "dim",
+            "schema": {
+              "default": "total",
+              "enum": [
+                "total",
+                "type",
+                "p1",
+                "p2",
+                "p3",
+                "p4"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "description": "For dim != total: the N keys with most events",
+            "explode": false,
+            "in": "query",
+            "name": "top",
+            "schema": {
+              "default": 6,
+              "description": "For dim != total: the N keys with most events",
+              "format": "int64",
+              "maximum": 12,
+              "minimum": 1,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SeriesSet"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Throughput time series",
+        "tags": [
+          "rollups"
         ]
       }
     }

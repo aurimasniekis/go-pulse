@@ -2,6 +2,7 @@ package api
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"strings"
 	"time"
@@ -9,10 +10,31 @@ import (
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/danielgtaylor/huma/v2/sse"
 
+	"github.com/aurimasniekis/go-pulse/internal/audit"
 	"github.com/aurimasniekis/go-pulse/internal/query"
 	"github.com/aurimasniekis/go-pulse/internal/streams"
 	"github.com/aurimasniekis/go-pulse/internal/tail"
+	"github.com/aurimasniekis/go-pulse/pkg/pulse/envelope"
 )
+
+// PublishInput is an operator-published event (dashboard "publish test event", e2e seeding).
+type PublishInput struct {
+	Subject     string            `json:"subject" maxLength:"256" doc:"evt.<domain>.<entity>.<action>[.<key>]"`
+	Type        string            `json:"type,omitempty" maxLength:"256" doc:"ce-type; empty publishes an untyped event"`
+	Source      string            `json:"source,omitempty" maxLength:"256" doc:"ce-source; default dashboard"`
+	ID          string            `json:"id,omitempty" maxLength:"128" doc:"Nats-Msg-Id; default a new ULID"`
+	ContentType string            `json:"content_type,omitempty" maxLength:"128"`
+	Data        string            `json:"data,omitempty" maxLength:"1048576" doc:"UTF-8 payload"`
+	Headers     map[string]string `json:"headers,omitempty"`
+}
+
+// PublishResult is the stream acknowledgement.
+type PublishResult struct {
+	Stream    string `json:"stream"`
+	Seq       uint64 `json:"seq"`
+	ID        string `json:"id"`
+	Duplicate bool   `json:"duplicate"`
+}
 
 // EventsInput is an explorer page request (PL-EXP-001..006).
 type EventsInput struct {
@@ -68,6 +90,37 @@ type TailInput struct {
 }
 
 func registerEvents(api huma.API, d *Deps) {
+	huma.Register(api, huma.Operation{OperationID: "publish-event", Method: http.MethodPost, Path: "/events", Summary: "Publish an event",
+		Description: "Publishes one event into EVENTS as the operator (audited).", Tags: []string{"events"}, DefaultStatus: http.StatusCreated},
+		func(ctx context.Context, in *struct{ Body PublishInput }) (*struct{ Body PublishResult }, error) {
+			b := in.Body
+			src := b.Source
+			if src == "" {
+				src = "dashboard"
+			}
+			ev := envelope.Event{Subject: b.Subject, ID: b.ID, Type: b.Type, Source: src, ContentType: b.ContentType, Data: []byte(b.Data)}
+			for k, v := range b.Headers {
+				if ev.Extra == nil {
+					ev.Extra = map[string][]string{}
+				}
+				ev.Extra[k] = []string{v}
+			}
+			msg, err := envelope.Encode(ev)
+			if errors.Is(err, envelope.ErrSubject) {
+				return nil, huma.Error422UnprocessableEntity(err.Error())
+			}
+			if err != nil {
+				return nil, d.internalErr("publish", err)
+			}
+			ack, err := d.JS.PublishMsg(ctx, msg)
+			if err != nil {
+				return nil, mapQueryErr(d, "publish", err)
+			}
+			_ = audit.Write(ctx, d.DB, d.actor(ctx), "event.publish", b.Subject, audit.OK, map[string]any{"seq": ack.Sequence, "type": b.Type})
+			return &struct{ Body PublishResult }{PublishResult{Stream: ack.Stream, Seq: ack.Sequence, ID: msg.Header.Get(envelope.HeaderID),
+				Duplicate: ack.Duplicate}}, nil
+		})
+
 	huma.Register(api, huma.Operation{OperationID: "query-events", Method: http.MethodGet, Path: "/events", Summary: "Explore events", Tags: []string{"events"}},
 		func(ctx context.Context, in *EventsInput) (*struct{ Body EventsPage }, error) {
 			r, err := in.toRequest()

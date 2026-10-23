@@ -14,7 +14,11 @@ export interface paths {
         /** Explore events */
         get: operations["query-events"];
         put?: never;
-        post?: never;
+        /**
+         * Publish an event
+         * @description Publishes one event into EVENTS as the operator (audited).
+         */
+        post: operations["publish-event"];
         delete?: never;
         options?: never;
         head?: never;
@@ -30,6 +34,23 @@ export interface paths {
         };
         /** Get one event by sequence */
         get: operations["get-event"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/overview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Overview KPIs and forecast */
+        get: operations["get-overview"];
         put?: never;
         post?: never;
         delete?: never;
@@ -112,6 +133,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/subjects/info": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** One indexed subject */
+        get: operations["get-subject"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/subjects/tree": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Subject tree level */
+        get: operations["get-subject-tree"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/system/info": {
         parameters: {
             query?: never;
@@ -141,6 +196,23 @@ export interface paths {
          * @description Streams `event` messages (id = stream sequence) and `notice` messages when events were dropped by the per-session rate limit. A comment keepalive is sent every 20 s.
          */
         get: operations["tail-events"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/throughput": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Throughput time series */
+        get: operations["get-throughput"];
         put?: never;
         post?: never;
         delete?: never;
@@ -295,6 +367,54 @@ export interface components {
             /** Format: int64 */
             scanned_bytes: number;
         };
+        Forecast: {
+            /** Format: int64 */
+            avg_daily_bytes: number;
+            /** Format: int64 */
+            current_bytes: number;
+            /** @description The stream is at its limit and drops its oldest events */
+            discarding_old: boolean;
+            /**
+             * Format: date-time
+             * @description When max_bytes is reached at the current rate (absent once full or with no traffic)
+             */
+            full_at?: string;
+            /**
+             * Format: double
+             * @description max_bytes / average daily bytes
+             */
+            horizon_days?: number;
+            /** Format: int64 */
+            max_bytes: number;
+            /**
+             * Format: double
+             * @description How much history the average is based on
+             */
+            sample_days: number;
+            /** Format: double */
+            used_ratio: number;
+        };
+        "Get-subject-treeResponse": {
+            /**
+             * Format: uri
+             * @description A URL to the JSON Schema for this object.
+             * @example /api/admin/v1/schemas/Get-subject-treeResponse.json
+             */
+            readonly $schema?: string;
+            index: components["schemas"]["IndexStats"];
+            nodes: components["schemas"]["Node"][];
+        };
+        IndexStats: {
+            /** Format: int64 */
+            cap: number;
+            /**
+             * Format: int64
+             * @description Subject updates not indexed because the cap was reached
+             */
+            dropped: number;
+            /** Format: int64 */
+            indexed: number;
+        };
         Jsz: {
             api: components["schemas"]["JszAPIStruct"];
             /** Format: int64 */
@@ -324,12 +444,137 @@ export interface components {
             max_storage: number;
             store_dir: string;
         };
+        KeyCount: {
+            /** Format: int64 */
+            bytes: number;
+            key: string;
+            /** Format: int64 */
+            msgs: number;
+        };
+        Node: {
+            /** Format: int64 */
+            bytes: number;
+            /**
+             * Format: int64
+             * @description Distinct next tokens below this path
+             */
+            children: number;
+            /** Format: date-time */
+            last_seen: string;
+            last_type?: string;
+            /** @description An exact subject exists at this path */
+            leaf: boolean;
+            /** Format: int64 */
+            msgs: number;
+            path: string;
+            /**
+             * Format: int64
+             * @description Indexed subjects at or below this path
+             */
+            subjects: number;
+            token: string;
+        };
         Notice: {
             /** Format: int64 */
             dropped: number;
             /** Format: int64 */
             rate: number;
             reason: string;
+        };
+        Overview: {
+            /**
+             * Format: uri
+             * @description A URL to the JSON Schema for this object.
+             * @example /api/admin/v1/schemas/Overview.json
+             */
+            readonly $schema?: string;
+            /** Format: int64 */
+            bytes: number;
+            /** Format: date-time */
+            first_time: string;
+            forecast: components["schemas"]["Forecast"];
+            index: components["schemas"]["IndexStats"];
+            last_1h: components["schemas"]["KeyCount"];
+            last_24h: components["schemas"]["KeyCount"];
+            /** Format: date-time */
+            last_time: string;
+            /** Format: int64 */
+            msgs: number;
+            /** Format: int64 */
+            num_subjects: number;
+            stream: string;
+            /** @description Depth-2 prefixes (evt.<domain>) */
+            top_prefixes_24h: components["schemas"]["KeyCount"][];
+            /** @description Depth-4 prefixes (evt.<domain>.<entity>.<action>) */
+            top_subjects_7d: components["schemas"]["KeyCount"][];
+            top_types_24h: components["schemas"]["KeyCount"][];
+        };
+        Point: {
+            /** Format: int64 */
+            bytes: number;
+            /** Format: int64 */
+            msgs: number;
+            /** Format: int64 */
+            t: number;
+        };
+        PublishInput: {
+            /**
+             * Format: uri
+             * @description A URL to the JSON Schema for this object.
+             * @example /api/admin/v1/schemas/PublishInput.json
+             */
+            readonly $schema?: string;
+            content_type?: string;
+            /** @description UTF-8 payload */
+            data?: string;
+            headers?: {
+                [key: string]: string;
+            };
+            /** @description Nats-Msg-Id; default a new ULID */
+            id?: string;
+            /** @description ce-source; default dashboard */
+            source?: string;
+            /** @description evt.<domain>.<entity>.<action>[.<key>] */
+            subject: string;
+            /** @description ce-type; empty publishes an untyped event */
+            type?: string;
+        };
+        PublishResult: {
+            /**
+             * Format: uri
+             * @description A URL to the JSON Schema for this object.
+             * @example /api/admin/v1/schemas/PublishResult.json
+             */
+            readonly $schema?: string;
+            duplicate: boolean;
+            id: string;
+            /** Format: int64 */
+            seq: number;
+            stream: string;
+        };
+        Series: {
+            key: string;
+            points: components["schemas"]["Point"][];
+        };
+        SeriesSet: {
+            /**
+             * Format: uri
+             * @description A URL to the JSON Schema for this object.
+             * @example /api/admin/v1/schemas/SeriesSet.json
+             */
+            readonly $schema?: string;
+            dim: string;
+            /** Format: int64 */
+            from: number;
+            range: string;
+            series: components["schemas"]["Series"][];
+            /**
+             * Format: int64
+             * @description Bucket size in seconds
+             */
+            step: number;
+            /** Format: int64 */
+            to: number;
         };
         StreamDTO: {
             /**
@@ -420,6 +665,29 @@ export interface components {
             /** Format: int64 */
             num_subjects: number;
         };
+        SubjectInfo: {
+            /**
+             * Format: uri
+             * @description A URL to the JSON Schema for this object.
+             * @example /api/admin/v1/schemas/SubjectInfo.json
+             */
+            readonly $schema?: string;
+            /** Format: int64 */
+            bytes: number;
+            /** Format: date-time */
+            first_seen: string;
+            json_keys: string[];
+            /** Format: date-time */
+            keys_sampled_at?: string;
+            /** Format: date-time */
+            last_seen: string;
+            /** Format: int64 */
+            last_seq: number;
+            last_type: string;
+            /** Format: int64 */
+            msgs: number;
+            subject: string;
+        };
         SystemInfo: {
             /**
              * Format: uri
@@ -501,6 +769,39 @@ export interface operations {
             };
         };
     };
+    "publish-event": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PublishInput"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublishResult"];
+                };
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
     "get-event": {
         parameters: {
             query?: never;
@@ -520,6 +821,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["EventDTO"];
+                };
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
+    "get-overview": {
+        parameters: {
+            query?: {
+                stream?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Overview"];
                 };
             };
             /** @description Error */
@@ -755,6 +1087,71 @@ export interface operations {
             };
         };
     };
+    "get-subject": {
+        parameters: {
+            query: {
+                stream?: string;
+                subject: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SubjectInfo"];
+                };
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
+    "get-subject-tree": {
+        parameters: {
+            query?: {
+                stream?: string;
+                /** @description Parent path; empty for the roots */
+                prefix?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Get-subject-treeResponse"];
+                };
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
     "get-system-info": {
         parameters: {
             query?: never;
@@ -830,6 +1227,41 @@ export interface operations {
                         /** @description The retry time in milliseconds. */
                         retry?: number;
                     })[];
+                };
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
+    "get-throughput": {
+        parameters: {
+            query?: {
+                stream?: string;
+                range?: "1h" | "24h" | "7d" | "30d" | "1y";
+                dim?: "total" | "type" | "p1" | "p2" | "p3" | "p4";
+                /** @description For dim != total: the N keys with most events */
+                top?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SeriesSet"];
                 };
             };
             /** @description Error */

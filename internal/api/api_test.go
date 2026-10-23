@@ -17,6 +17,7 @@ import (
 	"github.com/aurimasniekis/go-pulse/internal/auth"
 	"github.com/aurimasniekis/go-pulse/internal/clients"
 	"github.com/aurimasniekis/go-pulse/internal/query"
+	"github.com/aurimasniekis/go-pulse/internal/rollup"
 	"github.com/aurimasniekis/go-pulse/internal/store"
 	"github.com/aurimasniekis/go-pulse/internal/streams"
 	"github.com/aurimasniekis/go-pulse/internal/sysapi"
@@ -52,8 +53,13 @@ func newHarness(t *testing.T) *harness {
 		t.Fatal(err)
 	}
 	app, _ := pulse.New(nc, "api-test")
+	ro := rollup.New(js, db, rollup.Options{Streams: []string{streams.Events}, FlushEvery: 50 * time.Millisecond})
+	rctx, rcancel := context.WithCancel(context.Background())
+	rdone := make(chan struct{})
+	go func() { ro.Run(rctx); close(rdone) }()
+	t.Cleanup(func() { rcancel(); <-rdone })
 	d := &Deps{Version: "test", Profile: "dev", DB: db, NC: nc, JS: js, Sys: sys, Query: query.New(js, 4, query.DefaultBudget),
-		Tail: tail.New(js, 2, 1000), Auth: auth.None{}, Ready: func() bool { return true }}
+		Tail: tail.New(js, 2, 1000), Rollup: ro, Auth: auth.None{}, Ready: func() bool { return true }}
 	h := &harness{admin: httptest.NewServer(NewAdmin(d)), public: httptest.NewServer(NewPublic(d)), app: app, db: db, deps: d}
 	t.Cleanup(h.admin.Close)
 	t.Cleanup(h.public.Close)
@@ -338,4 +344,75 @@ func TestSubjectsCollide(t *testing.T) {
 		}
 	}
 	_ = fmt.Sprint()
+}
+
+func TestRollupEndpoints(t *testing.T) {
+	h := newHarness(t)
+	h.publish(t, 12)
+	base := h.admin.URL + AdminPrefix
+	var ov Overview
+	deadline := time.Now().Add(5 * time.Second)
+	for {
+		_, body := do(t, "GET", base+"/overview", "", nil)
+		_ = json.Unmarshal([]byte(body), &ov)
+		if ov.Last1h.Msgs == 12 || time.Now().After(deadline) {
+			break
+		}
+		time.Sleep(50 * time.Millisecond)
+	}
+	if ov.Msgs != 12 || ov.Last1h.Msgs != 12 || ov.Last24h.Msgs != 12 || len(ov.TopTypes24h) != 1 || ov.Index.Indexed != 1 ||
+		ov.Forecast.MaxBytes != 256<<20 || len(ov.TopSubjects7d) != 1 || ov.TopSubjects7d[0].Key != "evt.test.thing.created" {
+		t.Fatalf("overview %+v", ov)
+	}
+	for _, q := range []string{"range=1h", "range=24h&dim=type", "range=1h&dim=p3", "range=1y", "range=30d&dim=p4&top=3"} {
+		resp, body := do(t, "GET", base+"/throughput?"+q, "", nil)
+		var ss SeriesSet
+		_ = json.Unmarshal([]byte(body), &ss)
+		if resp.StatusCode != 200 || len(ss.Series) != 1 || len(ss.Series[0].Points) == 0 {
+			t.Fatalf("%s: %d %s", q, resp.StatusCode, body)
+		}
+		var sum int64
+		for _, p := range ss.Series[0].Points {
+			sum += p.Msgs
+		}
+		if sum != 12 {
+			t.Fatalf("%s: sum %d", q, sum)
+		}
+	}
+	if resp, _ := do(t, "GET", base+"/throughput?range=2h", "", nil); resp.StatusCode != http.StatusUnprocessableEntity {
+		t.Fatalf("bad range: %d", resp.StatusCode)
+	}
+	_, body := do(t, "GET", base+"/subjects/tree?prefix=evt.test", "", nil)
+	if !strings.Contains(body, `"token":"thing"`) || !strings.Contains(body, `"msgs":12`) {
+		t.Fatalf("tree %s", body)
+	}
+	if resp, _ := do(t, "GET", base+"/subjects/info?subject=evt.nope.x.y", "", nil); resp.StatusCode != http.StatusNotFound {
+		t.Fatalf("missing subject: %d", resp.StatusCode)
+	}
+	if resp, body := do(t, "GET", base+"/subjects/info?subject=evt.test.thing.created", "", nil); resp.StatusCode != 200 || !strings.Contains(body, `"last_type":"test.thing.created.v1"`) {
+		t.Fatalf("subject: %d %s", resp.StatusCode, body)
+	}
+}
+
+func TestAdminPublish(t *testing.T) {
+	h := newHarness(t)
+	base := h.admin.URL + AdminPrefix
+	body := `{"subject":"evt.home.door.opened","type":"home.door.opened.v1","data":"{\"door\":\"front\"}","content_type":"application/json","headers":{"x-test":"1"},"id":"fixed-1"}`
+	resp, out := do(t, "POST", base+"/events", body, csrfH)
+	if resp.StatusCode != http.StatusCreated || !strings.Contains(out, `"seq":1`) {
+		t.Fatalf("%d %s", resp.StatusCode, out)
+	}
+	if _, out := do(t, "POST", base+"/events", body, csrfH); !strings.Contains(out, `"duplicate":true`) {
+		t.Fatalf("dedupe: %s", out)
+	}
+	if resp, _ := do(t, "POST", base+"/events", `{"subject":"evt.bad"}`, csrfH); resp.StatusCode != http.StatusUnprocessableEntity {
+		t.Fatalf("bad subject: %d", resp.StatusCode)
+	}
+	if resp, _ := do(t, "POST", base+"/events", body, nil); resp.StatusCode != http.StatusForbidden {
+		t.Fatalf("no csrf: %d", resp.StatusCode)
+	}
+	_, out = do(t, "GET", base+"/events/EVENTS/1", "", nil)
+	if !strings.Contains(out, `"source":"dashboard"`) || !strings.Contains(out, `"x-test":["1"]`) {
+		t.Fatalf("stored: %s", out)
+	}
 }

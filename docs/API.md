@@ -38,6 +38,11 @@ Every other path on the public listener returns 404 (PL-EDGE-001). The public li
 | GET | `/events` | Explorer page (see below) |
 | GET | `/events/{stream}/{seq}` | One event |
 | GET | `/tail` | Live tail (SSE) |
+| POST | `/events` | Publish one event as the operator (subject grammar enforced, audited) |
+| GET | `/overview` | KPIs, top domains/types/subjects, disk forecast, subject index stats |
+| GET | `/throughput` | Time series: `range` 1h/24h/7d/30d/1y, `dim` total/type/p1–p4, `top` N keys |
+| GET | `/subjects/tree` | One level of the subject tree below `prefix` |
+| GET | `/subjects/info` | One indexed subject with sampled JSON keys |
 
 ### Explorer (`GET /events`)
 
@@ -56,6 +61,12 @@ envelope fields (`id`, `type`, `source`, `content_type`, `event_time`), `untyped
 
 Query: `stream`, `subject` (repeatable), `since`. Header: `Last-Event-ID`. At most 10 sessions; 200 events/s per
 session — excess events are dropped and reported in a `notice` (`dropped`, `reason`: `rate` or `slow_client`).
+
+### Rollups
+
+Counts come from headers-only consumers and are committed every 10 s together with the consumer checkpoint
+(exactly once). Minute data covers 8 days, hourly 400 days, daily forever. The retention horizon is
+`max_bytes / average daily bytes` and is meaningful after a day of traffic.
 
 ## Public API
 
