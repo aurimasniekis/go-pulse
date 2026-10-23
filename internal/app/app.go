@@ -2,6 +2,7 @@ package app
 
 import (
 	"context"
+	"crypto/tls"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -14,14 +15,18 @@ import (
 	"github.com/nats-io/nats.go"
 	"github.com/nats-io/nats.go/jetstream"
 
+	"github.com/aurimasniekis/go-pulse/internal/api"
+	"github.com/aurimasniekis/go-pulse/internal/auth"
 	"github.com/aurimasniekis/go-pulse/internal/bootstrap"
 	"github.com/aurimasniekis/go-pulse/internal/certs"
 	"github.com/aurimasniekis/go-pulse/internal/clients"
 	"github.com/aurimasniekis/go-pulse/internal/config"
 	"github.com/aurimasniekis/go-pulse/internal/natsconn"
+	"github.com/aurimasniekis/go-pulse/internal/query"
 	"github.com/aurimasniekis/go-pulse/internal/store"
 	"github.com/aurimasniekis/go-pulse/internal/streams"
 	"github.com/aurimasniekis/go-pulse/internal/sysapi"
+	"github.com/aurimasniekis/go-pulse/internal/tail"
 )
 
 // App is a running pulsed.
@@ -35,6 +40,8 @@ type App struct {
 	JS      jetstream.JetStream
 	Sys     *sysapi.Client
 	Clients *clients.Service
+	Query   *query.Engine
+	Tail    *tail.Manager
 
 	ready     atomic.Bool
 	listeners []*http.Server
@@ -131,6 +138,30 @@ func Start(ctx context.Context, cfg *config.Config, log *slog.Logger) (*App, err
 	if err := streams.EnsureBlobs(ctx, a.JS); err != nil {
 		return nil, fmt.Errorf("ensure blobs object store: %w", err)
 	}
+	a.Query = query.New(a.JS, 4, query.DefaultBudget)
+	a.Tail = tail.New(a.JS, tail.DefaultMaxSessions, tail.DefaultRate)
+	authn, err := auth.New(cfg.AuthMode)
+	if err != nil {
+		return nil, err
+	}
+	deps := &api.Deps{Log: log, Version: Version, Profile: cfg.Profile, DB: a.DB, NC: a.AppConn, JS: a.JS, Sys: a.Sys,
+		Query: a.Query, Tail: a.Tail, Auth: authn, AdminHosts: cfg.AdminHosts, Ready: a.Ready}
+	if err := a.serve(ctx, "admin", cfg.AdminAddr, api.NewAdmin(deps)); err != nil {
+		return nil, err
+	}
+	if cfg.PublicAddr != "" {
+		var tlsConf *tls.Config
+		if cfg.OriginCertFile != "" {
+			cert, err := tls.LoadX509KeyPair(cfg.OriginCertFile, cfg.OriginKeyFile)
+			if err != nil {
+				return nil, fmt.Errorf("origin certificate: %w", err)
+			}
+			tlsConf = &tls.Config{Certificates: []tls.Certificate{cert}, MinVersion: tls.VersionTLS12}
+		}
+		if err := a.serveTLS(ctx, "public", cfg.PublicAddr, api.NewPublic(deps), tlsConf); err != nil {
+			return nil, err
+		}
+	}
 	a.goLoop(a.loopCtx, "account-sync", time.Minute, func(ctx context.Context) { //nolint:contextcheck // loops outlive startup
 		if _, err := a.Clients.Sync(ctx, false); err != nil {
 			log.Warn("account sync", "err", err)
@@ -184,12 +215,21 @@ func (a *App) startMetrics(ctx context.Context) error {
 }
 
 func (a *App) serve(ctx context.Context, name, addr string, h http.Handler) error {
+	return a.serveTLS(ctx, name, addr, h, nil)
+}
+
+// serveTLS starts a listener; with tlsConf it serves HTTPS. WriteTimeout stays 0 because SSE streams are long-lived;
+// Huma's SSE sets a per-write deadline instead.
+func (a *App) serveTLS(ctx context.Context, name, addr string, h http.Handler, tlsConf *tls.Config) error {
 	var lc net.ListenConfig
 	ln, err := lc.Listen(ctx, "tcp", addr)
 	if err != nil {
 		return fmt.Errorf("%s listener %s: %w", name, addr, err)
 	}
-	srv := &http.Server{Handler: h, ReadHeaderTimeout: 10 * time.Second, IdleTimeout: 120 * time.Second}
+	if tlsConf != nil {
+		ln = tls.NewListener(ln, tlsConf)
+	}
+	srv := &http.Server{Handler: h, ReadHeaderTimeout: 10 * time.Second, IdleTimeout: 120 * time.Second, MaxHeaderBytes: 64 << 10}
 	a.listeners = append(a.listeners, srv)
 	a.wg.Add(1)
 	go func() {

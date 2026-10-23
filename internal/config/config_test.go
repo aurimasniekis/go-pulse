@@ -20,11 +20,14 @@ func keyFile(t *testing.T) string {
 }
 
 func TestProdDefaults(t *testing.T) {
-	c, err := Load(env(map[string]string{"PULSE_MASTER_KEY_FILE": keyFile(t)}))
+	if _, err := Load(env(map[string]string{"PULSE_MASTER_KEY_FILE": keyFile(t)})); err == nil {
+		t.Fatal("prod accepted a plain-HTTP public listener")
+	}
+	c, err := Load(env(map[string]string{"PULSE_MASTER_KEY_FILE": keyFile(t), "PULSE_PUBLIC_ADDR": "off"}))
 	if err != nil {
 		t.Fatal(err)
 	}
-	if c.Profile != ProfileProd || c.AdminAddr != "127.0.0.1:8080" || c.MetricsAddr != "127.0.0.1:9464" || len(c.MasterKey) != 32 {
+	if c.PublicAddr != "" || c.Profile != ProfileProd || c.AdminAddr != "127.0.0.1:8080" || c.MetricsAddr != "127.0.0.1:9464" || len(c.MasterKey) != 32 {
 		t.Fatalf("%+v", c)
 	}
 }
@@ -32,6 +35,8 @@ func TestProdDefaults(t *testing.T) {
 func TestProdRefusals(t *testing.T) {
 	kf := keyFile(t)
 	cases := map[string]map[string]string{
+		"plain http public listener":        {"PULSE_MASTER_KEY_FILE": kf},
+		"cert without key":                  {"PULSE_MASTER_KEY_FILE": kf, "PULSE_ORIGIN_CERT_FILE": "/x"},
 		"admin public with auth none":       {"PULSE_MASTER_KEY_FILE": kf, "PULSE_ADMIN_PUBLIC": "true"},
 		"non-loopback admin with auth none": {"PULSE_MASTER_KEY_FILE": kf, "PULSE_ADMIN_ADDR": "0.0.0.0:8080"},
 		"plain master key in prod":          {"PULSE_MASTER_KEY": secretbox.GenerateMasterKey()},
@@ -50,9 +55,10 @@ func TestProdRefusals(t *testing.T) {
 func TestContainerAdminPublishedOnLoopback(t *testing.T) {
 	c, err := Load(env(map[string]string{
 		"PULSE_MASTER_KEY_FILE": keyFile(t), "PULSE_ADMIN_ADDR": "0.0.0.0:8080", "PULSE_ADMIN_PUBLISHED_LOOPBACK": "true",
+		"PULSE_PUBLIC_ADDR": "off", "PULSE_ADMIN_HOSTS": "Pulse.local, x",
 	}))
-	if err != nil || c.AdminAddr != "0.0.0.0:8080" {
-		t.Fatalf("%v", err)
+	if err != nil || c.AdminAddr != "0.0.0.0:8080" || len(c.AdminHosts) != 2 || c.AdminHosts[0] != "pulse.local" {
+		t.Fatalf("%v %v", err, c.AdminHosts)
 	}
 }
 

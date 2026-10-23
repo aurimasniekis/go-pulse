@@ -18,10 +18,16 @@ x-pulse-env: &pulse-env
   PULSE_METRICS_ADDR: 0.0.0.0:9464
   PULSE_PUBLIC_ADDR: 0.0.0.0:8443
   PULSE_EVENTS_MAX_BYTES: 30GiB # deployment computes 60% of the data disk
+  PULSE_ORIGIN_CERT_FILE: /run/secrets/cf_origin_cert   # Terraform module output origin_certificate_pem
+  PULSE_ORIGIN_KEY_FILE: /run/secrets/cf_origin_key     # Terraform module output origin_private_key_pem
 
 secrets:
   pulse_master_key:
     file: /srv/pulse/secrets/master.key
+  cf_origin_cert:
+    file: /srv/pulse/secrets/cf_origin.crt
+  cf_origin_key:
+    file: /srv/pulse/secrets/cf_origin.key
 
 networks:
   pulse:
@@ -67,7 +73,7 @@ services:
     environment:
       <<: *pulse-env
       GOMEMLIMIT: 300MiB
-    secrets: [pulse_master_key]
+    secrets: [pulse_master_key, cf_origin_cert, cf_origin_key]
     volumes: [pulsed-data:/data/pulsed, nats-data:/data/nats]
     networks: [pulse]
     ports:

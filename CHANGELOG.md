@@ -13,3 +13,5 @@ versioning: [docs/VERSIONING.md](docs/VERSIONING.md).
   `pulsed keys export`, dev compose stack, reference prod compose.
 - M2: envelope package and SDK conformance vectors, `EVENTS` and `blobs` ensured at start, Go SDK (`pkg/pulse`),
   `pulse context|pub|sub`, sizing spike tooling (`make spike`, operator-triggered).
+- M3: admin API (system, streams, consumers, explorer, SSE tail) and public listener skeleton on Huma v2, Host
+  allowlist and CSRF header on the admin listener, `pulsed openapi`, generated TypeScript client types.

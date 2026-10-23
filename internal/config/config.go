@@ -47,7 +47,10 @@ type Config struct {
 	MetricsAddr            string
 	AdminPublishedLoopback bool // compose publishes the admin port only on host loopback (ADR-0008)
 	AdminPublic            bool
-	AuthMode               string // none | oidc
+	AuthMode               string   // none | oidc
+	AdminHosts             []string // extra Host names accepted by the admin listener (DNS-rebinding guard)
+	OriginCertFile         string   // public listener TLS certificate (Cloudflare Origin CA), PEM
+	OriginKeyFile          string
 
 	ShutdownTimeout time.Duration
 }
@@ -78,12 +81,15 @@ func Load(getenv Getenv) (*Config, error) {
 		RawHost:                e.str("PULSE_RAW_HOST", ""),
 		PublicHost:             e.str("PULSE_PUBLIC_HOST", ""),
 		EventsMaxBytes:         e.bytes("PULSE_EVENTS_MAX_BYTES", 10<<30),
-		PublicAddr:             e.str("PULSE_PUBLIC_ADDR", ":8443"),
+		PublicAddr:             e.strAllowEmpty("PULSE_PUBLIC_ADDR", ":8443"),
 		AdminAddr:              e.str("PULSE_ADMIN_ADDR", "127.0.0.1:8080"),
 		MetricsAddr:            e.str("PULSE_METRICS_ADDR", "127.0.0.1:9464"),
 		AdminPublishedLoopback: e.bool("PULSE_ADMIN_PUBLISHED_LOOPBACK", false),
 		AdminPublic:            e.bool("PULSE_ADMIN_PUBLIC", false),
 		AuthMode:               e.str("PULSE_AUTH_MODE", "none"),
+		AdminHosts:             e.list("PULSE_ADMIN_HOSTS"),
+		OriginCertFile:         e.str("PULSE_ORIGIN_CERT_FILE", ""),
+		OriginKeyFile:          e.str("PULSE_ORIGIN_KEY_FILE", ""),
 		ShutdownTimeout:        e.dur("PULSE_SHUTDOWN_TIMEOUT", 20*time.Second),
 	}
 	mk, err := e.secret("PULSE_MASTER_KEY", c.Profile == ProfileProd)
@@ -128,6 +134,13 @@ func (c *Config) Validate() error {
 				"address, or bind inside a container and publish only on host loopback with PULSE_ADMIN_PUBLISHED_LOOPBACK=true (ADR-0008)", c.AdminAddr))
 		}
 	}
+	if (c.OriginCertFile == "") != (c.OriginKeyFile == "") {
+		errs = append(errs, errors.New("PULSE_ORIGIN_CERT_FILE and PULSE_ORIGIN_KEY_FILE go together"))
+	}
+	if c.Profile == ProfileProd && c.PublicAddr != "" && c.OriginCertFile == "" {
+		errs = append(errs, errors.New("the prod profile refuses a plain-HTTP public listener: set PULSE_ORIGIN_CERT_FILE/PULSE_ORIGIN_KEY_FILE "+
+			"or disable the listener with PULSE_PUBLIC_ADDR=off (PL-EDGE-010)"))
+	}
 	if c.EventsMaxBytes < 64<<20 {
 		errs = append(errs, errors.New("PULSE_EVENTS_MAX_BYTES must be at least 64MiB"))
 	}
@@ -152,6 +165,28 @@ func (c *Config) Dev() bool { return c.Profile == ProfileDev }
 type envReader struct {
 	get  Getenv
 	errs []error
+}
+
+// strAllowEmpty is str where "off" (or "none", "disabled") means explicitly empty, e.g. a disabled listener.
+func (e *envReader) strAllowEmpty(k, def string) string {
+	switch v := strings.TrimSpace(e.get(k)); v {
+	case "":
+		return def
+	case "off", "none", "disabled":
+		return ""
+	default:
+		return v
+	}
+}
+
+func (e *envReader) list(k string) []string {
+	var out []string
+	for _, v := range strings.Split(e.get(k), ",") {
+		if v = strings.TrimSpace(v); v != "" {
+			out = append(out, strings.ToLower(v))
+		}
+	}
+	return out
 }
 
 func (e *envReader) str(k, def string) string {

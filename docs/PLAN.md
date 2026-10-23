@@ -162,8 +162,8 @@ Status values: `planned`, `in-progress`, `implemented`, `tested`, `externally-ve
 |---|---|---|---|
 | M0 | Skeleton | tested | 0e5611e |
 | M1 | Identity, NATS bootstrap, SQLite | tested | 02717c1 |
-| M2 | Envelope, EVENTS, Go SDK, CLI | tested (spike pending user run) | (this commit) |
-| M3 | API and query engine | planned | |
+| M2 | Envelope, EVENTS, Go SDK, CLI | tested (spike pending user run) | 1e417c0 |
+| M3 | API and query engine | tested | (this commit) |
 | M4 | UI core | planned | |
 | M5 | Rollups | planned | |
 | M6 | Clients and ingress | planned | |
@@ -185,6 +185,7 @@ Status values: `planned`, `in-progress`, `implemented`, `tested`, `externally-ve
 | 2026-10-23 | M0 | Skeleton done: Go module, `pulsed version|healthcheck`, UI shell, Dockerfile, CI/release. Go bumped to 1.27.3 for GO-2026-6809 (ADR-0019). `make check` green. |
 | 2026-10-23 | M1 | secretbox, natsauth (grants→permissions, scoped signers), natsconf, bootstrap, natsconn, sysapi, store (SQLite), clients service, config, `pulsed init|serve|keys export`, dev compose (init → nats → pulsed). Found and fixed: empty NATS allow list = allow all (sentinel); scoped users need zero permission sections; upstream race in embedded reload (RELOAD tests use a subprocess). |
 | 2026-10-23 | M2 | Envelope + conformance vectors, EVENTS/blobs ensure, Go SDK (publish, ordered/durable subscribe, Handle[T], blobs), CLI context/pub/sub. Spike tooling written but not run: the user decides when (heavy). |
+| 2026-10-23 | M3 | Huma admin/public APIs, auth seam, Host allowlist (DNS rebinding), CSRF header, explorer engine (direct get batch, ordered consumer, backward windows, cursors, budgets), SSE tail, `pulsed openapi` + TS types (separate TS5 apigen package), UI served from the binary. |
 
 ## 6. Acceptance checklist (mapped to requirement IDs)
 
@@ -240,15 +241,15 @@ E browser E2E · C CI/static check · S spike/perf · R restore drill · X exter
 
 #### PL-ADM — Dashboard access
 
-- [ ] `PL-ADM-001` Loopback admin listener — M3
-- [ ] `PL-ADM-002` Authenticator seam — M3
-- [ ] `PL-ADM-003` Refuse unsafe exposure — M3
-- [ ] `PL-ADM-004` Browser hardening — M3
-- [ ] `PL-ADM-005` Future OIDC contract — M3
+- [x] `PL-ADM-001` Loopback admin listener — M3 — ✅ tested: internal/app (admin listener), dev stack on loopback; internal/api TestUIAndPublic (admin paths 404 on public)
+- [x] `PL-ADM-002` Authenticator seam — M3 — ✅ tested: internal/auth seam; oidc refused (internal/config TestProdRefusals)
+- [x] `PL-ADM-003` Refuse unsafe exposure — M3 — ✅ tested: internal/config TestProdRefusals (admin public / non-loopback with auth none)
+- [x] `PL-ADM-004` Browser hardening — M3 — ✅ tested: internal/api TestAdminGuards (CSP and headers, CSRF header, Host allowlist)
+- [x] `PL-ADM-005` Future OIDC contract — M3 — ✅ documented: docs/operator/sso.md
 
 #### PL-EDGE — Public listener and TLS
 
-- [ ] `PL-EDGE-001` Public routes only — M3
+- [x] `PL-EDGE-001` Public routes only — M3 — ✅ tested: internal/api TestUIAndPublic (route allowlist)
 - [ ] `PL-EDGE-002` Origin certificate — M8
 - [ ] `PL-EDGE-003` Authenticated Origin Pulls — M8
 - [ ] `PL-EDGE-004` Real client IP — M8
@@ -256,8 +257,8 @@ E browser E2E · C CI/static check · S spike/perf · R restore drill · X exter
 - [ ] `PL-EDGE-006` Raw NATS TLS — M9
 - [x] `PL-EDGE-007` Bootstrap TLS — M1 — ✅ tested: internal/bootstrap TestBootstrapLeafRenewal; internal/clients TestReloadServesNewCert
 - [ ] `PL-EDGE-008` Cloudflare ranges — M8
-- [ ] `PL-EDGE-009` Timeouts and limits — M3
-- [ ] `PL-EDGE-010` Dev mode — M3
+- [ ] `PL-EDGE-009` Timeouts and limits — M3 — ◐ partial: read-header 10 s, idle 120 s, body limits, per-IP token bucket tested (TestUIAndPublic); real-IP source arrives with M8
+- [ ] `PL-EDGE-010` Dev mode — M3 — ◐ partial: prod refuses plain HTTP (internal/config); dev plain HTTP works; TLS listener loads the origin cert (reload in M8)
 
 #### PL-BAN — Automatic bans
 
@@ -297,21 +298,21 @@ E browser E2E · C CI/static check · S spike/perf · R restore drill · X exter
 
 #### PL-API — API
 
-- [ ] `PL-API-001` Huma v2 on net/http — M3
-- [ ] `PL-API-002` Spec export — M3
-- [ ] `PL-API-003` Errors — M3
-- [ ] `PL-API-004` Live data — M3
-- [ ] `PL-API-005` Versioning — M3
+- [x] `PL-API-001` Huma v2 on net/http — M3 — ✅ tested: internal/api (Huma v2 on net/http)
+- [x] `PL-API-002` Spec export — M3 — ✅ tested: `pulsed openapi`, `make api`, CI drift check (api/, web/src/api)
+- [x] `PL-API-003` Errors — M3 — ✅ tested: problem details in internal/api tests; internalErr hides internals
+- [x] `PL-API-004` Live data — M3 — ✅ tested: internal/api TestTailSSE (events, resume, keepalive design)
+- [x] `PL-API-005` Versioning — M3 — ✅ implemented: /api/v1 and /api/admin/v1 prefixes
 
 #### PL-EXP — Explorer and tail
 
-- [ ] `PL-EXP-001` Forward reads — M3
-- [ ] `PL-EXP-002` Multi-filter reads — M3
-- [ ] `PL-EXP-003` Newest first — M3
-- [ ] `PL-EXP-004` Opaque cursor — M3
-- [ ] `PL-EXP-005` Server-side filters — M3
-- [ ] `PL-EXP-006` Budgets — M3
-- [ ] `PL-EXP-007` Live tail — M3
+- [x] `PL-EXP-001` Forward reads — M3 — ✅ tested: internal/query TestQueries (forward single filter via GetBatch)
+- [x] `PL-EXP-002` Multi-filter reads — M3 — ✅ tested: internal/query TestQueries (two-subject cases use an ordered consumer)
+- [x] `PL-EXP-003` Newest first — M3 — ✅ tested: internal/query TestQueries backward + TestBackwardEndsAt
+- [x] `PL-EXP-004` Opaque cursor — M3 — ✅ tested: internal/query TestCursorTampering; internal/api mismatched cursor → 400
+- [x] `PL-EXP-005` Server-side filters — M3 — ✅ tested: internal/query TestQueries (type, untyped, header, contains, json path)
+- [x] `PL-EXP-006` Budgets — M3 — ✅ tested: internal/query TestBudgetPartialAndResume, TestConcurrencyLimit
+- [x] `PL-EXP-007` Live tail — M3 — ✅ tested: internal/api TestTailSSE (session cap, resume); rate-limit notices implemented, not load-tested
 - [ ] `PL-EXP-008` Message view — M4
 
 #### PL-ROLL — Rollups
@@ -368,7 +369,7 @@ E browser E2E · C CI/static check · S spike/perf · R restore drill · X exter
 - [ ] `PL-UI-007` Large lists — M4
 - [ ] `PL-UI-008` Secret display — M4
 - [ ] `PL-UI-009` Tests — M12
-- [ ] `PL-UI-010` Missing UI — M0 — ◐ partial: `ui.FS()` returns nil without a build (internal/ui/ui_test.go); the serve-side notice lands with the admin listener in M3
+- [ ] `PL-UI-010` Missing UI — M0 — ◐ implemented: internal/api uiHandler serves a notice when the UI is not built; that path is untested (tests run with a built UI); SPA fallback tested
 
 #### PL-SDK — SDKs and CLI
 
@@ -405,7 +406,7 @@ E browser E2E · C CI/static check · S spike/perf · R restore drill · X exter
 - [x] `PL-TST-001` Embedded server tests — M1 — ✅ tested: internal/testutil/natstest
 - [x] `PL-TST-002` Race — M1 — ✅ tested: `make test` (-race) green
 - [x] `PL-TST-003` Bootstrap tests — M1 — ✅ tested: internal/clients (creds connect, AUTH.ERR host, revoke → disconnect < 5 s, restart persistence, RELOAD new cert)
-- [ ] `PL-TST-004` Query tests — M3
+- [x] `PL-TST-004` Query tests — M3 — ✅ tested: internal/query (72 table-driven subtests)
 - [ ] `PL-TST-005` E2E — M4
 - [ ] `PL-TST-006` Gate spike — M2 — ◐ tooling ready: cmd/pulse-spike, scripts/spike.sh, `make spike`; not run — the user triggers it
 - [ ] `PL-TST-007` Restore drill — M11
@@ -413,7 +414,7 @@ E browser E2E · C CI/static check · S spike/perf · R restore drill · X exter
 #### PL-DOC — Documentation
 
 - [ ] `PL-DOC-001` Operator docs — M12
-- [ ] `PL-DOC-002` API docs — M3
+- [x] `PL-DOC-002` API docs — M3 — ✅ documented: docs/API.md
 - [x] `PL-DOC-003` Envelope docs — M2 — ✅ documented: docs/ENVELOPE.md
 - [ ] `PL-DOC-004` Sizing — M2 — ◐ docs/SIZING.md procedure + budget; results pending the spike run
 - [ ] `PL-DOC-005` Backups — M11
@@ -428,7 +429,7 @@ E browser E2E · C CI/static check · S spike/perf · R restore drill · X exter
 | K-4 | CF free-plan limits (custom rules, one rate-limit rule with a 10 s period, one IP list). | M15 module design. | R-03. |
 | K-5 | `cloudflare_api_token` needs a parent token with API Tokens: Edit. | M15 docs. | Create tokens manually. |
 | K-6 | Vite 8 (rolldown) with the TanStack router plugin and the Mantine PostCSS preset. | M0 build. | Code-based routes. |
-| K-7 | Huma SSE's per-message write deadline. | M3 tail tests. | Plain `http.Flusher` handler outside Huma, documented in the spec. |
+| K-7 | Huma SSE's per-message write deadline. | Cleared at M3: the deadline is set per write, keepalives every 20 s; tail SSE tested. | Plain `http.Flusher` handler outside Huma, documented in the spec. |
 | K-8 | Installing SDKs from git (pnpm `github:…#path:/sdk/ts`, pip `#subdirectory=`). | M13. | Publish to a private registry. |
 | K-9 | SQLite single writer under bursty admin + rollup + delivery-log writes. | M5/M7 load tests. | Batch delivery-log writes. |
 

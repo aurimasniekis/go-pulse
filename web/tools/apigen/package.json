@@ -1,0 +1,13 @@
+{
+  "name": "pulse-apigen",
+  "private": true,
+  "description": "Generates web/src/api/*.d.ts from api/*.openapi.json. Separate package because openapi-typescript needs the TypeScript 5 compiler API, while the app uses TypeScript 7.",
+  "packageManager": "pnpm@10.11.0",
+  "scripts": {
+    "gen": "openapi-typescript ../../../api/admin.openapi.json -o ../../src/api/admin.d.ts && openapi-typescript ../../../api/public.openapi.json -o ../../src/api/public.d.ts"
+  },
+  "devDependencies": {
+    "openapi-typescript": "7.13.0",
+    "typescript": "5.9.3"
+  }
+}

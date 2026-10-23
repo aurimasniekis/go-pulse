@@ -66,7 +66,7 @@ linters:
         linters: [forbidigo]
         text: "fmt.Print"
       - path: _test\.go
-        linters: [gosec, noctx, bodyclose, contextcheck]
+        linters: [gosec, noctx, bodyclose, contextcheck, usestdlibvars]
 
 formatters:
   enable:

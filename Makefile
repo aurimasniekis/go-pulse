@@ -10,7 +10,7 @@ GOVULNCHECK  ?= $(GO) run golang.org/x/vuln/cmd/govulncheck@v1.9.0
 DEV          := docker compose -f deploy/compose.dev.yaml -p pulse-dev
 
 .DEFAULT_GOAL := help
-.PHONY: help web web-dev build build-go test race vet lint vuln secrets web-test check image dev-up dev-down dev-logs dev-reset spike e2e clean
+.PHONY: help api web web-dev build build-go test race vet lint vuln secrets web-test check image dev-up dev-down dev-logs dev-reset spike e2e clean
 
 help: ## List targets
 	@awk 'BEGIN {FS = ":.*## "} /^[a-zA-Z_-]+:.*## / {printf "  \033[36m%-14s\033[0m %s\n", $$1, $$2}' $(MAKEFILE_LIST)
@@ -33,6 +33,10 @@ image: ## Build the container image for the local platform ($(IMAGE))
 	docker buildx build --load -t $(IMAGE) --build-arg VERSION=$(VERSION) --build-arg COMMIT=$(COMMIT) .
 
 # ---- checks ------------------------------------------------------------------
+
+api: ## Regenerate api/*.openapi.json and the UI's TypeScript types
+	$(GO) run ./cmd/pulsed openapi --out-dir api
+	cd web && pnpm gen:api
 
 vet: ## go vet
 	$(GO) vet ./...

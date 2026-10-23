@@ -1,0 +1,1514 @@
+{
+  "components": {
+    "schemas": {
+      "BlobRef": {
+        "additionalProperties": false,
+        "properties": {
+          "bucket": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "sha256": {
+            "type": "string"
+          },
+          "size": {
+            "format": "int64",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "bucket",
+          "name",
+          "size",
+          "sha256"
+        ],
+        "type": "object"
+      },
+      "ConsumerDTO": {
+        "additionalProperties": false,
+        "properties": {
+          "ack_floor_stream_seq": {
+            "format": "int64",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "ack_policy": {
+            "type": "string"
+          },
+          "created": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "deliver_policy": {
+            "type": "string"
+          },
+          "delivered_stream_seq": {
+            "format": "int64",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "description": {
+            "type": "string"
+          },
+          "durable": {
+            "type": "boolean"
+          },
+          "filter_subjects": {
+            "items": {
+              "type": "string"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "internal": {
+            "description": "Created by pulsed (rollups, tail, explorer, webhooks)",
+            "type": "boolean"
+          },
+          "last_active": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "num_ack_pending": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "num_pending": {
+            "format": "int64",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "num_redelivered": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "num_waiting": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "paused": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "name",
+          "durable",
+          "description",
+          "filter_subjects",
+          "deliver_policy",
+          "ack_policy",
+          "created",
+          "num_pending",
+          "num_ack_pending",
+          "num_redelivered",
+          "num_waiting",
+          "delivered_stream_seq",
+          "ack_floor_stream_seq",
+          "paused",
+          "internal"
+        ],
+        "type": "object"
+      },
+      "ErrorDetail": {
+        "additionalProperties": false,
+        "properties": {
+          "location": {
+            "description": "Where the error occurred, e.g. 'body.items[3].tags' or 'path.thing-id'",
+            "type": "string"
+          },
+          "message": {
+            "description": "Error message text",
+            "type": "string"
+          },
+          "value": {
+            "description": "The value at the given location"
+          }
+        },
+        "type": "object"
+      },
+      "ErrorModel": {
+        "additionalProperties": false,
+        "properties": {
+          "$schema": {
+            "description": "A URL to the JSON Schema for this object.",
+            "examples": [
+              "/api/admin/v1/schemas/ErrorModel.json"
+            ],
+            "format": "uri",
+            "readOnly": true,
+            "type": "string"
+          },
+          "detail": {
+            "description": "A human-readable explanation specific to this occurrence of the problem.",
+            "examples": [
+              "Property foo is required but is missing."
+            ],
+            "type": "string"
+          },
+          "errors": {
+            "description": "Optional list of individual error details",
+            "items": {
+              "$ref": "#/components/schemas/ErrorDetail"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "instance": {
+            "description": "A URI reference that identifies the specific occurrence of the problem.",
+            "examples": [
+              "https://example.com/error-log/abc123"
+            ],
+            "format": "uri",
+            "type": "string"
+          },
+          "status": {
+            "description": "HTTP status code",
+            "examples": [
+              400
+            ],
+            "format": "int64",
+            "type": "integer"
+          },
+          "title": {
+            "description": "A short, human-readable summary of the problem type. This value should not change between occurrences of the error.",
+            "examples": [
+              "Bad Request"
+            ],
+            "type": "string"
+          },
+          "type": {
+            "default": "about:blank",
+            "description": "A URI reference to human-readable documentation for the error.",
+            "examples": [
+              "https://example.com/errors/example"
+            ],
+            "format": "uri",
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "EventDTO": {
+        "additionalProperties": false,
+        "properties": {
+          "$schema": {
+            "description": "A URL to the JSON Schema for this object.",
+            "examples": [
+              "/api/admin/v1/schemas/EventDTO.json"
+            ],
+            "format": "uri",
+            "readOnly": true,
+            "type": "string"
+          },
+          "blob": {
+            "$ref": "#/components/schemas/BlobRef"
+          },
+          "content_type": {
+            "type": "string"
+          },
+          "data": {
+            "type": "string"
+          },
+          "encoding": {
+            "enum": [
+              "utf8",
+              "base64"
+            ],
+            "type": "string"
+          },
+          "event_time": {
+            "description": "ce-time",
+            "format": "date-time",
+            "type": "string"
+          },
+          "headers": {
+            "additionalProperties": {
+              "items": {
+                "type": "string"
+              },
+              "type": [
+                "array",
+                "null"
+              ]
+            },
+            "type": "object"
+          },
+          "id": {
+            "type": "string"
+          },
+          "seq": {
+            "format": "int64",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "size": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "source": {
+            "type": "string"
+          },
+          "stream": {
+            "type": "string"
+          },
+          "stream_time": {
+            "description": "When NATS stored the event",
+            "format": "date-time",
+            "type": "string"
+          },
+          "subject": {
+            "type": "string"
+          },
+          "subject_valid": {
+            "description": "Subject follows evt.\u003cdomain\u003e.\u003centity\u003e.\u003caction\u003e[.\u003ckey\u003e]",
+            "type": "boolean"
+          },
+          "type": {
+            "type": "string"
+          },
+          "untyped": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "stream",
+          "seq",
+          "subject",
+          "stream_time",
+          "size",
+          "headers",
+          "data",
+          "encoding",
+          "untyped",
+          "subject_valid"
+        ],
+        "type": "object"
+      },
+      "EventsPage": {
+        "additionalProperties": false,
+        "properties": {
+          "$schema": {
+            "description": "A URL to the JSON Schema for this object.",
+            "examples": [
+              "/api/admin/v1/schemas/EventsPage.json"
+            ],
+            "format": "uri",
+            "readOnly": true,
+            "type": "string"
+          },
+          "events": {
+            "items": {
+              "$ref": "#/components/schemas/EventDTO"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "first_seq": {
+            "format": "int64",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "last_seq": {
+            "format": "int64",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "next": {
+            "description": "Cursor for the next page; absent at the end",
+            "type": "string"
+          },
+          "partial": {
+            "description": "The scan budget ran out before the page filled; continue with next",
+            "type": "boolean"
+          },
+          "reason": {
+            "enum": [
+              "msgs",
+              "bytes",
+              "time"
+            ],
+            "type": "string"
+          },
+          "scanned": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "scanned_bytes": {
+            "format": "int64",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "events",
+          "scanned",
+          "scanned_bytes",
+          "partial",
+          "first_seq",
+          "last_seq"
+        ],
+        "type": "object"
+      },
+      "Jsz": {
+        "additionalProperties": false,
+        "properties": {
+          "api": {
+            "$ref": "#/components/schemas/JszAPIStruct"
+          },
+          "bytes": {
+            "format": "int64",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "config": {
+            "$ref": "#/components/schemas/JszConfigStruct"
+          },
+          "consumers": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "memory": {
+            "format": "int64",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "messages": {
+            "format": "int64",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "storage": {
+            "format": "int64",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "streams": {
+            "format": "int64",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "config",
+          "memory",
+          "storage",
+          "streams",
+          "consumers",
+          "messages",
+          "bytes",
+          "api"
+        ],
+        "type": "object"
+      },
+      "JszAPIStruct": {
+        "additionalProperties": false,
+        "properties": {
+          "errors": {
+            "format": "int64",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "total": {
+            "format": "int64",
+            "minimum": 0,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "total",
+          "errors"
+        ],
+        "type": "object"
+      },
+      "JszConfigStruct": {
+        "additionalProperties": false,
+        "properties": {
+          "max_memory": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "max_storage": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "store_dir": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "max_memory",
+          "max_storage",
+          "store_dir"
+        ],
+        "type": "object"
+      },
+      "Notice": {
+        "additionalProperties": false,
+        "properties": {
+          "dropped": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "rate": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "reason": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "dropped",
+          "reason",
+          "rate"
+        ],
+        "type": "object"
+      },
+      "StreamDTO": {
+        "additionalProperties": false,
+        "properties": {
+          "$schema": {
+            "description": "A URL to the JSON Schema for this object.",
+            "examples": [
+              "/api/admin/v1/schemas/StreamDTO.json"
+            ],
+            "format": "uri",
+            "readOnly": true,
+            "type": "string"
+          },
+          "allow_direct": {
+            "type": "boolean"
+          },
+          "compression": {
+            "type": "string"
+          },
+          "created": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "discard": {
+            "type": "string"
+          },
+          "duplicates_seconds": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "kind": {
+            "description": "KV buckets and object stores are streams too",
+            "enum": [
+              "stream",
+              "kv",
+              "object"
+            ],
+            "type": "string"
+          },
+          "managed": {
+            "description": "Owned by pulsed; cannot be edited or deleted here",
+            "type": "boolean"
+          },
+          "max_age_seconds": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "max_bytes": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "max_msg_size": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "max_msgs": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "name": {
+            "type": "string"
+          },
+          "retention": {
+            "type": "string"
+          },
+          "state": {
+            "$ref": "#/components/schemas/StreamState"
+          },
+          "storage": {
+            "type": "string"
+          },
+          "subjects": {
+            "items": {
+              "type": "string"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "name",
+          "kind",
+          "managed",
+          "description",
+          "subjects",
+          "storage",
+          "retention",
+          "discard",
+          "max_bytes",
+          "max_msgs",
+          "max_age_seconds",
+          "max_msg_size",
+          "compression",
+          "duplicates_seconds",
+          "allow_direct",
+          "created",
+          "state"
+        ],
+        "type": "object"
+      },
+      "StreamInput": {
+        "additionalProperties": false,
+        "properties": {
+          "$schema": {
+            "description": "A URL to the JSON Schema for this object.",
+            "examples": [
+              "/api/admin/v1/schemas/StreamInput.json"
+            ],
+            "format": "uri",
+            "readOnly": true,
+            "type": "string"
+          },
+          "allow_direct": {
+            "type": "boolean"
+          },
+          "compression": {
+            "type": "boolean"
+          },
+          "description": {
+            "maxLength": 512,
+            "type": "string"
+          },
+          "discard": {
+            "default": "old",
+            "enum": [
+              "old",
+              "new"
+            ],
+            "type": "string"
+          },
+          "duplicates_seconds": {
+            "format": "int64",
+            "maximum": 86400,
+            "minimum": 0,
+            "type": "integer"
+          },
+          "max_age_seconds": {
+            "format": "int64",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "max_bytes": {
+            "format": "int64",
+            "minimum": -1,
+            "type": "integer"
+          },
+          "max_msg_size": {
+            "format": "int32",
+            "maximum": 1048576,
+            "minimum": -1,
+            "type": "integer"
+          },
+          "max_msgs": {
+            "format": "int64",
+            "minimum": -1,
+            "type": "integer"
+          },
+          "name": {
+            "pattern": "^[A-Za-z0-9_-]{1,64}$",
+            "type": "string"
+          },
+          "storage": {
+            "default": "file",
+            "enum": [
+              "file",
+              "memory"
+            ],
+            "type": "string"
+          },
+          "subjects": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 32,
+            "minItems": 1,
+            "type": [
+              "array",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "name",
+          "subjects"
+        ],
+        "type": "object"
+      },
+      "StreamState": {
+        "additionalProperties": false,
+        "properties": {
+          "bytes": {
+            "format": "int64",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "consumers": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "first_seq": {
+            "format": "int64",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "first_time": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "last_seq": {
+            "format": "int64",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "last_time": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "msgs": {
+            "format": "int64",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "num_deleted": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "num_subjects": {
+            "format": "int64",
+            "minimum": 0,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "msgs",
+          "bytes",
+          "first_seq",
+          "first_time",
+          "last_seq",
+          "last_time",
+          "consumers",
+          "num_subjects",
+          "num_deleted"
+        ],
+        "type": "object"
+      },
+      "SystemInfo": {
+        "additionalProperties": false,
+        "properties": {
+          "$schema": {
+            "description": "A URL to the JSON Schema for this object.",
+            "examples": [
+              "/api/admin/v1/schemas/SystemInfo.json"
+            ],
+            "format": "uri",
+            "readOnly": true,
+            "type": "string"
+          },
+          "auth_mode": {
+            "type": "string"
+          },
+          "jetstream": {
+            "$ref": "#/components/schemas/Jsz"
+          },
+          "nats": {
+            "$ref": "#/components/schemas/SystemInfoNATSStruct"
+          },
+          "profile": {
+            "type": "string"
+          },
+          "ready": {
+            "type": "boolean"
+          },
+          "version": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "version",
+          "profile",
+          "auth_mode",
+          "ready",
+          "nats"
+        ],
+        "type": "object"
+      },
+      "SystemInfoNATSStruct": {
+        "additionalProperties": false,
+        "properties": {
+          "connected": {
+            "type": "boolean"
+          },
+          "rtt_ms": {
+            "format": "double",
+            "type": "number"
+          },
+          "server_name": {
+            "type": "string"
+          },
+          "version": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "connected",
+          "server_name",
+          "version",
+          "rtt_ms"
+        ],
+        "type": "object"
+      }
+    }
+  },
+  "info": {
+    "description": "Loopback-only admin API for the Pulse dashboard. State-changing requests need the X-Pulse-CSRF header.",
+    "title": "Pulse admin API",
+    "version": "v1"
+  },
+  "openapi": "3.1.0",
+  "paths": {
+    "/events": {
+      "get": {
+        "operationId": "query-events",
+        "parameters": [
+          {
+            "explode": false,
+            "in": "query",
+            "name": "stream",
+            "schema": {
+              "default": "EVENTS",
+              "pattern": "^[A-Za-z0-9_-]{1,64}$",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Subject filter; repeat for several (wildcards allowed)",
+            "explode": true,
+            "in": "query",
+            "name": "subject",
+            "schema": {
+              "description": "Subject filter; repeat for several (wildcards allowed)",
+              "items": {
+                "type": "string"
+              },
+              "type": [
+                "array",
+                "null"
+              ]
+            }
+          },
+          {
+            "description": "backward = newest first",
+            "explode": false,
+            "in": "query",
+            "name": "dir",
+            "schema": {
+              "default": "backward",
+              "description": "backward = newest first",
+              "enum": [
+                "forward",
+                "backward"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "description": "forward: first sequence; backward: last sequence (inclusive)",
+            "explode": false,
+            "in": "query",
+            "name": "start_seq",
+            "schema": {
+              "description": "forward: first sequence; backward: last sequence (inclusive)",
+              "format": "int64",
+              "minimum": 0,
+              "type": "integer"
+            }
+          },
+          {
+            "description": "forward only (RFC 3339)",
+            "explode": false,
+            "in": "query",
+            "name": "start_time",
+            "schema": {
+              "description": "forward only (RFC 3339)",
+              "format": "date-time",
+              "type": "string"
+            }
+          },
+          {
+            "explode": false,
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "default": 50,
+              "format": "int64",
+              "maximum": 500,
+              "minimum": 1,
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Exact ce-type, or (untyped)",
+            "explode": false,
+            "in": "query",
+            "name": "type",
+            "schema": {
+              "description": "Exact ce-type, or (untyped)",
+              "type": "string"
+            }
+          },
+          {
+            "description": "key=value, repeatable",
+            "explode": true,
+            "in": "query",
+            "name": "header",
+            "schema": {
+              "description": "key=value, repeatable",
+              "items": {
+                "type": "string"
+              },
+              "type": [
+                "array",
+                "null"
+              ]
+            }
+          },
+          {
+            "description": "Payload substring",
+            "explode": false,
+            "in": "query",
+            "name": "contains",
+            "schema": {
+              "description": "Payload substring",
+              "maxLength": 256,
+              "type": "string"
+            }
+          },
+          {
+            "description": "Dot path into a JSON payload",
+            "explode": false,
+            "in": "query",
+            "name": "json_path",
+            "schema": {
+              "description": "Dot path into a JSON payload",
+              "maxLength": 256,
+              "type": "string"
+            }
+          },
+          {
+            "explode": false,
+            "in": "query",
+            "name": "json_value",
+            "schema": {
+              "maxLength": 256,
+              "type": "string"
+            }
+          },
+          {
+            "description": "Opaque cursor from a previous page",
+            "explode": false,
+            "in": "query",
+            "name": "cursor",
+            "schema": {
+              "description": "Opaque cursor from a previous page",
+              "maxLength": 512,
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EventsPage"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Explore events",
+        "tags": [
+          "events"
+        ]
+      }
+    },
+    "/events/{stream}/{seq}": {
+      "get": {
+        "operationId": "get-event",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "stream",
+            "required": true,
+            "schema": {
+              "pattern": "^[A-Za-z0-9_-]{1,64}$",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "seq",
+            "required": true,
+            "schema": {
+              "format": "int64",
+              "minimum": 1,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EventDTO"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Get one event by sequence",
+        "tags": [
+          "events"
+        ]
+      }
+    },
+    "/streams": {
+      "get": {
+        "operationId": "list-streams",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/StreamDTO"
+                  },
+                  "type": [
+                    "array",
+                    "null"
+                  ]
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "List streams",
+        "tags": [
+          "streams"
+        ]
+      },
+      "post": {
+        "operationId": "create-stream",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StreamInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StreamDTO"
+                }
+              }
+            },
+            "description": "Created"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Create a user stream",
+        "tags": [
+          "streams"
+        ]
+      }
+    },
+    "/streams/{name}": {
+      "delete": {
+        "description": "Deletes the stream and all its messages. `confirm` must repeat the stream name.",
+        "operationId": "delete-stream",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "name",
+            "required": true,
+            "schema": {
+              "pattern": "^[A-Za-z0-9_-]{1,64}$",
+              "type": "string"
+            }
+          },
+          {
+            "explode": false,
+            "in": "query",
+            "name": "confirm",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Delete a user stream",
+        "tags": [
+          "streams"
+        ]
+      },
+      "get": {
+        "operationId": "get-stream",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "name",
+            "required": true,
+            "schema": {
+              "pattern": "^[A-Za-z0-9_-]{1,64}$",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StreamDTO"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Get a stream",
+        "tags": [
+          "streams"
+        ]
+      },
+      "put": {
+        "operationId": "update-stream",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "name",
+            "required": true,
+            "schema": {
+              "pattern": "^[A-Za-z0-9_-]{1,64}$",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StreamInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StreamDTO"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Update a user stream",
+        "tags": [
+          "streams"
+        ]
+      }
+    },
+    "/streams/{name}/consumers": {
+      "get": {
+        "operationId": "list-consumers",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "name",
+            "required": true,
+            "schema": {
+              "pattern": "^[A-Za-z0-9_-]{1,64}$",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ConsumerDTO"
+                  },
+                  "type": [
+                    "array",
+                    "null"
+                  ]
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "List consumers",
+        "tags": [
+          "streams"
+        ]
+      }
+    },
+    "/streams/{name}/consumers/{consumer}": {
+      "delete": {
+        "operationId": "delete-consumer",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "name",
+            "required": true,
+            "schema": {
+              "pattern": "^[A-Za-z0-9_-]{1,64}$",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "consumer",
+            "required": true,
+            "schema": {
+              "pattern": "^[A-Za-z0-9_-]{1,128}$",
+              "type": "string"
+            }
+          },
+          {
+            "explode": false,
+            "in": "query",
+            "name": "confirm",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Delete a consumer",
+        "tags": [
+          "streams"
+        ]
+      }
+    },
+    "/system/info": {
+      "get": {
+        "operationId": "get-system-info",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SystemInfo"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Server status",
+        "tags": [
+          "system"
+        ]
+      }
+    },
+    "/tail": {
+      "get": {
+        "description": "Streams `event` messages (id = stream sequence) and `notice` messages when events were dropped by the per-session rate limit. A comment keepalive is sent every 20 s.",
+        "operationId": "tail-events",
+        "parameters": [
+          {
+            "explode": false,
+            "in": "query",
+            "name": "stream",
+            "schema": {
+              "default": "EVENTS",
+              "pattern": "^[A-Za-z0-9_-]{1,64}$",
+              "type": "string"
+            }
+          },
+          {
+            "explode": true,
+            "in": "query",
+            "name": "subject",
+            "schema": {
+              "items": {
+                "type": "string"
+              },
+              "type": [
+                "array",
+                "null"
+              ]
+            }
+          },
+          {
+            "description": "Replay from this time before going live",
+            "explode": false,
+            "in": "query",
+            "name": "since",
+            "schema": {
+              "description": "Replay from this time before going live",
+              "format": "date-time",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Resume after this stream sequence",
+            "in": "header",
+            "name": "Last-Event-ID",
+            "schema": {
+              "description": "Resume after this stream sequence",
+              "format": "int64",
+              "minimum": 0,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "text/event-stream": {
+                "schema": {
+                  "description": "Each oneOf object in the array represents one possible Server Sent Events (SSE) message, serialized as UTF-8 text according to the SSE specification.",
+                  "items": {
+                    "oneOf": [
+                      {
+                        "properties": {
+                          "data": {
+                            "$ref": "#/components/schemas/EventDTO"
+                          },
+                          "event": {
+                            "const": "event",
+                            "description": "The event name.",
+                            "type": "string"
+                          },
+                          "id": {
+                            "description": "The event ID.",
+                            "type": "integer"
+                          },
+                          "retry": {
+                            "description": "The retry time in milliseconds.",
+                            "type": "integer"
+                          }
+                        },
+                        "required": [
+                          "data",
+                          "event"
+                        ],
+                        "title": "Event event",
+                        "type": "object"
+                      },
+                      {
+                        "properties": {
+                          "data": {
+                            "$ref": "#/components/schemas/Notice"
+                          },
+                          "event": {
+                            "const": "notice",
+                            "description": "The event name.",
+                            "type": "string"
+                          },
+                          "id": {
+                            "description": "The event ID.",
+                            "type": "integer"
+                          },
+                          "retry": {
+                            "description": "The retry time in milliseconds.",
+                            "type": "integer"
+                          }
+                        },
+                        "required": [
+                          "data",
+                          "event"
+                        ],
+                        "title": "Event notice",
+                        "type": "object"
+                      }
+                    ]
+                  },
+                  "title": "Server Sent Events",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Live tail (SSE)",
+        "tags": [
+          "events"
+        ]
+      }
+    }
+  },
+  "servers": [
+    {
+      "url": "/api/admin/v1"
+    }
+  ]
+}

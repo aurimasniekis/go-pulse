@@ -9,6 +9,7 @@
 !web/
 
 web/node_modules/
+web/tools/
 web/test-results/
 web/playwright-report/
 internal/ui/dist/assets/

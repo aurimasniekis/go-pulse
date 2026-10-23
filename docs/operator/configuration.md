@@ -45,8 +45,10 @@
 
 | Variable | Default | Meaning |
 |---|---|---|
-| `PULSE_PUBLIC_ADDR` | `:8443` | Public listener (M3/M8). |
-| `PULSE_ADMIN_ADDR` | `127.0.0.1:8080` | Admin UI + API (M3). |
+| `PULSE_PUBLIC_ADDR` | `:8443` | Public listener. `off` disables it. Prod requires the origin certificate below. |
+| `PULSE_ORIGIN_CERT_FILE` / `PULSE_ORIGIN_KEY_FILE` | — | Public listener TLS (Cloudflare Origin CA cert + key, PEM). Required in prod when the listener is on. Reload and AOP: M8. |
+| `PULSE_ADMIN_ADDR` | `127.0.0.1:8080` | Admin UI + API. |
+| `PULSE_ADMIN_HOSTS` | — | Extra comma-separated Host names the admin listener accepts (besides 127.0.0.1, localhost, ::1). |
 | `PULSE_ADMIN_PUBLISHED_LOOPBACK` | `false` | Set `true` when the admin port binds inside a container and compose publishes it only on host loopback. Required in prod for a non-loopback `PULSE_ADMIN_ADDR` with auth none (ADR-0008). |
 | `PULSE_ADMIN_PUBLIC` | `false` | Mount the admin API on the public listener. Refused with auth none in prod. |
 | `PULSE_AUTH_MODE` | `none` | `none`; `oidc` refuses to start until implemented (R-02). |

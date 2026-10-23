@@ -73,8 +73,15 @@ jobs:
           pnpm typecheck
           pnpm test
           pnpm build
-      - name: generated files are committed (route tree, API types)
-        run: git diff --exit-code -- web/src
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version: ${{ env.GO_VERSION }}
+      - name: OpenAPI specs and TS types are up to date (PL-API-002)
+        run: |
+          go run ./cmd/pulsed openapi --out-dir api
+          (cd web && pnpm gen:api)
+      - name: generated files are committed (route tree, API specs and types)
+        run: git diff --exit-code -- web/src api
 
   image:
     name: image build + smoke (no push)

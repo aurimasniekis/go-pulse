@@ -3,12 +3,16 @@ module github.com/aurimasniekis/go-pulse
 go 1.27.3
 
 require (
+	github.com/danielgtaylor/huma/v2 v2.39.1
 	github.com/nats-io/jwt/v2 v2.8.2
 	github.com/nats-io/nats-server/v2 v2.15.1
 	github.com/nats-io/nats.go v1.55.0
 	github.com/nats-io/nkeys v0.4.16
+	github.com/oklog/ulid/v2 v2.1.2
 	github.com/spf13/cobra v1.10.2
+	github.com/synadia-io/orbit.go/jetstreamext v0.3.2
 	golang.org/x/crypto v0.58.0
+	golang.org/x/time v0.16.0
 	modernc.org/sqlite v1.61.0
 )
 
@@ -23,11 +27,10 @@ require (
 	github.com/minio/highwayhash v1.0.4 // indirect
 	github.com/nats-io/nuid v1.0.1 // indirect
 	github.com/ncruces/go-strftime v1.1.0 // indirect
-	github.com/oklog/ulid/v2 v2.1.2 // indirect
 	github.com/remyoudompheng/bigfft v0.0.0-20230129092748-24d4a6f8daec // indirect
-	github.com/spf13/pflag v1.0.9 // indirect
+	github.com/spf13/pflag v1.0.10 // indirect
+	github.com/synadia-io/orbit.go/natsext v0.1.3 // indirect
 	golang.org/x/sys v0.49.0 // indirect
-	golang.org/x/time v0.16.0 // indirect
 	modernc.org/libc v1.79.0 // indirect
 	modernc.org/mathutil v1.7.1 // indirect
 	modernc.org/memory v1.12.1 // indirect

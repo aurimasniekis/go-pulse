@@ -237,6 +237,25 @@
   live connections; auto-reconnecting clients come back with the new permissions and the same creds. User JWTs signed by a
   scoped key must carry a zero-valued permissions/limits section (jwt `HasEmptyPermissions`), not `NewUserClaims` defaults.
 
+### ADR-0026 — API type generation runs in a separate tool package with TypeScript 5
+- **Status:** accepted (M3)
+- **Context:** The UI uses TypeScript 7 (native compiler). `openapi-typescript` 7.13 needs the TypeScript 5 compiler JS API,
+  which TypeScript 7 no longer ships; pnpm overrides and packageExtensions cannot change peer resolution.
+- **Decision:** `web/tools/apigen` is a separate pnpm package (own lockfile) pinning `openapi-typescript` 7.13.0 and
+  `typescript` 5.9.3. `pnpm gen:api` / `make api` run it. The app keeps TypeScript 7. It is excluded from the Docker context.
+
+### ADR-0027 — Admin listener Host allowlist (DNS-rebinding guard) — **security-relevant (strengthening)**
+- **Status:** accepted (M3)
+- **Decision:** The admin handler answers only requests whose `Host` is `127.0.0.1`, `localhost`, `::1` or listed in
+  `PULSE_ADMIN_HOSTS`; others get 421. With auth none, loopback binding alone does not stop a malicious page that rebinds
+  its DNS name to 127.0.0.1 while the operator's SSH tunnel is open (THREAT_MODEL T-21).
+
+### ADR-0028 — Public listener in the prod profile requires TLS
+- **Status:** accepted (M3)
+- **Decision:** In prod, a non-empty `PULSE_PUBLIC_ADDR` requires `PULSE_ORIGIN_CERT_FILE`/`PULSE_ORIGIN_KEY_FILE`
+  (PL-EDGE-010); `PULSE_PUBLIC_ADDR=off` disables the listener. M3 loads the certificate once; mtime reload and AOP mTLS
+  arrive in M8.
+
 ## 2. Open review items
 
 | ID | Item | Default until decided |
