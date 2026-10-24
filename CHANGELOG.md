@@ -44,6 +44,9 @@ versioning: [docs/VERSIONING.md](docs/VERSIONING.md).
   troubleshooting).
 
 ### Fixed
+- Reference compose: banagent could not write nftables sets (added capabilities do not reach the image's non-root
+  user); it now runs as root with only NET_ADMIN and DAC_READ_SEARCH. The firewall contract documents that Debian's
+  nftables unit flushes the whole ruleset on stop.
 - Admin API requests canceled by the browser return 499 instead of logging an internal error.
 - Go SDK: re-subscribing a durable with a different start position failed with "deliver policy can not be updated";
   it now binds to the existing consumer.

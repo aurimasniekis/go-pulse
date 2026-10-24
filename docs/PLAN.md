@@ -278,7 +278,7 @@ E browser E2E · C CI/static check · S spike/perf · R restore drill · X exter
 - [x] `PL-BAN-004` Never-ban list — M8 — ✅ tested: internal/ban TestNeverBan (loopback, private, Docker, ULA, Cloudflare, config); allowlist in TestManualAllowlistAndPersistence
 - [x] `PL-BAN-005` Storage — M8 — ✅ tested: SQLite persistence across restart, manual ban/lift audited (internal/ban, internal/api)
 - [x] `PL-BAN-006` HTTP enforcement — M8 — ✅ tested: internal/ban TestMiddlewareAndFeed; internal/api TestSecurityAPIAndEnforcement
-- [ ] `PL-BAN-007` nftables enforcement — M8 — ◐ tested: banagent unit tests + real nftables in a privileged Linux container (make test-nft); not yet externally verified on the VM (M14)
+- [ ] `PL-BAN-007` nftables enforcement — M8/M14 — ◐ tested: banagent unit tests + real nftables in a privileged container (make test-nft); end to end in the events-wan-lt converge test (Debian 13 container: manual ban → nft set within seconds, lift removes it; found that banagent needs root with only NET_ADMIN/DAC_READ_SEARCH, and that Debian's nftables unit flushes everything on stop); VM pending
 - [x] `PL-BAN-008` Cloudflare list (optional) — M8 — ✅ tested: internal/ban TestCloudflareReconcile (fake API: add/remove managed items, unmanaged untouched, idempotent); real Cloudflare pending (X)
 - [x] `PL-BAN-009` Security page — M8 — ✅ tested: e2e security.spec.ts (failures, ban, lift, never-ban error, allowlist)
 

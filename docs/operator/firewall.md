@@ -27,7 +27,9 @@ table inet pulse_edge {
 ```
 
 Never use `flush ruleset`: it would delete Docker's tables. `destroy table inet pulse_edge` (nft ≥ 1.0.8) replaces only
-this table, so `systemctl restart nftables` keeps Docker working (and empties the ban sets until banagent refills them,
+this table. **Debian's `nftables.service` runs `nft flush ruleset` on stop**, so a restart also needs a unit drop-in that
+clears it (`[Service]` / `ExecStop=`); the deployment's firewall role installs one. With it, `systemctl restart nftables`
+keeps Docker working (and empties the ban sets until banagent refills them,
 which it does on its next poll).
 
 ## banagent
@@ -39,7 +41,9 @@ which it does on its next poll).
 | `PULSE_BANAGENT_TABLE` | `pulse_edge` | inet table name. |
 | `PULSE_BANAGENT_SET_V4` / `_V6` | `pulse_ban_v4` / `pulse_ban_v6` | Set names. |
 
-Run with `network_mode: host` and `cap_add: [NET_ADMIN]`. banagent long-polls the feed (new bans arrive within a
+Run with `network_mode: host` as root inside the container with every capability dropped except `NET_ADMIN` and
+`DAC_READ_SEARCH` (`user: "0:0"`, `cap_drop: [ALL]`): Docker grants added capabilities only to root processes, and the
+image's default user is 65532. See `deploy/examples/compose.yaml`. banagent long-polls the feed (new bans arrive within a
 second), re-reads everything every 5 minutes, and leaves the sets untouched while pulsed is down; element timeouts still
 expire bans. A single IPv6 address is banned as its /64.
 

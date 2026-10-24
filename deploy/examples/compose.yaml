@@ -98,7 +98,13 @@ services:
     image: ghcr.io/aurimasniekis/pulsed@sha256:<digest>
     command: ["banagent"]
     network_mode: host
-    cap_add: [NET_ADMIN]
+    # Added capabilities reach only root processes and the image runs as uid 65532, so banagent runs as root inside
+    # the container holding only NET_ADMIN (nft sets) and DAC_READ_SEARCH (its 0600 token owned by 65532).
+    user: "0:0"
+    cap_drop: [ALL]
+    cap_add: [NET_ADMIN, DAC_READ_SEARCH]
+    security_opt: ["no-new-privileges:true"]
+    read_only: true
     environment:
       PULSE_BANAGENT_URL: http://127.0.0.1:9464/internal/v1/bans
       PULSE_BANAGENT_TOKEN_FILE: /run/pulse-banagent/token
