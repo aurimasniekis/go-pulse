@@ -174,8 +174,8 @@ Status values: `planned`, `in-progress`, `implemented`, `tested`, `externally-ve
 | M11 | Backups | tested; gate PL-BAK-007 passed (production S3 pending) | 20db4e6 |
 | M12 | Remaining UI | tested | 281a9ba |
 | M13 | Python and TS SDKs | tested | e0ee09d |
-| M14 | Ansible (events-wan-lt) | planned | n/a (no commits in that repo) |
-| M15 | Terraform + deploy (events-wan-lt) | planned | n/a |
+| M14 | Ansible (events-wan-lt) | tested locally in a Debian 13 container; VM pending | n/a (no commits in that repo) |
+| M15 | Terraform + deploy (events-wan-lt) | module tested with mocks; deploy prepared, waits for a release and the VPS | n/a |
 
 ### 5.3 Progress log
 
@@ -196,6 +196,8 @@ Status values: `planned`, `in-progress`, `implemented`, `tested`, `externally-ve
 | 2026-10-24 | M11 | Backups (ADR-0035). Gate PL-BAK-007 passed: NATS 2.15 snapshots are NATSARC1 and restore keeps sequences and timestamps; republishing keeps none (0/15). pulsed snapshots every APP stream, stores message records in sequence-anchored buckets (HMAC names, S2 + age, deduplicated: an unchanged night uploads ~7 KB), plus `pulse.db` (VACUUM INTO) and `keys.enc`; verification, GFS 7/4/12 with chunk GC, authenticated restore (manifest MAC, chunk HMACs; replace pre-checks all chunks), background restore jobs, `pulsed backup keygen|list|run|restore`, Backups page, `backup_stale` alert wired, SeaweedFS 4.48 in the dev stack, `make test-s3`. Found and fixed while testing: the end-of-snapshot message has no status header when the archive fits one chunk; a restore stream filter that opened up after the first match (regression test). |
 | 2026-10-24 | M12 | KV & Objects browser (buckets, keys with filter and history, set/delete, object upload ≤ 64 MiB / download as attachment / delete; `blobs` read-only), Settings page (effective configuration with secrets as set/not set, per-browser time zone and colour scheme), audit time-range filters, every-page Playwright smoke (heading, no page/console errors), nav ↔ route vitest, missing-UI handler test. The Alerts (M10) and Backups (M11) pages landed with their milestones. e2e overview seeding now beats the current top-10 leader instead of relying on fixed counts (35/35 three runs in a row). |
 | 2026-10-24 | M13 | Python SDK (`sdk/python`, nats-py: connect with creds, publish, ordered/durable subscribe, request, blobs) and TS SDK (`sdk/ts`, @nats-io v3.4.0: node tls:// and ws://, browser bundle) with the same surface as the dashboard snippets; both pass the 37 conformance vectors; Go ↔ Python ↔ TS interop (`make test-sdk-interop`: identical replay with since, durable resume, blobs both ways, publish-back) and a real-browser replay over `/ws` through the dev stack (e2e sdk-browser.spec); CI job `sdk`. Found and fixed: re-subscribing a Go durable with a different start position failed ("deliver policy can not be updated"); regression test added. ADR-0036. |
+| 2026-10-24 | M14 | events-wan-lt (uncommitted, per the user's rule): roles base, firewall, fail2ban, docker, alloy, pulse; `make test-ansible` converges them in a privileged Debian 13 container with pulsed:dev and passes all assertions and a changed=0 second run. Findings fed back here: banagent needs root with only NET_ADMIN/DAC_READ_SEARCH (be3fc7a), Debian's nftables unit flushes everything on stop (firewall contract updated). VM verification (`scripts/vm-verify.sh`) waits for the test VM. |
+| 2026-10-24 | M15 | events-wan-lt: `make pin-image` (attestation check + digest), `make deploy`, docs/GO-LIVE.md. Waiting for a tagged release (no remote yet) and the VPS. |
 
 ## 6. Acceptance checklist (mapped to requirement IDs)
 
