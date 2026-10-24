@@ -402,8 +402,8 @@ E browser E2E · C CI/static check · S spike/perf · R restore drill · X exter
 - [ ] `PL-OPS-004` Profiles — M1 — ◐ partial: prod refusals for admin exposure, plain master key, missing key, plain-HTTP public listener and missing AOP CA tested (internal/config); dev master key detection not applicable (prod requires *_FILE)
 - [x] `PL-OPS-005` Dev stack — M1/M11 — ✅ verified locally: deploy/compose.dev.yaml runs init → nats → pulsed with Alloy and SeaweedFS (all healthy, e2e runs against it); pebble runs in `make test-acme` instead (ADR-0032)
 - [ ] `PL-OPS-006` Reference prod compose — M1 — ◐ implemented: deploy/examples/compose.yaml; banagent service depends on M8
-- [ ] `PL-OPS-007` CI — M0 — ◐ implemented: .github/workflows/ci.yaml (SHA-pinned, GOTOOLCHAIN=local); `make check` green locally; never run on GitHub (no remote)
-- [ ] `PL-OPS-008` Release — M0 — ◐ implemented: .github/workflows/release.yaml; not externally verified (no remote, no tag)
+- [x] `PL-OPS-007` CI — M0 — ✅ externally verified: ci and e2e workflows green on GitHub (runs 40085344249, 40085344245 for 6af1b65, 2026-10-24); the first run found two local-only gaps (ADR-0037 progress note)
+- [ ] `PL-OPS-008` Release — M0 — ◐ implemented: .github/workflows/release.yaml; not externally verified (no tag pushed yet)
 - [ ] `PL-OPS-009` Memory budget — M2 — ◐ limits configured (deploy/examples, deploy/compose.dev.yaml); measurement pending the operator-triggered spike (docs/SIZING.md)
 - [x] `PL-OPS-010` Graceful shutdown — M1 — ✅ tested: listeners drain, rollups flush, outbound dispatchers stop, NATS drains; internal/app TestStartReadyShutdown asserts shutdown within PULSE_SHUTDOWN_TIMEOUT
 - [x] `PL-OPS-011` Versioning — M0 — ✅ tested: cmd/pulsed/main_test.go TestVersionJSON; docs/VERSIONING.md
