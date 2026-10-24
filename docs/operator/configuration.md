@@ -1,6 +1,6 @@
 # Configuration contract
 
-> This file is the contract between the pulse image and the deployment repository (`events-wan-lt`).
+> This file is the contract between the pulse image and a deployment.
 > Every variable is `PULSE_*`. Secrets use a `*_FILE` variant pointing at a compose secret; in the prod profile the plain
 > variable is refused for secrets.
 > Reference topology: [`deploy/examples/compose.yaml`](../../deploy/examples/compose.yaml).
@@ -16,14 +16,16 @@
 | `pulsed version [--json]` | Build info. |
 | `pulsed banagent` | nftables ban mirror (see [firewall.md](firewall.md)). |
 | `pulsed openapi [--out-dir]` | Print or write the OpenAPI specs. |
+| `pulsed admin bootstrap\|recover\|token` | First administrator, break-glass recovery, automation tokens ([users.md](users.md); audited). |
+| `pulsed backup keygen\|list\|run\|restore` | Backups ([../BACKUPS.md](../BACKUPS.md)). |
 
 ## Core
 
 | Variable | Default | Meaning |
 |---|---|---|
-| `PULSE_PROFILE` | `prod` | `dev` or `prod`. Prod refuses insecure settings (PL-OPS-004). |
+| `PULSE_PROFILE` | `prod` | `dev` or `prod`. Prod refuses insecure settings, as noted on this page. |
 | `PULSE_LOG_LEVEL` | `info` | `debug`, `info`, `warn`, `error`. JSON logs on stdout. |
-| `PULSE_DATA_DIR` | `/data/pulsed` | pulsed volume: `keys.enc`, `pulse.db`, `pulsed.lock`, `tls/ca.crt`, `banagent/token`, `acme/`. |
+| `PULSE_DATA_DIR` | `/data/pulsed` | pulsed volume: `keys.enc`, `pulse.db`, `pulsed.lock`, `tls/ca.crt`, `banagent/token`, `tmp/` (backup staging). |
 | `PULSE_NATS_DIR` | `/data/nats` | Volume shared with nats (mounted at the same path in both): `nats.conf`, `operator.jwt`, `tls/`, `jwt/`, `js/`. |
 | `PULSE_MASTER_KEY_FILE` | — (required) | 32-byte master key, hex or base64. Never on a volume. `PULSE_MASTER_KEY` is accepted in dev only. |
 | `PULSE_SHUTDOWN_TIMEOUT` | `20s` | Graceful shutdown bound. |
@@ -61,11 +63,11 @@
 | `PULSE_CF_ACCOUNT_ID`, `PULSE_CF_BANLIST_ID`, `PULSE_CF_BANLIST_TOKEN_FILE` | — | Optional: mirror bans ≥ 1 h into a Cloudflare IP list (Terraform outputs `ban_list_id`, `ban_sync_api_token`). |
 | `PULSE_OUTBOUND_ALLOW` | — | Comma-separated IPs/CIDRs outbound webhooks may reach although they are internal (e.g. a LAN service). |
 | `PULSE_ADMIN_HOSTS` | — | Extra comma-separated Host names the admin listener accepts (besides 127.0.0.1, localhost, ::1). |
-| `PULSE_ADMIN_PUBLISHED_LOOPBACK` | `false` | Set `true` when the admin port binds inside a container and compose publishes it only on host loopback. Required in prod for a non-loopback `PULSE_ADMIN_ADDR` (ADR-0008). |
+| `PULSE_ADMIN_PUBLISHED_LOOPBACK` | `false` | Set `true` when the admin port binds inside a container and compose publishes it only on host loopback. Required in prod for a non-loopback `PULSE_ADMIN_ADDR`. |
 | `PULSE_METRICS_ADDR` | `127.0.0.1:9464` | `/metrics` (Prometheus), `/healthz`, `/readyz`, `/internal/v1/bans` (banagent). |
 | `PULSE_HEALTHCHECK_URL` | `http://127.0.0.1:9464/readyz` | Probed by `pulsed healthcheck`. |
 
-## Dashboard sign-in (ADR-0038)
+## Dashboard sign-in
 
 Every dashboard and admin API request needs a signed-in user. `pulsed admin bootstrap` prints the first administrator's
 setup link ([users.md](users.md)). `PULSE_AUTH_MODE` was removed; pulsed refuses to start when it is set.
@@ -76,10 +78,10 @@ setup link ([users.md](users.md)). `PULSE_AUTH_MODE` was removed; pulsed refuses
 | `PULSE_ADMIN_PUBLIC_HOST` | `PULSE_PUBLIC_HOST` | Hostname of the public dashboard. Its own hostname serves only the dashboard and the API hostname only the API; the API hostname serves the dashboard on every non-API path. |
 | `PULSE_ADMIN_URL` | `https://<PULSE_ADMIN_PUBLIC_HOST>` with `PULSE_ADMIN_PUBLIC`, else `http://127.0.0.1:8080` | The dashboard origin: SSO redirects there (`<PULSE_ADMIN_URL>/auth/oidc/callback` is the redirect URI to register) and `pulsed admin` prints links for it. Must be https in prod unless it is the loopback tunnel. |
 | `PULSE_SESSION_IDLE` / `PULSE_SESSION_MAX` | `30m` / `12h` | Sign-out after inactivity / absolute session lifetime (at most 168h). |
-| `PULSE_REAUTH_WINDOW` | `5m` | Sensitive actions (credentials shown once, deletes, restores, user and SSO administration) need authentication this recent. At most 15m in prod. |
+| `PULSE_REAUTH_WINDOW` | `5m` | Sensitive actions need authentication this recent: the list is in [users.md](users.md#roles) (credentials shown once, deleting streams and buckets, restores, user and SSO changes). At most 15m in prod. |
 | `PULSE_MFA_REQUIRED_ROLES` | `administrator,operator` | Password accounts holding one of these roles must enroll TOTP. `none` requires it for nobody (not recommended). |
 
-## ACME (Let's Encrypt for raw NATS, PL-EDGE-006, ADR-0032)
+## ACME (Let's Encrypt for raw NATS)
 
 | Variable | Default | Meaning |
 |---|---|---|
@@ -96,7 +98,7 @@ setup link ([users.md](users.md)). `PULSE_AUTH_MODE` was removed; pulsed refuses
 The certificate and key are written to `<PULSE_NATS_DIR>/tls/acme.crt|key`, so pulsed needs the NATS volume mounted
 read-write (as in the reference compose). Status and expiry appear on the System page.
 
-## Alerts and notifiers (PL-OBS-004..006, ADR-0033)
+## Alerts and notifiers
 
 | Variable | Default | Meaning |
 |---|---|---|
@@ -112,7 +114,7 @@ Notifiers send at most 20 (Telegram) / 25 (Discord) messages per minute with a s
 as suppressed and the next delivered message says how many were dropped. Tokens and webhook URLs never appear in logs
 or API errors. Rules are edited on the Alerts page; their settings live in SQLite.
 
-## Backups (PL-BAK-001..009, ADR-0035)
+## Backups
 
 | Variable | Default | Meaning |
 |---|---|---|
@@ -127,6 +129,19 @@ or API errors. Rules are edited on the Alerts page; their settings live in SQLit
 | `PULSE_BACKUP_S3_ACCESS_KEY_FILE` / `_SECRET_KEY_FILE` | — | Credentials (files in prod). Least privilege: list/get/put/delete on the prefix. |
 | `PULSE_BACKUP_S3_CA_FILE` | — | Extra CA for a private S3 endpoint. |
 | `PULSE_BACKUP_S3_INSECURE` / `_CREATE_BUCKET` | `false` | Plain HTTP and bucket creation; dev only (refused in prod). |
+
+## Command and client variables
+
+These are read by individual commands and the `pulse` CLI, not by `pulsed serve`. `PULSE_HEALTHCHECK_URL` is under
+Listeners.
+
+| Variable | Read by | Meaning |
+|---|---|---|
+| `PULSE_ADMIN_TOKEN` | `pulsed backup run`, the `pulse` admin commands | Personal access token, when `--token` (pulsed) or `--admin-token-file` / the context's token file (pulse) is not given. |
+| `PULSE_CONFIG` | `pulse` | Path of the CLI's context file (default `<user config dir>/pulse/config.json`, e.g. `~/.config/pulse/config.json`). |
+| `PULSE_CONTEXT` | `pulse` | Context to use when `--context` is not given (default: the current context). |
+
+banagent has its own variables (`PULSE_BANAGENT_*`): see [firewall.md](firewall.md#banagent).
 
 ## Files the deployment provides
 

@@ -18,7 +18,7 @@ func newKeysCmd() *cobra.Command {
 	var confirm bool
 	export := &cobra.Command{
 		Use:   "export",
-		Short: "Print the decrypted key set as JSON to stdout (PL-KEY-007). Requires pulsed to be stopped.",
+		Short: "Print the decrypted key set as JSON to stdout. Requires pulsed to be stopped.",
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			if !confirm {

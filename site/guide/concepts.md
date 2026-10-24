@@ -72,9 +72,10 @@ webhooks** deliver matching events to your URLs, signed with HMAC and retried fo
 
 ## The operator side
 
-- **Dashboard and admin API**: bound to `127.0.0.1:8080` on the server and reached with `ssh -L`, or, when enabled, on
-  its own hostname behind Cloudflare. Every request needs a signed-in **user** (password + TOTP, or single sign-on) with
-  a **role**: administrator, operator, auditor or viewer. The CLI uses personal access tokens on the tunnel.
+- **Dashboard and admin API**: bound to `127.0.0.1:8080` on the server and reached with `ssh -L`, or, when enabled,
+  behind Cloudflare on its own hostname or the API hostname. Every request needs a signed-in **user** (password + TOTP,
+  or single sign-on) with a **role**: administrator, operator, auditor or viewer. The CLI uses personal access tokens
+  on the tunnel.
 - **Rollups**: `pulsed` counts events per minute, hour and day by subject prefix and type, from headers only. They feed
   the Overview charts, the subject tree, the disk forecast and the retention horizon (how many days of history fit).
 - **Bans**: repeated authentication failures (NATS, HTTP tokens, webhook signatures) from one address ban it, first for

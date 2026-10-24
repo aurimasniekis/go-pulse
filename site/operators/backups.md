@@ -101,6 +101,8 @@ Without `--streams` every stream in the backup is restored; `--replace` replaces
 With the same master key (from your vault) and the same S3 settings in the compose file:
 
 ```sh
+# 0. The container runs as uid 65532: give it a readable copy of the identity.
+sudo install -m 0400 -o 65532 backup-identity.txt id.txt
 # 1. Before the first start: restore pulse.db and keys.enc, so every client's credentials keep working.
 docker compose run --rm --no-deps -v ./id.txt:/tmp/id.txt:ro pulsed \
   backup list --identity /tmp/id.txt
@@ -113,7 +115,7 @@ docker compose run --rm --no-deps -v ./id.txt:/tmp/id.txt:ro pulsed \
   backup restore --id <id> --identity /tmp/id.txt --all
 ```
 
-Delete `id.txt` from the server afterwards. Restoring `EVENTS` takes as much disk and time as the stream's size.
+Delete `id.txt` from the server afterwards (`sudo rm id.txt`). Restoring `EVENTS` takes as much disk and time as the stream's size.
 Rollups resume from their checkpoints in the restored `pulse.db`, because sequence numbers are preserved.
 
 Rehearse this on a scratch VM after major changes, and record how long it took.

@@ -1,4 +1,4 @@
-// Reference Alloy config for the VPS (PL-OBS-008). Alloy runs with network_mode: host, so pulsed's metrics listener
+// Reference Alloy config for the VPS. Alloy runs with network_mode: host, so pulsed's metrics listener
 // is reached on host loopback. prometheus.exporter.unix reads the host's /proc and /sys (mounted read-only).
 // No remote_write is configured; the block below is a placeholder.
 

@@ -1,4 +1,4 @@
-// Dev Alloy config (PL-OBS-008): scrapes pulsed over the compose network and the container's own view of host
+// Dev Alloy config: scrapes pulsed over the compose network and the container's own view of host
 // metrics. Nothing leaves the machine: no remote_write is configured. Inspect targets at http://127.0.0.1:12345.
 
 prometheus.exporter.unix "host" { }

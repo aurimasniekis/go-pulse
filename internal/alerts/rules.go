@@ -57,7 +57,7 @@ var builtins = []builtin{
 	{KindCertExpiry, "Certificate expiry", "A TLS certificate (internal leaf, Let's Encrypt, origin, AOP CA) expires within the given days.",
 		notify.Critical, RuleParams{Days: 14}, 0},
 	{KindBackupStale, "Backup stale", "The last backup failed or no backup succeeded within the given hours.", notify.Critical, RuleParams{Hours: 36}, 0},
-	{KindClientExpiry, "Client credential expiry", "An active client's credentials expire within the given days (PL-AUTH-012).",
+	{KindClientExpiry, "Client credential expiry", "An active client's credentials expire within the given days.",
 		notify.Warning, RuleParams{Days: 30}, 0},
 	{KindBanStorm, "Ban storm", "At least the given number of bans within the window.", notify.Warning, RuleParams{Count: 10, WindowMinutes: 10}, 0},
 	{KindSlowConsumers, "NATS slow consumers", "The NATS server reported new slow consumers within the window.", notify.Warning,

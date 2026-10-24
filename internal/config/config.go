@@ -281,7 +281,7 @@ func (c *Config) Validate() error {
 		errs = append(errs, fmt.Errorf("PULSE_PROFILE must be dev or prod, got %q", c.Profile))
 	}
 	if c.removedAuthMode != "" {
-		errs = append(errs, errors.New("PULSE_AUTH_MODE was removed: the dashboard always requires sign-in (users, TOTP and SSO, ADR-0038); "+
+		errs = append(errs, errors.New("PULSE_AUTH_MODE was removed: the dashboard always requires sign-in (users, TOTP and SSO); "+
 			"run `pulsed admin bootstrap` for the first administrator"))
 	}
 	if len(c.MasterKey) == 0 {
@@ -289,7 +289,7 @@ func (c *Config) Validate() error {
 	}
 	if c.Profile == ProfileProd && !isLoopback(c.AdminAddr) && !c.AdminPublishedLoopback {
 		errs = append(errs, fmt.Errorf("refusing admin listener %q in the prod profile: bind a loopback address, or bind inside a container and "+
-			"publish only on host loopback with PULSE_ADMIN_PUBLISHED_LOOPBACK=true (ADR-0008); use PULSE_ADMIN_PUBLIC for remote access", c.AdminAddr))
+			"publish only on host loopback with PULSE_ADMIN_PUBLISHED_LOOPBACK=true; use PULSE_ADMIN_PUBLIC for remote access", c.AdminAddr))
 	}
 	if c.AdminPublic {
 		if c.PublicAddr == "" {
@@ -320,10 +320,10 @@ func (c *Config) Validate() error {
 	}
 	if c.Profile == ProfileProd && c.PublicAddr != "" && c.OriginCertFile == "" {
 		errs = append(errs, errors.New("the prod profile refuses a plain-HTTP public listener: set PULSE_ORIGIN_CERT_FILE/PULSE_ORIGIN_KEY_FILE "+
-			"or disable the listener with PULSE_PUBLIC_ADDR=off (PL-EDGE-010)"))
+			"or disable the listener with PULSE_PUBLIC_ADDR=off"))
 	}
 	if c.Profile == ProfileProd && c.PublicAddr != "" && c.AOPCAFile == "" {
-		errs = append(errs, errors.New("the prod profile requires Authenticated Origin Pulls on the public listener: set PULSE_AOP_CA_FILE (PL-EDGE-003)"))
+		errs = append(errs, errors.New("the prod profile requires Authenticated Origin Pulls on the public listener: set PULSE_AOP_CA_FILE"))
 	}
 	if (c.CFAccountID != "" || c.CFBanListID != "" || c.CFBanListToken != "") && (c.CFAccountID == "" || c.CFBanListID == "" || c.CFBanListToken == "") {
 		errs = append(errs, errors.New("the Cloudflare ban list sync needs PULSE_CF_ACCOUNT_ID, PULSE_CF_BANLIST_ID and PULSE_CF_BANLIST_TOKEN_FILE together"))
@@ -366,7 +366,7 @@ func (c *Config) Validate() error {
 			errs = append(errs, errors.New("PULSE_BACKUP_ENABLED needs PULSE_BACKUP_S3_ENDPOINT, _BUCKET, _ACCESS_KEY_FILE and _SECRET_KEY_FILE"))
 		}
 		if strings.TrimSpace(c.BackupAgeRecipients) == "" {
-			errs = append(errs, errors.New("PULSE_BACKUP_ENABLED needs PULSE_BACKUP_AGE_RECIPIENTS(_FILE): backups are always encrypted (PL-BAK-002)"))
+			errs = append(errs, errors.New("PULSE_BACKUP_ENABLED needs PULSE_BACKUP_AGE_RECIPIENTS(_FILE): backups are always encrypted"))
 		}
 		if _, err := time.Parse("15:04", c.BackupAt); err != nil {
 			errs = append(errs, fmt.Errorf("PULSE_BACKUP_AT must be HH:MM (UTC), got %q", c.BackupAt))

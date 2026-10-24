@@ -1,6 +1,6 @@
 # @pulse/sdk (TypeScript)
 
-Pulse SDK for node ≥ 22 and browsers (PL-SDK-003), on `@nats-io/*` v3.
+Pulse SDK for node ≥ 22 and browsers, on `@nats-io/*` v3.
 
 ```sh
 pnpm add "github:aurimasniekis/go-pulse#path:/sdk/ts"   # builds dist/ on install (prepare)

@@ -4,9 +4,8 @@ Every dashboard page and every admin API call needs a signed-in user. People sig
 password plus a TOTP code, or through any OpenID Connect provider (Keycloak, Authentik, Dex, Entra ID, Google, Okta…).
 The CLI uses personal access tokens. There is no anonymous mode and no default password.
 
-The contract is in [`docs/operator/users.md`](https://github.com/aurimasniekis/go-pulse/blob/main/docs/operator/users.md)
-and requirements PL-USR-001..012 in
-[`docs/GOAL.md`](https://github.com/aurimasniekis/go-pulse/blob/main/docs/GOAL.md).
+The full operator guide is
+[`docs/operator/users.md`](https://github.com/aurimasniekis/go-pulse/blob/main/docs/operator/users.md).
 
 ## The first administrator
 
@@ -20,7 +19,7 @@ docker compose exec pulsed pulsed admin bootstrap
 
 The link is built from `PULSE_ADMIN_URL` and is valid for 30 minutes. Open it on the dashboard (the public dashboard
 host, or `http://127.0.0.1:8080` through `ssh -L 8080:127.0.0.1:8080 <server>`), choose an email and a password of at
-least 12 characters, then sign in. Administrators must enroll TOTP before the session can be used:
+least 12 bytes, then sign in. Administrators must enroll TOTP before the session can be used:
 
 1. scan the QR code (or type the secret) into an authenticator app and enter a code;
 2. save the **ten recovery codes** somewhere offline: each works once in place of a TOTP code;
@@ -38,22 +37,22 @@ least 12 characters, then sign in. Administrators must enroll TOTP before the se
 |---|---|
 | administrator | Everything, including users, single sign-on and backup restores. |
 | operator | Run the bus: clients and HTTP tokens, webhooks, streams, KV and objects, bans, alert rules, running backups, publishing events, the audit log. Not users, SSO or restores. |
-| auditor | Read everything, including the audit log and the user list. |
-| viewer | Read the dashboards, events and settings. |
+| auditor | Everything a viewer reads, plus the audit log and the user list (not SSO settings). |
+| viewer | Read the dashboards, events and payloads, clients, webhooks, bans, alerts, backups and settings; not the audit log or users. |
 
 Every admin API operation names exactly one permission, and the dashboard hides pages and buttons you cannot use. A user
 without roles can sign in but sees nothing. Changing someone's roles or disabling them signs them out everywhere. The
 last enabled administrator cannot be demoted, disabled or deleted.
 
 Password accounts holding the administrator or operator role must enroll TOTP (`PULSE_MFA_REQUIRED_ROLES`). An
-administrator can require it for anyone else with the user's "MFA required" setting.
+administrator can require it for anyone else with the user's **Require an authenticator** switch.
 
 ## Adding people
 
 | Way | How |
 |---|---|
 | Invitation | **Users → Invitations → Invite**: email and roles. The link is valid for 72 hours and works once; the person sets a display name and password. |
-| User and password link | **Users → Create user**, then **Password link** (valid for one hour, works once). The same link resets a forgotten password. Administrators never set or see other people's passwords. |
+| User and password link | **Users → New user**, then **Password link** (valid for one hour, works once). The same link resets a forgotten password. Administrators never set or see other people's passwords. |
 | Single sign-on | Link the person's identity at a provider, or let a provider create users just in time (below). |
 
 Every one-time link is shown once. Pulse stores only a keyed MAC of it.
@@ -136,8 +135,8 @@ A Pulse user is matched by the provider's **issuer and subject**, never by email
 email as an existing user is not merged into it. To connect an existing user:
 
 - the user signs in with their password and uses **Account → Link** for the provider;
-- or an administrator opens the user, enters the expected subject (**Link identity**);
-- or an administrator issues a **link invitation** (72 hours, single use) and sends it; the person's next SSO login is
+- or an administrator opens the user, enters the expected subject (**Link by subject**);
+- or an administrator issues a **Link invitation** (72 hours, single use) and sends it; the person's next SSO login is
   linked to that user.
 
 An identity linked to one user is never moved to another. Unlinking signs the user out.
@@ -176,12 +175,13 @@ their Pulse TOTP code instead (they must have enrolled one).
 ## Personal access tokens
 
 The `pulse` CLI's admin commands (`pulse clients`, `pulse streams`, `pulse backup`) and `pulsed backup run` use a
-personal access token. **Account → Personal access tokens → Create**: a name, **one** of your own (manually assigned)
-roles and a lifetime (default 90 days, at most 366). The token (`pulse_pat_…`) is shown once.
+personal access token. **Account → Personal access tokens → New token**: a name, **one** of your own (manually
+assigned) roles and a lifetime (default 90 days, at most 366). The token (`pulse_pat_…`) is shown once.
 
 - It works **only on the loopback admin listener**, through the SSH tunnel, never on the public dashboard.
 - At every request it holds the token's role only if you still hold that role.
-- It needs no CSRF token and counts as recently authenticated (creating it needed a fresh sign-in with MFA).
+- It needs no CSRF token and skips the recent sign-in checks: a token created here needed a fresh sign-in with MFA,
+  and a host-minted one (below) needs access to the host.
 - Every action is in the audit log under your name and the token's ID.
 
 ```sh

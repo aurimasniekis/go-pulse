@@ -19,8 +19,11 @@ Send it as a bearer token:
 
 ```sh
 export PULSE_TOKEN=pulse_…
-curl -fsS https://events.example.com/api/v1/health
+curl -fsS -G https://events.example.com/api/v1/events -H "Authorization: Bearer $PULSE_TOKEN" \
+  --data-urlencode 'subject=evt.home.>' -d limit=1
 ```
+
+`GET /api/v1/health` is a liveness check and needs no token.
 
 | Response | Meaning |
 |---|---|
@@ -80,7 +83,7 @@ and returns the reply body with its content type. Needs a `request` grant. `time
 
 ```sh
 curl -fsS -X POST "https://events.example.com/api/v1/request/svc.weather.now?timeout_ms=2000" \
-  -H "Authorization: Bearer $PULSE_TOKEN" -d '{"city":"Vilnius"}'
+  -H "Authorization: Bearer $PULSE_TOKEN" -H "Content-Type: application/json" -d '{"city":"Vilnius"}'
 ```
 
 `503` means nobody serves the subject; `504` means no reply within the timeout.

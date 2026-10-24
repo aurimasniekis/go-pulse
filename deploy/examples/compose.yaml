@@ -1,4 +1,4 @@
-# Reference production topology (PL-OPS-006). A deployment repository renders its own copy of this file from
+# Reference production topology. A deployment repository renders its own copy of this file from
 # docs/operator/configuration.md and pins the pulsed image by digest.
 #
 # Host prerequisites (docs/operator/deployment.md): Docker with userland-proxy=false and ip6tables=true; nftables table
@@ -77,7 +77,8 @@ services:
     environment:
       <<: *pulse-env
       GOMEMLIMIT: 300MiB
-      # Let's Encrypt for r.events.example.com on 4222 (ADR-0032). Only pulsed needs these (not init).
+      # Let's Encrypt for r.events.example.com on 4222, served next to the internal certificate pulsed itself uses.
+      # Only pulsed needs these (not init).
       PULSE_ACME_ENABLED: "true"
       PULSE_ACME_CF_TOKEN_FILE: /run/secrets/acme_cf_token
     secrets: [pulse_master_key, cf_origin_cert, cf_origin_key, aop_ca, acme_cf_token]
@@ -85,7 +86,7 @@ services:
     networks: [pulse]
     ports:
       - "443:8443"            # public, Cloudflare ranges only (nftables), AOP mTLS
-      - "127.0.0.1:8080:8080" # admin UI + API: host loopback only (ADR-0008)
+      - "127.0.0.1:8080:8080" # admin UI + API: host loopback only
       - "127.0.0.1:9464:9464" # metrics, health, banagent endpoint: host loopback only
     depends_on:
       nats: { condition: service_healthy }

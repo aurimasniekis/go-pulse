@@ -23,7 +23,7 @@ import (
 )
 
 func newBackupCmd() *cobra.Command {
-	cmd := &cobra.Command{Use: "backup", Short: "Backups: keygen, list, run, restore (PL-BAK-006)"}
+	cmd := &cobra.Command{Use: "backup", Short: "Backups: keygen, list, run, restore"}
 	cmd.AddCommand(newBackupKeygenCmd(), newBackupListCmd(), newBackupRunCmd(), newBackupRestoreCmd())
 	return cmd
 }

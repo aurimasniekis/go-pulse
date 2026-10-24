@@ -122,7 +122,7 @@ pulse streams        # streams, KV and object stores in the APP account
 pulse clients ls
 pulse clients create door-bot --grant 'publish:evt.home.door.>' --grant 'subscribe:evt.home.>'
 pulse clients create indexer --grant 'durable:evt.>:indexer' --out indexer.creds
-pulse clients rotate door-bot            # new creds in door-bot.creds; the old ones stop working
+pulse clients rotate door-bot -o door-bot.new.creds   # the old creds stop working; the file must not exist yet
 pulse clients revoke door-bot --yes      # permanent
 ```
 

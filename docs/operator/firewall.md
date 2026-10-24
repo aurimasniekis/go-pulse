@@ -1,7 +1,7 @@
 # Firewall and bans contract
 
-> PL-BAN-007, ADR-0011. The deployment repo's `firewall` role owns the nftables ruleset; `pulsed banagent` only adds and
-> removes elements in the two ban sets.
+> The deployment repo's `firewall` role owns the nftables ruleset; `pulsed banagent` only adds and removes elements in
+> the two ban sets.
 
 ## Required table
 
@@ -10,7 +10,7 @@
 ```nft
 destroy table inet pulse_edge
 table inet pulse_edge {
-  set cloudflare_v4 { type ipv4_addr; flags interval; elements = { … } }   # from scripts/cf-ranges-seed.sh
+  set cloudflare_v4 { type ipv4_addr; flags interval; elements = { … } }   # deployment repo: scripts/cf-ranges-seed.sh
   set cloudflare_v6 { type ipv6_addr; flags interval; elements = { … } }
   set pulse_ban_v4  { type ipv4_addr; flags interval, timeout; }
   set pulse_ban_v6  { type ipv6_addr; flags interval, timeout; }

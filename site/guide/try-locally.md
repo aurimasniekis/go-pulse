@@ -97,8 +97,8 @@ means:
 pulse pub evt.home.door.opened '{}'          # fails: no publish grant on evt.home.>
 ```
 
-NATS reports permission violations asynchronously, so a denied publish surfaces as a timeout after a few seconds
-rather than an immediate error.
+NATS reports permission violations asynchronously, so a denied publish surfaces as a timeout (10 seconds for
+`pulse pub`) rather than an immediate error.
 
 Then revoke the client on the Clients page (or `pulse clients revoke demo --yes`) and watch a running `pulse sub`
 lose its connection.

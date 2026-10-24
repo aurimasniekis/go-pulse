@@ -1041,7 +1041,7 @@
             "type": "string"
           },
           "expires_soon": {
-            "description": "Expires within 30 days (PL-AUTH-012)",
+            "description": "Expires within 30 days",
             "type": "boolean"
           },
           "grants": {

@@ -2099,7 +2099,7 @@ export interface components {
             description: string;
             /** Format: date-time */
             expires_at: string;
-            /** @description Expires within 30 days (PL-AUTH-012) */
+            /** @description Expires within 30 days */
             expires_soon: boolean;
             grants: components["schemas"]["Grant"][];
             id: string;

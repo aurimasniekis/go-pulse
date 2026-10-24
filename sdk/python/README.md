@@ -1,6 +1,6 @@
 # pulse-sdk (Python)
 
-Async Python SDK for Pulse (`docs/ENVELOPE.md`, PL-SDK-002). Requires Python ≥ 3.10.
+Async Python SDK for Pulse (`docs/ENVELOPE.md`). Requires Python ≥ 3.10.
 
 ```sh
 pip install "git+https://github.com/aurimasniekis/go-pulse#subdirectory=sdk/python"

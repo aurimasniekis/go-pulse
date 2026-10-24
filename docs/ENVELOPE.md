@@ -1,7 +1,7 @@
 # Event envelope and subjects
 
-> PL-ENV-001..005, PL-BUS-002/003/004/009. Implementation: `pkg/pulse/envelope` (Go); conformance vectors:
-> `sdk/conformance/vectors.json` (shared by every SDK).
+> Implementation: `pkg/pulse/envelope` (Go); conformance vectors: `sdk/conformance/vectors.json` (shared by every
+> SDK).
 
 ## Subjects
 

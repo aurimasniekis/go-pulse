@@ -110,13 +110,13 @@ test-sdk-interop: sdk/python/.venv ## Go ↔ Python ↔ TS (node tls:// and ws:/
 	cd sdk/ts && pnpm install --frozen-lockfile --silent && pnpm -s build
 	$(GO) test -tags interop -count=1 -v ./internal/sdktest/
 
-drill: ## Restore drill, the PL-BAK-007 release gate (embedded NATS; no Docker)
+drill: ## Restore drill: restored events keep their original timestamps (embedded NATS; no Docker)
 	$(GO) test -race -count=1 -v -run TestRestoreDrill ./internal/backup/
 
 test-s3: ## Backups against a real S3 service (SeaweedFS in Docker)
 	$(GO) test -tags s3 -race -count=1 -v -run TestS3 ./internal/backup/
 
-spike: ## M2 sizing spike: ~10 GB / 5k subjects into NATS under mem_limit 900m (heavy; run only when intended)
+spike: ## Sizing spike: ~10 GB / 5k subjects into NATS under mem_limit 900m (heavy; run only when intended)
 	./scripts/spike.sh
 
 e2e: sdk-build ## Playwright against the dev stack (make dev-up first)

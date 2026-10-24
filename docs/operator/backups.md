@@ -1,7 +1,7 @@
 # Backups (operations)
 
 Format, layout and the full restore procedures are in [../BACKUPS.md](../BACKUPS.md); configuration in
-[configuration.md](configuration.md#backups-pl-bak-001009-adr-0035).
+[configuration.md](configuration.md#backups).
 
 ## Daily checks
 

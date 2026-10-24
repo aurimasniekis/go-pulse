@@ -1,7 +1,7 @@
-# Local development stack (PL-OPS-005): init → nats → pulsed → alloy, plus SeaweedFS as the backup S3 target.
+# Local development stack: init → nats → pulsed → alloy, plus SeaweedFS as the backup S3 target.
 # Host ports are overridable with PULSE_DEV_{NATS,ADMIN,METRICS,PUBLIC,ALLOY}_PORT when the defaults are taken.
 # `make dev-up` generates deploy/.dev/master.key (gitignored) and builds pulsed:dev from the repo.
-# pebble runs in `make test-acme`, not here (ADR-0032).
+# pebble (a local ACME test server) runs in `make test-acme`, not here.
 
 x-pulse-env: &pulse-env
   PULSE_PROFILE: dev
@@ -13,7 +13,7 @@ x-pulse-env: &pulse-env
   PULSE_NATS_WEBSOCKET_URL: http://nats:8080
   PULSE_ADMIN_ADDR: 0.0.0.0:8080
   PULSE_ADMIN_PUBLISHED_LOOPBACK: "true"
-  # Dashboard sign-in (ADR-0038): `make dev-admin` prints the first administrator's setup link. The long reauth window
+  # Dashboard sign-in: `make dev-admin` prints the first administrator's setup link. The long reauth window
   # (dev only; prod allows at most 15m) keeps e2e and screenshot runs from stopping at re-authentication prompts.
   PULSE_ADMIN_URL: http://127.0.0.1:${PULSE_DEV_ADMIN_PORT:-8080}
   PULSE_REAUTH_WINDOW: 1h

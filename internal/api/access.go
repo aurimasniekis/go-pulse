@@ -19,7 +19,7 @@ import (
 type ClientDTO struct {
 	clients.Client
 	Connections int  `json:"connections"`
-	ExpiresSoon bool `json:"expires_soon" doc:"Expires within 30 days (PL-AUTH-012)"`
+	ExpiresSoon bool `json:"expires_soon" doc:"Expires within 30 days"`
 }
 
 // Issued is returned once when credentials are created or rotated (PL-AUTH-004).

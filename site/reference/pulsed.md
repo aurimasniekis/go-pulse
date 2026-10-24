@@ -11,7 +11,7 @@ The tool-facing `pulse` CLI is documented separately ([pulse CLI](/clients/cli))
 | `pulsed banagent` | Mirror bans into nftables. |
 | `pulsed healthcheck` | Probe the readiness endpoint (container health check). |
 | `pulsed backup keygen\|list\|run\|restore` | Backups. |
-| `pulsed admin bootstrap\|recover` | The first dashboard administrator; break-glass recovery. |
+| `pulsed admin bootstrap\|recover\|token` | The first dashboard administrator; break-glass recovery; automation tokens. |
 | `pulsed keys export` | Print the decrypted key set. |
 | `pulsed openapi` | Print or write the OpenAPI specs. |
 | `pulsed version` | Build information. |
@@ -61,8 +61,8 @@ GETs the readiness URL and exits 0 on 200. The default URL is `PULSE_HEALTHCHECK
 
 ## `pulsed backup`
 
-The backup commands need the backup configuration (`PULSE_BACKUP_ENABLED` and `PULSE_BACKUP_S3_*`) in the environment,
-except `keygen`.
+`list` and `restore` need the backup configuration (`PULSE_BACKUP_ENABLED` and `PULSE_BACKUP_S3_*`) in the
+environment; `keygen` needs nothing, and `run` only asks the running pulsed.
 
 ### `keygen`
 
@@ -118,7 +118,7 @@ start, then start the stack, then `--all` ([backup and restore](/operators/backu
 Dashboard bootstrap, break-glass recovery and automation tokens ([Users and single sign-on](/operators/users)). They need the master key
 (run them inside the pulsed container: `docker compose exec pulsed pulsed admin …`) and work while pulsed is running;
 they then refuse a database whose schema differs from the binary's. Links are printed for `PULSE_ADMIN_URL` and shown
-once; both commands write audit records.
+once; every command writes audit records.
 
 ```sh
 pulsed admin bootstrap

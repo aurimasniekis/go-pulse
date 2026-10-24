@@ -51,17 +51,11 @@ features:
 
 <div class="pl-home">
 
-<div class="pl-status">
-
-**Pre-release.** No version is tagged yet. Pulse is small on purpose: one VPS with 2 GB of RAM, one distroless image
-plus the official NATS image, single node. Read the [security model](/security/) and its
-[release status](/security/#release-status) before you run Pulse anywhere that matters.
-
-</div>
-
 ## How it works
 
 <Flow />
+
+Pulse is small on purpose: one VPS with 2 GB of RAM, one distroless image plus the official NATS image, a single node.
 
 1. `pulsed init` sets NATS up in JWT operator mode, with its own operator, accounts and signing keys sealed by a master
    key.

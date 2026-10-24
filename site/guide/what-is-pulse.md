@@ -51,14 +51,15 @@ Pulse is deliberately small. It is not:
 - **exactly once.** JetStream de-duplicates retries with the same event ID for two minutes. Beyond that, delivery is
   at least once; consumers should be idempotent.
 - **an anonymous dashboard.** Every dashboard request needs a signed-in user (password with TOTP, or OIDC single
-  sign-on). It is reachable through an SSH tunnel and, if you enable it, on its own hostname behind Cloudflare.
+  sign-on). It is reachable through an SSH tunnel and, if you enable it, behind Cloudflare (on its own hostname or the
+  API hostname).
 - **encrypted at rest inside NATS.** Disk encryption is the host's job. Backups are encrypted.
 
 ## Status
 
-**Pre-release.** No version has been tagged yet. All milestones up to the SDKs are implemented and tested locally;
-the reference deployment (Ansible on a Debian 13 VPS, Cloudflare via Terraform) is tested in containers but not yet
-verified on a real server. The sizing spike that sets the subject-cardinality guideline has not been run. Read the
-[security model](/security/) before you rely on it.
+**Pre-release.** No version has been tagged yet. The server, the dashboard, the CLI and the Go, Python and TypeScript
+SDKs are implemented and tested locally. The reference deployment (a Debian 13 VPS behind Cloudflare) is set up by a
+separate Ansible and Terraform deployment, tested locally but not yet verified on a real server. The sizing spike that
+sets the subject-cardinality guideline has not been run. Read the [security model](/security/) before you rely on it.
 
 Next: [Concepts](/guide/concepts).

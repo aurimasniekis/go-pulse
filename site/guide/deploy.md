@@ -82,6 +82,7 @@ Every `PULSE_*` variable and secret file is listed in the [configuration referen
    docker run --rm ghcr.io/aurimasniekis/pulsed:<version> backup keygen > backup-identity.txt
    ```
 
+   Until a release exists: `docker run --rm pulsed:local backup keygen > backup-identity.txt`, after `make image`.
    Keep `backup-identity.txt` offline. Only the printed recipient (`age1…`) goes into the server's configuration
    (`PULSE_BACKUP_AGE_RECIPIENTS`). See [Backup and restore](/operators/backups).
 3. Render the compose file from the reference: set `PULSE_PUBLIC_HOST`, `PULSE_RAW_HOST`, `PULSE_HOST_IPS` (the VPS's

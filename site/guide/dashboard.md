@@ -1,8 +1,8 @@
 # The dashboard
 
 The dashboard is a React app embedded in `pulsed`. It is served with the admin API on `127.0.0.1:8080`, reached
-through `ssh -L 8080:127.0.0.1:8080 <vps>`, and, when you enable it, on its own hostname behind Cloudflare. Every page
-needs a signed-in user; every change is recorded in the audit log under that user.
+through `ssh -L 8080:127.0.0.1:8080 <vps>`, and, when you enable it, behind Cloudflare (on its own hostname or the API
+hostname). Every page needs a signed-in user; every change is recorded in the audit log under that user.
 
 ## Signing in
 
@@ -89,8 +89,8 @@ The managed `blobs` store is read-only here.
 ### Clients
 
 Tool identities on NATS: grants, status, expiry, tags and live connections. Create a client, edit its grants without
-new credentials, **rotate** (new `.creds`, old ones revoked), **revoke** permanently, or **kick** its connections. New
-`.creds` are shown once with connection snippets.
+new credentials, **rotate** (new `.creds`, old ones revoked), **revoke** permanently, or **Disconnect** its live
+connections. New `.creds` are shown once with connection snippets.
 
 <Shot name="clients" themed alt="Clients with grants, status, expiry and connection counts" caption="Clients" />
 

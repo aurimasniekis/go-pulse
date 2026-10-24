@@ -1,6 +1,6 @@
 # Sizing
 
-> PL-DOC-004, PL-TST-006, PL-OPS-009. **Status: spike tooling ready; measurements pending an operator-triggered run.**
+> **Status: spike tooling ready; measurements pending an operator-triggered run.**
 > The spike is heavy (it writes ~10 GB into a Docker volume and takes several minutes), so it is never run automatically.
 
 ## Target box
@@ -15,11 +15,12 @@
 | alloy | 192m | — |
 | init | 128m (one-shot) | — |
 
-A 2 GB swapfile with `swappiness=10` absorbs short spikes (events-wan-lt `roles/base`).
+A 2 GB swapfile with `swappiness=10` absorbs short spikes (set up by the deployment, not by pulsed).
 
-## The spike (M2 gate)
+## The sizing spike
 
-`make spike` (= `scripts/spike.sh`) runs `init` + `nats` from `deploy/spike/compose.yaml` with `mem_limit: 900m`,
+The spike checks that NATS stays within its memory budget with about 10 GiB of events, and measures restart and replay
+times. `make spike` (= `scripts/spike.sh`) runs `init` + `nats` from `deploy/spike/compose.yaml` with `mem_limit: 900m`,
 `GOMEMLIMIT=600MiB` and 2 CPUs, then `cmd/pulse-spike` in a Go container on the same network:
 
 1. Publishes `TARGET` logical bytes (default 10 GiB) as ~1 KiB incompressible-ish payloads with envelope headers across
@@ -43,10 +44,11 @@ Smaller runs: `TARGET=2147483648 SUBJECTS=5000 make spike`. Clean up: `docker co
 | Single sparse subject by time, first message | pending |
 | Direct get last-by-subject, avg | pending |
 
-Record the run date, commit, host and the numbers above, then decide RG-3 (PL-OPS-009).
+Record the run date, commit, host and the numbers above, and check the NATS memory peaks against its budget (900 MB
+with `GOMEMLIMIT=600MiB`).
 
-## Subject cardinality guideline (PL-BUS-009, provisional)
+## Subject cardinality guideline (provisional)
 
 Until the spike numbers exist: keep distinct subjects per stream in the low tens of thousands (the subject index caps at
-50k, PL-ROLL-004). Put high-cardinality identifiers in the payload or a single trailing `<key>` token, not in several
+50k subjects). Put high-cardinality identifiers in the payload or a single trailing `<key>` token, not in several
 tokens. Revisit after the spike.

@@ -16,11 +16,14 @@ race tests, builds and scans the image, and pushes it to GHCR.
 
 1. **CI.** `main` is green on GitHub for the commit to be tagged: the `ci` workflow (Go, security, web, SDKs with
    interop, image smoke) and the `e2e` workflow. `make test` includes the restore drill (`make drill` runs it alone),
-   a release gate. Run the Docker suites CI does not: `make test-nft`, `make test-acme` and `make test-s3`.
+   which every release must pass. Run the Docker suites CI does not: `make test-nft`, `make test-acme` and
+   `make test-s3`.
 2. **Changelog.** Move the `[Unreleased]` entries into `## [X.Y.Z] - YYYY-MM-DD` in [CHANGELOG.md](../CHANGELOG.md)
-   and list the known limitations that still hold (see the [acceptance checklist](PLAN.md)).
-3. **Version references.** Update the status notes in `README.md`, [site/security/index.md](../site/security/index.md)
-   and the FAQ, and any install example that names a version (`git grep -nF <previous version> -- README.md site docs`).
+   and list the known limitations that still hold (the release status on
+   [site/security/index.md](../site/security/index.md) is the current list).
+3. **Version references.** Update the release status on [site/security/index.md](../site/security/index.md), the FAQ,
+   the "No release yet" note in [site/guide/deploy.md](../site/guide/deploy.md) and the README's deploy section, and any
+   install example that names a version (`git grep -nF <previous version> -- README.md site docs`).
 4. **Screenshots.** If the dashboard changed visibly, regenerate them with `make screenshots` (fictional data on a
    throwaway stack) and review every image before committing.
 5. **Commit** these changes on `main` (`docs: prepare vX.Y.Z release`) and push. Wait for CI.

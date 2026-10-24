@@ -40,7 +40,7 @@ ack, err := c.Publish(ctx, "evt.home.door.opened", "home.door.opened.v1", map[st
 // ack.ID (the event ID), ack.Stream, ack.Sequence, ack.Duplicate
 ```
 
-`data` may be a JSON-marshalable value (`application/json`), a `string` (`text/plain`), `[]byte`
+`data` may be a JSON-marshalable value (`application/json`), a `string` (`text/plain; charset=utf-8`), `[]byte`
 (`application/octet-stream`), `json.RawMessage` or `nil`. Pass `""` as the type for an untyped event.
 
 | Option | Effect |

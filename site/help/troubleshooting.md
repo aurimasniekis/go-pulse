@@ -8,11 +8,11 @@ and the dashboard's **System**, **Security** and **Alerts** pages.
 | Symptom | Check | Fix |
 |---|---|---|
 | `Authorization Violation` on connect | The client's status and expiry on the Clients page | Expired or revoked credentials: rotate the client and deploy the new `.creds`. |
-| Publish or subscribe **times out** after ~5 s | The client's grants | NATS reports permission violations asynchronously, so a denied JetStream call looks like a timeout. Add the grant; the tool reconnects with it, no new `.creds` needed. |
+| Publish or subscribe **times out** (5 s in the SDKs, 10 s for `pulse pub`) | The client's grants | NATS reports permission violations asynchronously, so a denied JetStream call looks like a timeout. Add the grant; the tool reconnects with it, no new `.creds` needed. |
 | `Permissions Violation for … _INBOX.…` | The tool sets its own inbox prefix | Use an SDK, or `--inbox-prefix _INBOX_<client-id>` with the `nats` CLI. |
 | `Permissions Violation for … CONSUMER.CREATE …` | Subscribe and durable grants | The filter must be inside a `subscribe` grant; durable names must match a `durable` grant. Library helpers that create consumers differently are refused; use the SDKs. |
 | `invalid event subject` | The subject | At least four lowercase tokens starting with `evt`: see [the envelope](/clients/envelope). |
-| `x509: certificate signed by unknown authority` on 4222 | System → Certificates | Until Let's Encrypt succeeds, NATS serves the internal bootstrap certificate: pass the internal CA (`--ca`, `WithCAFile`, `ca=`). ACME errors are on the System page. |
+| `x509: certificate signed by unknown authority` on 4222 | System → Certificates | Until Let's Encrypt succeeds, NATS serves the internal bootstrap certificate: pass the internal CA (`--ca`, `WithCAFile`, `ca=`). ACME errors are on the System page. Python's `ca=` and TypeScript's `ca` replace the system roots, so remove them once the Let's Encrypt certificate is served (otherwise the same error appears then); Go's `WithCAFile` and the CLI's `--ca` add to the system roots. |
 | Connection to 4222 or 443 hangs | Security page: is the address banned? | Lift the ban. The admin tunnel comes from loopback and is never banned, so the dashboard always works. |
 | A durable replays from an old position | Durable start options only apply when the consumer is created | Delete the consumer on the Streams page (or use a new durable name) to start over. |
 | Live tail shows "sampled out" | 200 events/s per tail session | Expected under load; the Explorer and replay have every stored event. |
@@ -49,7 +49,7 @@ and the dashboard's **System**, **Security** and **Alerts** pages.
 | Symptom | Check | Fix |
 |---|---|---|
 | `pulsed` stays unhealthy | `docker compose logs pulsed`; `curl 127.0.0.1:9464/readyz` | Usually NATS is not reachable or pushing the APP account failed: check `nats` health and `PULSE_NATS_URL`. |
-| `pulsed` refuses to start in production | The error names the setting | The production profile refuses unsafe combinations: plain HTTP on the public listener, no AOP CA, a non-loopback admin listener, a reauth window over 15 minutes, an `http://` dashboard URL, the removed `PULSE_AUTH_MODE`, the test DNS provider. Fix the configuration; do not switch to the dev profile. |
+| `pulsed` refuses to start in production | The error names the setting | The production profile refuses unsafe combinations: plain HTTP on the public listener, no AOP CA, a non-loopback admin listener, a reauth window over 15 minutes, an `http://` dashboard URL, the removed `PULSE_AUTH_MODE` (refused in every profile), the test DNS provider. Fix the configuration; do not switch to the dev profile. |
 | Dashboard says the UI is not built | A local build without the UI | Use the release image, or `make build` (which runs `make web` first). |
 | Dashboard answers `421 Misdirected Request` | The `Host` header | The admin listener accepts only `127.0.0.1`, `localhost`, `::1` and `PULSE_ADMIN_HOSTS`. Open it as `http://127.0.0.1:8080` through the tunnel. |
 | Alerts fire but no messages arrive | Alerts → Notifiers (sent, failed, suppressed, last error) | Fix the bot token, chat ID or webhook file; use **Test**. Rate-limited messages count as suppressed. |

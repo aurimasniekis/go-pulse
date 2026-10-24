@@ -1,7 +1,7 @@
 # HTTP APIs
 
-> PL-API-001..005, PL-DOC-002. Specs are generated from code: `make api` writes `api/admin.openapi.json` and
-> `api/public.openapi.json` (OpenAPI 3.1) and the UI's TypeScript types; CI fails on drift.
+> Specs are generated from code: `make api` writes `api/admin.openapi.json` and `api/public.openapi.json`
+> (OpenAPI 3.1) and the UI's TypeScript types; CI fails on drift.
 
 ## Listeners
 
@@ -12,10 +12,10 @@
 | public | `:8443` (443 via Cloudflare, AOP mTLS in prod) | `/api/v1`, `/hooks/*`, `/ws`, `/healthz` | Tools with HTTP tokens, webhook senders, browsers |
 | metrics | `127.0.0.1:9464` | `/metrics`, `/healthz`, `/readyz`, `/internal/v1/bans` | Alloy, container healthcheck, banagent |
 
-Every other path on the public listener returns 404 (PL-EDGE-001). The public listener applies a per-IP token bucket
-(20 req/s, burst 40) and body limits (1 MiB API, 5 MiB hooks).
+Every other path on the public listener returns 404. The public listener applies a per-IP token bucket (20 req/s,
+burst 40) and body limits (1 MiB API, 5 MiB hooks).
 
-## Authentication (ADR-0038)
+## Authentication
 
 Every admin operation needs a signed-in user and the permission `internal/api/permissions.go` names for it.
 
@@ -37,9 +37,10 @@ Administration: `/users`, `/users/{id}` (+ `/reset-link`, `/sessions`, `/identit
 - JSON bodies; errors are RFC 9457 problem details (`title`, `status`, `detail`, `errors[]`). 5xx responses never
   include internal error text (it is logged).
 - Admin writes (`POST`, `PUT`, `PATCH`, `DELETE`) with a session require the session's CSRF token in `X-Pulse-CSRF` and a
-  same-origin `Origin` (PL-ADM-004).
+  same-origin `Origin`.
 - The admin listener only accepts `Host` values `127.0.0.1`, `localhost`, `::1` and `PULSE_ADMIN_HOSTS`; anything else
-  gets 421 (DNS-rebinding guard, THREAT_MODEL T-21).
+  gets 421. This guards against DNS rebinding: a web page that resolves its own hostname to 127.0.0.1 cannot use your
+  browser and the SSH tunnel to reach the admin API.
 - Destructive admin calls take `?confirm=<name>` repeating the target's name.
 - Live data uses SSE: `event` messages carry `id: <stream seq>`; reconnect with `Last-Event-ID` to resume. A comment
   keepalive is sent every 20 s (Cloudflare closes idle connections after 100 s).
@@ -50,7 +51,7 @@ Administration: `/users`, `/users/{id}` (+ `/reset-link`, `/sessions`, `/identit
 |---|---|---|
 | GET | `/system/info` | Version, profile, NATS connection and server stats (VARZ), JetStream usage, pulsed runtime |
 | GET | `/system/connections` | NATS connections across accounts (SYS, APP), busiest first (`sort`, `limit`) |
-| GET | `/system/certificates` | Internal CA, NATS leaf, Let's Encrypt, origin and AOP CA certificates (names, issuer, serial, expiry, days left) plus ACME status when enabled (ADR-0032) |
+| GET | `/system/certificates` | Internal CA, NATS leaf, Let's Encrypt, origin and AOP CA certificates (names, issuer, serial, expiry, days left) plus ACME status when enabled |
 | GET | `/streams` | Streams in the APP account (`kind`: stream, kv, object; `managed` for EVENTS and blobs) |
 | GET/PUT/DELETE | `/streams/{name}` | Read, update, delete a user stream (EVENTS and blobs are managed) |
 | POST | `/streams` | Create a user stream; subjects may not overlap `evt.>`, `_sys.>`, `$…`, `_INBOX.>` |
@@ -80,7 +81,7 @@ Query: `stream` (default EVENTS), `subject` (repeatable, wildcards), `dir` (`bac
 (`key=value`, repeatable), `contains` (payload substring), `json_path` + `json_value`, `cursor`.
 
 Response: `events[]`, `next` (opaque cursor bound to the filters; reusing it with other filters is a 400), `scanned`,
-`scanned_bytes`, `partial` + `reason` (`msgs`, `bytes`, `time`) when the scan budget (50k messages, 64 MB, 3 s) ran out
+`scanned_bytes`, `partial` + `reason` (`msgs`, `bytes`, `time`) when the scan budget (50k messages, 64 MiB, 3 s) ran out
 before the page filled — continue with `next`. At most 4 queries run at once (429 otherwise).
 
 Each event: `stream`, `seq`, `subject`, `stream_time`, `size`, `headers`, `data` + `encoding` (`utf8` or `base64`),
@@ -155,14 +156,14 @@ Admin endpoints: `/hooks/inbound` (CRUD, `rotate_secret`), `/hooks/outbound` (CR
 Admin: `GET /security` (edge status, active bans, history, recent failures, offenders, allowlist), `POST /security/bans`,
 `POST /security/bans/lift`, `POST /security/allowlist`, `POST /security/allowlist/remove`.
 
-## Alerts (PL-OBS-004..006, ADR-0033)
+## Alerts
 
 Admin: `GET /alerts` (rules with live instances, notifier counters, firing count), `POST /alerts/rules` (custom threshold
 rule), `PUT /alerts/rules/{id}`, `DELETE /alerts/rules/{id}` (custom only; built-ins return 409), `POST /alerts/evaluate`,
 `GET /alerts/history?rule=&before_id=&limit=`, `POST /alerts/notifiers/{name}/test` (502 with the reason on failure).
 
 Built-in rules (ids = kinds): `disk_forecast` (30 d), `stream_usage` (85 %), `cert_expiry` (14 d), `backup_stale` (36 h,
-reports *no data* until backups exist), `client_expiry` (30 d, PL-AUTH-012), `ban_storm` (10 in 10 min),
+reports *no data* until backups exist), `client_expiry` (30 d), `ban_storm` (10 in 10 min),
 `slow_consumers` (new ones in 10 min), `dead_letters` (24 h), `nats_down` (held 60 s). Custom `threshold` rules count
 events or payload bytes for the whole stream, one ce-type or one subject prefix over a window, `above` or `below` a
 threshold (`below 1` is a dead-man switch). Prefixes of 1–2 tokens are counted per minute, 3 tokens per hour, 4 per day;
@@ -179,7 +180,7 @@ data:     {"rule_id","rule_name","kind","key","state","severity","summary","valu
 
 Tools subscribe with a `subscribe` grant on `_sys.alert.>` (the only grantable `_sys` subject).
 
-## Metrics (`GET /metrics` on the metrics listener, PL-OBS-002)
+## Metrics (`GET /metrics` on the metrics listener)
 
 | Metric | Type | Labels |
 |---|---|---|
@@ -200,7 +201,7 @@ Tools subscribe with a `subscribe` grant on `_sys.alert.>` (the only grantable `
 
 Plus the Go and process collectors (`go_*`, `process_*`).
 
-## Backups (PL-BAK-006/008, ADR-0035)
+## Backups
 
 Admin: `GET /backups` (enabled, destination, schedule, retention, recipients, running operation, catalog, last
 restore), `POST /backups/run` (202; 409 while busy), `POST /backups/prune`, `GET /backups/remote` (complete backups in the
@@ -209,7 +210,7 @@ object store, including earlier servers'), `POST /backups/{id}/plan` (dry run) a
 "streams": [...], "replace": bool}`; the identity is used for that request only. A wrong identity, or an object that
 fails its integrity check, returns 422.
 
-## KV and objects (PL-UI-004)
+## KV and objects
 
 Admin: `GET /kv` (KV and object buckets), `POST /kv`, `DELETE /kv/{bucket}?confirm=`, `GET /kv/{bucket}/keys?filter=&limit=`
 (latest revision per key; `truncated` when more exist), `GET|PUT|DELETE /kv/{bucket}/entry?key=` (value as utf8 or base64,

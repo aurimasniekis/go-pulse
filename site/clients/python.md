@@ -36,7 +36,7 @@ c = await connect(url, creds="tool.creds")            # or creds_data="<.creds c
 | `creds` / `creds_data` | Path to, or content of, the client's `.creds` (one is required). The client ID inside sets the inbox prefix `_INBOX_<client-id>`. |
 | `source` | `ce-source` for published events; also the connection name unless `name` is set. |
 | `name` | NATS connection name. |
-| `ca` | Path to an extra CA file, needed only while 4222 serves the internal bootstrap certificate. `tls://` URLs always use TLS. |
+| `ca` | Path to a CA file to trust **instead of** the system roots. Use it only while 4222 serves the internal bootstrap certificate, and remove it once the Let's Encrypt certificate is served. `tls://` URLs always use TLS. |
 | `stream` | Default stream for subscriptions (`EVENTS`). |
 | `**nats_options` | Passed to `nats.connect`. |
 

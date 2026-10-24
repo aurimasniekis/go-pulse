@@ -60,7 +60,7 @@ start position the next time it subscribes.
 
 The **Explorer** pages through any stream newest-first or oldest-first, from a sequence or a time, filtered by subject
 (wildcards), `ce-type`, headers, a payload substring or a JSON path. Filters that NATS cannot apply run in pulsed within
-a budget: 50,000 messages, 64 MB or 3 seconds per page, and at most 4 queries at once. When the budget runs out the page
+a budget: 50,000 messages, 64 MiB or 3 seconds per page, and at most 4 queries at once. When the budget runs out the page
 says so and **Continue scan** picks up where it stopped.
 
 **Live tail** streams new events as they arrive: at most 10 sessions, 200 events per second each. Excess events are

@@ -17,12 +17,6 @@
   <a href="https://aurimasniekis.github.io/go-pulse/security/">Security model</a>
 </p>
 
-> [!NOTE]
-> **Pre-release.** No version is tagged yet; the first will be 0.1.0. Before 1.0, interfaces may change between minor
-> versions ([docs/VERSIONING.md](docs/VERSIONING.md)). Known gaps: the sizing spike has not been run, the firewall and
-> ban enforcement have not been verified on a real VPS, and nothing has had an external security review. Details are on
-> the [security page](https://aurimasniekis.github.io/go-pulse/security/#release-status).
-
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="site/public/screenshots/overview-dark.png">
   <img src="site/public/screenshots/overview-light.png" alt="Pulse dashboard overview: event counts, throughput over time, top domains and types, disk forecast">
@@ -45,7 +39,7 @@ flowchart LR
     T["Tools, bots, agents<br/>(own .creds)"] -- "NATS TLS :4222" --> N["NATS JetStream<br/>EVENTS · KV · objects"]
     W["Webhook senders,<br/>browsers, HTTP tools"] -- "HTTPS" --> C["Cloudflare"] -- ":443, mTLS" --> P["pulsed<br/>API · dashboard · bans · rollups"]
     P <--> N
-    O["Operator"] -- "ssh -L" --> P
+    O["Operators<br/>(password + TOTP, or SSO)"] -- "Cloudflare or ssh -L" --> P
     P --> X["S3 backups · Telegram/Discord<br/>· outbound webhooks"]
 ```
 
@@ -71,7 +65,7 @@ flowchart LR
 - **Users, roles and single sign-on.** Dashboard users sign in with a password and TOTP or through any OpenID Connect
   provider (PKCE, group → role mappings, just-in-time users, step-up), with administrator, operator, auditor and
   viewer roles, recovery codes, invitations, break-glass recovery and personal access tokens for the CLI. The dashboard
-  stays behind an SSH tunnel or, if you choose, is served behind Cloudflare on its own hostname.
+  stays behind an SSH tunnel or, if you choose, is served behind Cloudflare (on its own hostname or the API hostname).
 - **A dashboard to see it all.** Event explorer with filters, live tail, subject tree, throughput and a disk forecast,
   streams and consumers, KV and object browser, clients, tokens, webhooks, security, alerts, backups and audit.
 - **Edge security.** pulsed terminates TLS itself behind Cloudflare with Authenticated Origin Pulls. Raw NATS gets a
@@ -95,13 +89,11 @@ invite; there is no multi-tenant isolation between users or tools beyond roles a
 | <img src="site/public/screenshots/security-light.png" alt="Security page with active bans and recent authentication failures"><br>**Bans and authentication failures** | <img src="site/public/screenshots/backups.png" alt="Backups page with verified nightly backups"><br>**Verified, encrypted backups** |
 | <img src="site/public/screenshots/login-light.png" alt="Sign-in page with password and single sign-on"><br>**Sign in with a password and TOTP, or SSO** | <img src="site/public/screenshots/users.png" alt="Users page with roles and sign-in methods"><br>**Users and roles** |
 
-All screenshots come from a throwaway instance with fictional data (`make screenshots`).
-
 ## Quick start
 
 ### Try it on your machine
 
-Needs Docker, Go (the version in `go.mod`), Node 24 and pnpm.
+Needs Docker with Compose v2, Go (the version in `go.mod`), make, openssl, curl and jq.
 
 ```sh
 git clone https://github.com/aurimasniekis/go-pulse.git && cd go-pulse
@@ -130,9 +122,8 @@ The reference deployment is one Debian VPS behind Cloudflare, with
 [Deploy on a VPS](https://aurimasniekis.github.io/go-pulse/guide/deploy) and the
 [configuration reference](https://aurimasniekis.github.io/go-pulse/reference/configuration).
 
-Release images will be published as `ghcr.io/aurimasniekis/pulsed` for linux/amd64 and linux/arm64, with an SBOM and
-build provenance (`gh attestation verify oci://ghcr.io/aurimasniekis/pulsed:<version> --repo aurimasniekis/go-pulse`).
-Pin them by digest. Until the first release, build the image yourself with `make image`.
+Releases publish `ghcr.io/aurimasniekis/pulsed` for linux/amd64 and linux/arm64 with an SBOM and build provenance; pin
+the image by digest. No version is released yet, so build the image with `make image`.
 
 ## Clients
 
@@ -152,7 +143,8 @@ async for e in c.subscribe("evt.home.>", since="24h"):
 
 ```sh
 curl -X POST https://events.example.com/api/v1/publish/evt.home.door.opened \
-  -H "Authorization: Bearer $PULSE_TOKEN" -H 'Ce-Type: home.door.opened.v1' -d '{"door":"front"}'
+  -H "Authorization: Bearer $PULSE_TOKEN" -H 'Ce-Type: home.door.opened.v1' \
+  -H 'Content-Type: application/json' -d '{"door":"front"}'
 ```
 
 | Client | Install |
@@ -162,37 +154,31 @@ curl -X POST https://events.example.com/api/v1/publish/evt.home.door.opened \
 | TypeScript SDK (node and browser) | `pnpm add "github:aurimasniekis/go-pulse#path:/sdk/ts"` |
 | `pulse` CLI | `go install github.com/aurimasniekis/go-pulse/cmd/pulse@latest` |
 
-The three SDKs share one set of [conformance vectors](sdk/conformance/vectors.json), and an interop test checks that
-Go, Python, node and a real browser read each other's events the same way. See
-[Clients & SDKs](https://aurimasniekis.github.io/go-pulse/clients/).
+Go, Python, node and the browser read each other's events the same way: the SDKs share one set of test vectors, an
+interop test (`make test-sdk-interop`) checks Go, Python and node against a real server, and a Playwright test checks
+the browser bundle over `/ws`. See [Clients & SDKs](https://aurimasniekis.github.io/go-pulse/clients/).
 
 ## Documentation
 
-The documentation website is **<https://aurimasniekis.github.io/go-pulse/>** (built from [`site/`](site/)).
+Everything is on the **[documentation website](https://aurimasniekis.github.io/go-pulse/)**:
 
-| Topic | Where |
-|---|---|
-| Getting started, client and operator guides | [Website](https://aurimasniekis.github.io/go-pulse/) |
-| Configuration contract (every `PULSE_*` variable) | [docs/operator/configuration.md](docs/operator/configuration.md) |
-| Operator reference (deployment, keys, TLS, firewall, bans, backups, upgrades) | [docs/operator/](docs/operator/) |
-| Subjects and the event envelope | [docs/ENVELOPE.md](docs/ENVELOPE.md) |
-| HTTP APIs (OpenAPI 3.1) | [docs/API.md](docs/API.md), [api/public.openapi.json](api/public.openapi.json), [api/admin.openapi.json](api/admin.openapi.json) |
-| Backup format and restores | [docs/BACKUPS.md](docs/BACKUPS.md) |
-| Product contract, plan, decisions | [docs/GOAL.md](docs/GOAL.md), [docs/PLAN.md](docs/PLAN.md), [docs/DECISIONS.md](docs/DECISIONS.md) |
-| Threat model, test strategy, sizing | [docs/THREAT_MODEL.md](docs/THREAT_MODEL.md), [docs/TEST_STRATEGY.md](docs/TEST_STRATEGY.md), [docs/SIZING.md](docs/SIZING.md) |
-| Versioning and changelog | [docs/VERSIONING.md](docs/VERSIONING.md), [CHANGELOG.md](CHANGELOG.md) |
-
-To work on the website: `make site-dev`.
+- [Get started](https://aurimasniekis.github.io/go-pulse/guide/what-is-pulse): concepts, trying it locally, deploying on a VPS, connecting your first tool
+  and a tour of the dashboard.
+- [Clients & SDKs](https://aurimasniekis.github.io/go-pulse/clients/): subjects and the envelope, the Go, Python and TypeScript SDKs, the CLI, the HTTP API
+  and webhooks.
+- [Operator guides](https://aurimasniekis.github.io/go-pulse/operators/): users and single sign-on, clients and grants, streams, Cloudflare and TLS,
+  firewall and bans, keys, backups, monitoring and upgrades.
+- [Reference](https://aurimasniekis.github.io/go-pulse/reference/configuration): configuration, server commands, the admin API and metrics.
+- [Security model](https://aurimasniekis.github.io/go-pulse/security/): what Pulse guarantees and what it does not.
 
 ## Security
 
-Read the [threat model](docs/THREAT_MODEL.md) before deploying. It lists what Pulse defends against and the risks it
+Read the [security model](https://aurimasniekis.github.io/go-pulse/security/) before deploying: it lists what Pulse defends against and the risks it
 accepts. Report vulnerabilities privately; see [SECURITY.md](SECURITY.md).
 
 ## Contributing
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for the development setup, the checks (`make check`, `make e2e`, the SDK
-interop and restore drill tests) and the rules.
+See [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## License
 

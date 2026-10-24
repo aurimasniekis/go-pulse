@@ -95,9 +95,9 @@ on the public hostname.
 
 ## Audit log
 
-Every change made through the dashboard, the admin API or `pulsed keys export` is written to the audit log in SQLite:
-client and token changes, grant edits, rotations, revocations, stream and bucket changes, webhook changes, bans,
-backups and restores, alert rule edits and admin publishes. Secrets are never recorded.
+Every change made through the dashboard, the admin API, `pulsed admin` or `pulsed keys export` is written to the audit
+log in SQLite: client and token changes, grant edits, rotations, revocations, stream and bucket changes, webhook
+changes, bans, backups and restores, alert rule edits and admin publishes. Secrets are never recorded.
 
 The **Audit** page filters by action (exact, or a prefix such as `client.`), actor, target, result and time range.
 

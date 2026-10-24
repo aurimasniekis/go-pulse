@@ -1,7 +1,7 @@
 # Configuration
 
-pulsed is configured only through `PULSE_*` environment variables. This page lists every one. The contract between the
-image and a deployment is
+pulsed is configured only through `PULSE_*` environment variables. This page lists every one (banagent's own are on
+[firewall and bans](/operators/bans#banagent)). The contract between the image and a deployment is
 [docs/operator/configuration.md](https://github.com/aurimasniekis/go-pulse/blob/main/docs/operator/configuration.md);
 the [reference compose file](https://github.com/aurimasniekis/go-pulse/blob/main/deploy/examples/compose.yaml) shows a
 complete production setup.
@@ -18,7 +18,7 @@ refused for every secret; the file variant is the only way. `*_FILE` wins when b
 |---|---|---|
 | `PULSE_PROFILE` | `prod` | `dev` or `prod`. Prod refuses insecure settings (see [below](#prod-profile-refusals)). |
 | `PULSE_LOG_LEVEL` | `info` | `debug`, `info`, `warn`, `error`. JSON logs on stdout. |
-| `PULSE_DATA_DIR` | `/data/pulsed` | pulsed's volume: `keys.enc`, `pulse.db`, `pulsed.lock`, `tls/ca.crt`, `banagent/token`, `acme/`. |
+| `PULSE_DATA_DIR` | `/data/pulsed` | pulsed's volume: `keys.enc`, `pulse.db`, `pulsed.lock`, `tls/ca.crt`, `banagent/token`, `tmp/` (backup staging). |
 | `PULSE_NATS_DIR` | `/data/nats` | The volume shared with NATS, mounted at the same path in both: `nats.conf`, `operator.jwt`, `tls/`, `jwt/`, `js/`. |
 | `PULSE_MASTER_KEY_FILE` | — (required) | 32-byte master key, hex or base64. Never on a volume. `PULSE_MASTER_KEY` works in `dev` only. |
 | `PULSE_SHUTDOWN_TIMEOUT` | `20s` | Bound for a graceful shutdown. |
@@ -139,7 +139,6 @@ mounted read-write.
 With `PULSE_PROFILE=prod` (the default), pulsed refuses to start when:
 
 - a secret is given as a plain variable instead of `*_FILE`;
-- the master key is missing;
 - the admin listener is not on loopback and `PULSE_ADMIN_PUBLISHED_LOOPBACK` is not `true`;
 - `PULSE_REAUTH_WINDOW` is longer than 15 minutes;
 - `PULSE_ADMIN_URL` is plain `http://` and not the loopback tunnel;
@@ -148,12 +147,24 @@ With `PULSE_PROFILE=prod` (the default), pulsed refuses to start when:
 - the Discord webhook URL is not `https://`;
 - backups use `PULSE_BACKUP_S3_INSECURE` or `PULSE_BACKUP_S3_CREATE_BUCKET`.
 
-In every profile it refuses `PULSE_AUTH_MODE` (removed), `PULSE_ADMIN_PUBLIC` without the public listener or a
-hostname, an invalid `PULSE_ADMIN_URL`, unknown roles in `PULSE_MFA_REQUIRED_ROLES`, out-of-range session settings,
-incomplete pairs (origin certificate and key, Telegram token and
-chat ID, the three Cloudflare ban-list settings), ACME without a real raw host or its DNS token, backups without an
-endpoint, bucket, credentials or recipients, and out-of-range ban, alert and size settings. The error names the
-variable.
+In every profile it refuses a missing master key, `PULSE_AUTH_MODE` (removed), `PULSE_ADMIN_PUBLIC` without the public
+listener or a hostname, an invalid `PULSE_ADMIN_URL`, unknown roles in `PULSE_MFA_REQUIRED_ROLES`, out-of-range session
+settings, incomplete pairs (origin certificate and key, Telegram token and chat ID, the three Cloudflare ban-list
+settings), ACME without a real raw host or its DNS token, backups without an endpoint, bucket, credentials or
+recipients, and out-of-range ban, alert and size settings. The error names the variable.
+
+## Command and client variables
+
+These are read by individual commands and the `pulse` CLI, not by `pulsed serve`. `PULSE_HEALTHCHECK_URL` is under
+[Listeners](#listeners).
+
+| Variable | Read by | Meaning |
+|---|---|---|
+| `PULSE_ADMIN_TOKEN` | `pulsed backup run`, the `pulse` admin commands | Personal access token, when `--token` (pulsed) or `--admin-token-file` / the context's token file (pulse) is not given. |
+| `PULSE_CONFIG` | `pulse` | Path of the CLI's context file (default `<user config dir>/pulse/config.json`, e.g. `~/.config/pulse/config.json`). |
+| `PULSE_CONTEXT` | `pulse` | Context to use when `--context` is not given (default: the current context). |
+
+banagent reads `PULSE_BANAGENT_*`; see [firewall and bans](/operators/bans#banagent).
 
 ## Files the deployment provides
 

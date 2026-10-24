@@ -12,7 +12,7 @@ on host loopback only. See [monitoring and alerts](/operators/monitoring) for ho
 | `GET /readyz` | `200 ready` once pulsed is serving, `503 not ready` before; used by `pulsed healthcheck` |
 | `GET /internal/v1/bans` | The ban feed for banagent; needs its bearer token |
 
-The public listener has its own liveness route, `GET /api/v1/health`.
+The public listener has its own liveness routes, `GET /healthz` and `GET /api/v1/health`.
 
 ## pulsed
 

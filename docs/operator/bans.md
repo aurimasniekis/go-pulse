@@ -1,6 +1,6 @@
 # Bans
 
-pulsed bans addresses that keep failing authentication, fail2ban-style (ADR-0011, ADR-0031).
+pulsed bans addresses that keep failing authentication, fail2ban-style.
 
 ## Detection
 
@@ -8,7 +8,7 @@ Failures count per address (IPv4 /32, IPv6 /64) within `PULSE_BAN_WINDOW` (10 mi
 - NATS authentication errors (`CLIENT.AUTH.ERR` advisories);
 - missing or invalid HTTP tokens;
 - bad webhook signatures;
-- failed dashboard sign-ins on the public listener (`dashboard`; ADR-0038).
+- failed dashboard sign-ins on the public listener (source `dashboard`).
 
 `PULSE_BAN_THRESHOLD` failures (5) ban the address for `PULSE_BAN_DURATION` (1 h). Repeat offenders get ×4 each
 time, up to `PULSE_BAN_MAX` (30 days). Offence memory lasts 30 days after a ban ends.

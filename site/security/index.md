@@ -1,9 +1,6 @@
 # Security model
 
-This page summarizes what Pulse protects, what it guarantees and what it does not. The canonical texts are the
-[product contract](https://github.com/aurimasniekis/go-pulse/blob/main/docs/GOAL.md) (§4) and the
-[threat model](https://github.com/aurimasniekis/go-pulse/blob/main/docs/THREAT_MODEL.md). If they disagree with this
-page, they win.
+This page summarizes what Pulse protects, what it guarantees and what it does not.
 
 ## Read this first
 
@@ -38,21 +35,21 @@ identity provider, and unprivileged local processes.
 
 These hold when Pulse is deployed as the operator guides describe. Status words are strict: **implemented** means the
 code exists, **tested** means automated tests in the repository pass, **externally verified** means it was checked on a
-real deployment or by someone outside the implementing work. **No guarantee is externally verified yet.**
+real deployment or by someone other than the author. **No guarantee is externally verified yet.**
 
-| # | Guarantee | Status |
-|---|---|---|
-| G-1 | A tool client can publish or subscribe only on subjects its grants allow. A new client has no permissions. | tested (embedded NATS) |
-| G-2 | A revoked client is disconnected within 5 seconds and cannot reconnect with the same credentials. | tested |
-| G-3 | Client seeds are shown once and never stored by pulsed. | tested |
-| G-4 | Every admin UI and API request is made by a signed-in user and allowed only by that user's role; sign-in failures are throttled and audited. | tested (every operation mapped to a permission, role, CSRF, Origin, session, TOTP and SSO tests; SSO against an in-process identity provider only) |
-| G-5 | In the prod profile, public HTTP routes accept only connections that passed Cloudflare Authenticated Origin Pulls. | tested locally with a self-made CA |
-| G-6 | The real client IP comes from `CF-Connecting-IP` only when the peer is in Cloudflare's ranges and passed mTLS. | tested |
-| G-7 | Inbound webhooks are accepted only with a valid signature or secret for that hook. | tested (GitHub's documented vector; Stripe against its documented scheme) |
-| G-8 | Outbound webhooks cannot reach loopback, private, link-local or metadata addresses. | tested |
-| G-9 | Signing keys at rest are sealed with a master key that never touches the data volume. | tested |
-| G-10 | Backups are encrypted before they leave the host. | tested |
-| G-11 | Repeated authentication failures from one address lead to a ban, enforced over HTTP and in nftables. | tested (nftables in a privileged container and a Debian 13 converge test; not yet on a real VM) |
+| Guarantee | Status |
+|---|---|
+| A tool client can publish or subscribe only on subjects its grants allow. A new client has no permissions. | tested (embedded NATS) |
+| A revoked client is disconnected within 5 seconds and cannot reconnect with the same credentials. | tested |
+| Client seeds are shown once and never stored by pulsed. | tested |
+| Every admin UI and API request is made by a signed-in user and allowed only by that user's role; sign-in failures are throttled and audited. | tested (every operation mapped to a permission, role, CSRF, Origin, session, TOTP and SSO tests; SSO against an in-process identity provider only) |
+| In the prod profile, public HTTP routes accept only connections that passed Cloudflare Authenticated Origin Pulls. | tested locally with a self-made CA |
+| The real client IP comes from `CF-Connecting-IP` only when the peer is in Cloudflare's ranges and passed mTLS. | tested |
+| Inbound webhooks are accepted only with a valid signature or secret for that hook. | tested (GitHub's documented vector; Stripe against its documented scheme) |
+| Outbound webhooks cannot reach loopback, private, link-local or metadata addresses. | tested |
+| Signing keys at rest are sealed with a master key that never touches the data volume. | tested |
+| Backups are encrypted before they leave the host. | tested |
+| Repeated authentication failures from one address lead to a ban, enforced over HTTP and in nftables. | tested over HTTP; nftables with `make test-nft` (a privileged container, run by hand, not in CI) and in the deployment repository's Debian 13 converge test; not yet on a real VM |
 
 ## Controls by threat
 
@@ -64,8 +61,8 @@ real deployment or by someone outside the implementing work. **No guarantee is e
 | Another Cloudflare customer pointing a zone at the origin | Per-hostname AOP with your own CA, not Cloudflare's shared one |
 | Spoofed `CF-Connecting-IP` or `X-Forwarded-For` | Trusted only from Cloudflare peers that passed mTLS; the `/ws` proxy replaces `X-Forwarded-For` with exactly one trusted value (NATS trusts the first) |
 | Unauthorized dashboard use | Sign-in for every request (no anonymous mode); every operation needs a permission from the user's role; server-side sessions bound to the listener that created them; the session's CSRF token and a same-origin `Origin` on every write; a Host allowlist against DNS rebinding (421 otherwise); strict CSP, no CORS; on the internet only behind Cloudflare and AOP |
-| Password guessing on the dashboard | Argon2id; one answer for every failure after the same work; throttling per account and per address (up to 15 min); TOTP mandatory for administrators and operators; failed public sign-ins feed the ban detector; audit |
-| A stolen session cookie | `HttpOnly` `__Host-` cookie; strict CSP; 30-minute idle and 12-hour absolute expiry; re-authentication within 5 minutes for secrets, deletes, restores and user or SSO changes; session list and revocation |
+| Password guessing on the dashboard | Argon2id; one answer for every failure after the same work; throttling per account and per address (up to 15 min); TOTP required by default for password accounts with the administrator or operator role; failed public sign-ins feed the ban detector; audit |
+| A stolen session cookie | `HttpOnly`, `SameSite=Lax` cookie (`__Host-` with `Secure` on https); strict CSP; 30-minute idle and 12-hour absolute expiry; re-authentication within 5 minutes for secrets shown once, deleting streams and buckets, restores and user or SSO changes ([full list](/operators/users#confirming-it-is-you)); session list and revocation |
 | A forged or replayed SSO login | PKCE, single-use state bound to the browser, nonce; ID token signature (RS256, ES256, EdDSA only), issuer, audience, `azp` and time checks; users matched by issuer and subject, never email; JIT provisioning only with restrictions |
 | A leaked CLI token | Personal access tokens work only on the loopback listener, carry one role capped by the user's current roles, expire and are revocable |
 | Every administrator locked out | Last-administrator guards; SSO-only only after a test login with an SSO administrator; break-glass `pulsed admin recover` on the host |
@@ -78,7 +75,7 @@ real deployment or by someone outside the implementing work. **No guarantee is e
 | Backup disclosure | age encryption before upload; the identity stays offline; chunk names are keyed hashes |
 | Forged backup objects | Chunk names, the manifest MAC and file hashes are keyed from the master key and checked before use |
 | Disk exhaustion | `max_bytes` with discard old, 1 MiB `max_payload`, rate limits, disk forecast alerts |
-| Expensive explorer queries | Budgets per page (50k messages, 64 MB, 3 s), 4 concurrent queries, capped tail sessions |
+| Expensive explorer queries | Budgets per page (50k messages, 64 MiB, 3 s), 4 concurrent queries, capped tail sessions |
 | Secrets in logs | Redaction; the audit log never stores secrets; URLs are stripped from outbound errors |
 | Banning yourself or Cloudflare | A never-ban list: Cloudflare's ranges, private ranges, the host's own addresses, an allowlist |
 
@@ -96,8 +93,8 @@ cryptography. TLS verification is never disabled.
   Cloudflare's free-plan limits.
 - **Exactly-once delivery** beyond JetStream's 2-minute de-duplication window.
 - **Replay protection for shared-secret webhooks.** Use a signing verifier whenever the sender supports one.
-- **Consumer isolation between clients on the same stream.** A `subscribe` grant lets a client pull from any consumer on that stream whose name it knows, including another client's durable with a wider filter, so it could read events outside its own grants. Durable names start with the owning client's ID, an 80-bit random ULID that other clients are never shown, so this needs a leaked client ID. A fix that scopes
-  pulls to the client's own consumers is open (R-05 in DECISIONS.md).
+- **Consumer isolation between clients on the same stream.** A `subscribe` grant lets a client pull from any consumer on that stream whose name it knows, including another client's durable with a wider filter, so it could read events outside its own grants. Durable names start with the owning client's ID, an 80-bit random ULID that other clients are never shown, so this needs a leaked client ID. Scoping
+  pulls to the client's own consumers is not implemented yet.
 - **Protection from your identity provider.** A provider (or whoever controls it) can sign in any identity linked to
   it, with the roles its group mappings grant.
 - **A stolen session within the reauth window.** A session cookie stolen from your browser can do what your role
@@ -108,10 +105,10 @@ cryptography. TLS verification is never disabled.
 
 ## Release status
 
-Pulse has **no tagged release yet**. The code is complete through the planned milestones and tested locally; these
-items are still open:
+Pulse has **no tagged release yet**. The code is feature complete and tested locally; these items are still
+open:
 
-- **No external review.** Nobody outside the implementing work has reviewed the code, the key handling or the backup
+- **No external review.** Nobody other than the author has reviewed the code, the key handling or the backup
   format.
 - **Not yet verified on a real VPS.** The firewall, ban enforcement, IPv6 client addresses and the host roles were
   tested in containers (including a Debian 13 converge test) but not on a real VM behind Cloudflare.
@@ -122,9 +119,10 @@ items are still open:
 - **Single sign-on** is tested against an in-process identity provider (discovery, PKCE, JWKS rotation, token
   validation, step-up, linking), not yet against a live provider such as Keycloak or Entra ID.
 - **No visual regression tests** for the dashboard; browser tests run in Chromium only.
-- **Consumer scoping (R-05).** A `subscribe` grant can pull from another client's consumer on the same stream if it
+- **Consumer scoping.** A `subscribe` grant can pull from another client's consumer on the same stream if it
   knows the consumer's name (see the limits above).
-- **`EVENTS` cannot be shrunk (R-06).** A lower `PULSE_EVENTS_MAX_BYTES` is ignored with a warning.
+- **`EVENTS` cannot be shrunk.** A lower `PULSE_EVENTS_MAX_BYTES` is ignored with a warning. To shrink the stream,
+  take a backup and use the nats CLI as the APP account.
 - The prod-profile refusals do not yet cover every unsafe combination, and the refusal to put the database on a
   network filesystem is implemented but untested.
 

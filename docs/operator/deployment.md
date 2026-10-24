@@ -27,7 +27,7 @@ Start order: `init` (completed) → `nats` (healthy) → `pulsed` (healthy) → 
 
 ## First deploy
 
-1. Generate the master key once and keep it in the vault: `openssl rand -hex 32` (or `pulsed`'s own generator in tests).
+1. Generate the master key once and keep it in the vault: `openssl rand -hex 32`.
    Losing it makes `keys.enc` unreadable ([keys.md](keys.md)).
 2. Create the age backup identity offline: `pulsed backup keygen > identity.txt`. Only the printed recipient
    (`age1…`) goes on the server ([backups.md](backups.md)).

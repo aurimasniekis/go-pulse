@@ -1,8 +1,5 @@
 # Dashboard users and single sign-on
 
-> PL-USR-001..012, ADR-0038. Ported from hallpass's operator authentication. Implemented in `internal/users`,
-> `internal/oidc` and `internal/rbac`.
-
 Every dashboard page and admin API call needs a signed-in user. Users sign in with an email and password (plus TOTP), or
 through any OpenID Connect provider (Keycloak, Authentik, Dex, Entra ID, Google, Okta, …).
 
@@ -17,7 +14,7 @@ docker compose exec pulsed pulsed admin bootstrap
 ```
 
 Open the link on the dashboard (`PULSE_ADMIN_URL`: the public dashboard host, or `http://127.0.0.1:8080` through
-`ssh -L 8080:127.0.0.1:8080 <server>`), choose an email and a password (at least 12 characters), sign in and enroll TOTP.
+`ssh -L 8080:127.0.0.1:8080 <server>`), choose an email and a password (at least 12 bytes), sign in and enroll TOTP.
 Keep the ten recovery codes offline. `make dev-admin` does the same for the dev stack.
 
 ## Roles
@@ -25,23 +22,26 @@ Keep the ten recovery codes offline. `make dev-admin` does the same for the dev 
 | Role | Can |
 |---|---|
 | administrator | Everything, including users, SSO settings and backup restores. |
-| operator | Run the bus: clients and HTTP tokens, webhooks, streams, KV and objects, bans, alert rules, running backups, publishing events. Not users, SSO or restores. |
-| auditor | Read everything, including the audit log and the user list. |
-| viewer | Read the dashboards and events. |
+| operator | Run the bus: clients and HTTP tokens, webhooks, streams, KV and objects, bans, alert rules, running backups, publishing events, the audit log. Not users, SSO or restores. |
+| auditor | Everything a viewer reads, plus the audit log and the user list (not SSO settings). |
+| viewer | Read the dashboards, events and payloads, clients, webhooks, bans, alerts, backups and settings; not the audit log or users. |
 
 A user without roles can sign in but sees nothing. Role changes and disabling a user sign them out everywhere. The last
 enabled administrator cannot be demoted, disabled or deleted. Password accounts with the administrator or operator role
 must enroll TOTP (`PULSE_MFA_REQUIRED_ROLES`).
 
-Sensitive actions ask you to confirm it is you if you have not signed in for 5 minutes (`PULSE_REAUTH_WINDOW`):
-creating clients, HTTP tokens and webhooks (their secrets are shown once), changing grants, deleting streams and buckets,
-restoring backups, and every user and SSO change.
+Sensitive actions ask you to confirm it is you if you have not signed in for 5 minutes (`PULSE_REAUTH_WINDOW`), some of
+them with a second factor as well:
+
+| Needs recent sign-in | Also needs a recent second factor (password accounts) |
+|---|---|
+| Creating clients, rotating them, changing their grants; creating HTTP tokens and webhooks, updating webhooks (secrets are shown once); deleting streams, KV and object buckets | Creating, changing and deleting users; password links, invitations and link invitations; linking and unlinking identities; SSO provider, mapping and sign-in settings changes; backup restore dry runs and restores; creating personal access tokens |
 
 ## Adding people
 
 - **Invitation** (Users → Invitations): email and roles; the link (72 h, single use) lets them set a password.
-- **User + password link** (Users → Create): then "Password link" (1 h, single use). Also used for resets: administrators
-  never set or see other users' passwords.
+- **User + password link** (Users → New user): then "Password link" (1 h, single use). Also used for resets:
+  administrators never set or see other users' passwords.
 - **SSO**: link the user's identity at a provider (below), or let the provider create users just in time.
 
 Signing in: one message for every failure; failures are throttled per account and per address (up to 15 minutes, never a
@@ -86,7 +86,8 @@ once. It works only on the loopback admin listener (through the SSH tunnel), nev
 has more than the role you still hold.
 
 ```sh
-pulse context add home --admin-url http://127.0.0.1:8080 --admin-token-file ~/.config/pulse/admin.token
+pulse context add home --url tls://r.events.example.com:4222 --creds ~/.config/pulse/home.creds \
+  --admin-url http://127.0.0.1:8080 --admin-token-file ~/.config/pulse/admin.token
 pulse clients ls
 ```
 

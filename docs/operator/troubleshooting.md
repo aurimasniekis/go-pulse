@@ -3,7 +3,7 @@
 | Symptom | Check | Fix |
 |---|---|---|
 | `pulsed` stays unhealthy | `docker compose logs pulsed`; `curl 127.0.0.1:9464/readyz` | Usually NATS is not reachable or the APP account push failed: check `nats` health and `PULSE_NATS_URL`. |
-| pulsed refuses to start in prod | The error names the variable | The prod profile refuses unsafe combinations (plain HTTP, no AOP CA, a non-loopback admin listener, the removed `PULSE_AUTH_MODE`, test DNS provider). Fix the configuration; do not switch profiles. |
+| pulsed refuses to start in prod | The error names the variable | The prod profile refuses unsafe combinations (plain HTTP, no AOP CA, a non-loopback admin listener, test DNS provider); every profile refuses the removed `PULSE_AUTH_MODE`. Fix the configuration; do not switch profiles. |
 | A tool gets `Authorization Violation` | The client's status and expiry on the Clients page | Rotate expired or revoked credentials. |
 | A tool gets `Permissions Violation for … _INBOX.…` | The tool sets its own inbox prefix | Use the SDKs, or `--inbox-prefix _INBOX_<client-id>` with the nats CLI. |
 | A tool gets `Permissions Violation for … CONSUMER.CREATE …` | Its grants | Subscribe and durable grants define which filters and consumer names are allowed; the SDKs create consumers the way the grants expect. |

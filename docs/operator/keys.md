@@ -15,7 +15,7 @@
 ## Client credentials
 
 - Created on the Clients page or with `pulse clients create <name> --grant …`. A new client has no permissions until
-  you give it grants (least privilege, ADR-0025).
+  you give it grants (least privilege).
 - They expire after 365 days by default. The `client_expiry` alert fires 30 days before expiry.
 - **Rotate**: `pulse clients rotate <name>` issues new creds and revokes the old user key. Connected tools are
   disconnected within seconds.

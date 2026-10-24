@@ -16,9 +16,8 @@ latest minor release line ([docs/VERSIONING.md](docs/VERSIONING.md)).
 
 ## Scope and guarantees
 
-The threats Pulse defends against, and the residual risks it accepts, are in
-[docs/THREAT_MODEL.md](docs/THREAT_MODEL.md) and on the [security page](https://aurimasniekis.github.io/go-pulse/security/).
-In particular:
+The threats Pulse defends against, and the residual risks it accepts, are on the
+[security page](https://aurimasniekis.github.io/go-pulse/security/). In particular:
 
 - Every dashboard request needs a signed-in user (password with TOTP, or OIDC single sign-on) whose role allows it.
   The dashboard is reachable through an SSH tunnel and, when enabled, behind Cloudflare. A session can do what its role
