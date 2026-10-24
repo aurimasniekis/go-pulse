@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"regexp"
+	"slices"
 	"sort"
 	"strings"
 	"time"
@@ -173,8 +174,13 @@ type ConsumerDTO struct {
 	Durable        bool       `json:"durable"`
 	Description    string     `json:"description"`
 	FilterSubjects []string   `json:"filter_subjects"`
-	DeliverPolicy  string     `json:"deliver_policy"`
+	DeliverPolicy  string     `json:"deliver_policy" enum:"all,new,last,last_per_subject,by_start_sequence,by_start_time"`
+	OptStartSeq    uint64     `json:"opt_start_seq,omitempty"`
+	OptStartTime   *time.Time `json:"opt_start_time,omitempty"`
 	AckPolicy      string     `json:"ack_policy"`
+	AckWaitSeconds int64      `json:"ack_wait_seconds"`
+	MaxDeliver     int        `json:"max_deliver" doc:"-1: unlimited"`
+	MaxAckPending  int        `json:"max_ack_pending" doc:"-1: unlimited"`
 	Created        time.Time  `json:"created"`
 	NumPending     uint64     `json:"num_pending"`
 	NumAckPending  int        `json:"num_ack_pending"`
@@ -187,6 +193,8 @@ type ConsumerDTO struct {
 	Internal       bool       `json:"internal" doc:"Created by pulsed (rollups, tail, explorer, webhooks)"`
 }
 
+const internalConsumerPrefix = "pulsed:"
+
 func consumerDTO(i *jetstream.ConsumerInfo) ConsumerDTO {
 	c := i.Config
 	f := c.FilterSubjects
@@ -194,14 +202,99 @@ func consumerDTO(i *jetstream.ConsumerInfo) ConsumerDTO {
 		f = []string{c.FilterSubject}
 	}
 	d := ConsumerDTO{Name: i.Name, Durable: c.Durable != "", Description: c.Description, FilterSubjects: nonNilS(f),
-		DeliverPolicy: c.DeliverPolicy.String(), AckPolicy: c.AckPolicy.String(), Created: i.Created, NumPending: i.NumPending,
+		DeliverPolicy: c.DeliverPolicy.String(), OptStartSeq: c.OptStartSeq, OptStartTime: c.OptStartTime,
+		AckPolicy: c.AckPolicy.String(), AckWaitSeconds: int64(c.AckWait / time.Second), MaxDeliver: c.MaxDeliver,
+		MaxAckPending: c.MaxAckPending, Created: i.Created, NumPending: i.NumPending,
 		NumAckPending: i.NumAckPending, NumRedelivered: i.NumRedelivered, NumWaiting: i.NumWaiting,
 		DeliveredSeq: i.Delivered.Stream, AckFloorSeq: i.AckFloor.Stream, Paused: i.Paused,
-		Internal: strings.HasPrefix(c.Description, "pulsed:")}
+		Internal: strings.HasPrefix(c.Description, internalConsumerPrefix)}
 	if i.Delivered.Last != nil {
 		d.LastActive = i.Delivered.Last
 	}
 	return d
+}
+
+// ConsumerInput creates or updates a durable pull consumer with explicit acks.
+type ConsumerInput struct {
+	Description    string     `json:"description,omitempty" maxLength:"512"`
+	FilterSubjects []string   `json:"filter_subjects" minItems:"1" maxItems:"16"`
+	DeliverPolicy  string     `json:"deliver_policy,omitempty" enum:"all,new,last,last_per_subject,by_start_sequence,by_start_time" default:"all"`
+	OptStartSeq    uint64     `json:"opt_start_seq,omitempty" doc:"Required with by_start_sequence"`
+	OptStartTime   *time.Time `json:"opt_start_time,omitempty" doc:"Required with by_start_time (RFC 3339)"`
+	AckWaitSeconds int64      `json:"ack_wait_seconds,omitempty" minimum:"0" maximum:"2147483647" doc:"0: server default (30 s)"`
+	MaxDeliver     int        `json:"max_deliver,omitempty" minimum:"-1" maximum:"2147483647" doc:"0 or -1: unlimited"`
+	MaxAckPending  int        `json:"max_ack_pending,omitempty" minimum:"-1" maximum:"2147483647" doc:"0: server default; -1: unlimited"`
+}
+
+var deliverPolicies = map[string]jetstream.DeliverPolicy{
+	"": jetstream.DeliverAllPolicy, "all": jetstream.DeliverAllPolicy, "new": jetstream.DeliverNewPolicy,
+	"last": jetstream.DeliverLastPolicy, "last_per_subject": jetstream.DeliverLastPerSubjectPolicy,
+	"by_start_sequence": jetstream.DeliverByStartSequencePolicy, "by_start_time": jetstream.DeliverByStartTimePolicy,
+}
+
+// validSubjectFilter reports whether s is a NATS subject, optionally with * and > wildcards (> last).
+func validSubjectFilter(s string) bool {
+	if s == "" || len(s) > 256 {
+		return false
+	}
+	toks := strings.Split(s, ".")
+	for i, t := range toks {
+		if t == "" || strings.ContainsFunc(t, func(r rune) bool { return r <= ' ' || r == 0x7f }) {
+			return false
+		}
+		if (strings.Contains(t, "*") && t != "*") || (strings.Contains(t, ">") && (t != ">" || i != len(toks)-1)) {
+			return false
+		}
+	}
+	return true
+}
+
+func (in *ConsumerInput) toConfig(name string) (jetstream.ConsumerConfig, error) {
+	if strings.HasPrefix(in.Description, internalConsumerPrefix) {
+		return jetstream.ConsumerConfig{}, fmt.Errorf("descriptions starting with %q are reserved for pulsed", internalConsumerPrefix)
+	}
+	for _, f := range in.FilterSubjects {
+		if !validSubjectFilter(f) {
+			return jetstream.ConsumerConfig{}, fmt.Errorf("invalid filter subject %q", f)
+		}
+	}
+	dp, ok := deliverPolicies[in.DeliverPolicy]
+	if !ok {
+		return jetstream.ConsumerConfig{}, fmt.Errorf("invalid deliver_policy %q", in.DeliverPolicy)
+	}
+	switch {
+	case dp == jetstream.DeliverByStartSequencePolicy && in.OptStartSeq == 0:
+		return jetstream.ConsumerConfig{}, errors.New("opt_start_seq is required with by_start_sequence")
+	case dp != jetstream.DeliverByStartSequencePolicy && in.OptStartSeq != 0:
+		return jetstream.ConsumerConfig{}, errors.New("opt_start_seq is only allowed with by_start_sequence")
+	case dp == jetstream.DeliverByStartTimePolicy && (in.OptStartTime == nil || in.OptStartTime.IsZero()):
+		return jetstream.ConsumerConfig{}, errors.New("opt_start_time is required with by_start_time")
+	case dp != jetstream.DeliverByStartTimePolicy && in.OptStartTime != nil:
+		return jetstream.ConsumerConfig{}, errors.New("opt_start_time is only allowed with by_start_time")
+	}
+	c := jetstream.ConsumerConfig{
+		Durable: name, Description: in.Description, DeliverPolicy: dp, OptStartSeq: in.OptStartSeq,
+		AckPolicy: jetstream.AckExplicitPolicy, AckWait: time.Duration(in.AckWaitSeconds) * time.Second,
+		MaxDeliver: in.MaxDeliver, MaxAckPending: in.MaxAckPending, ReplayPolicy: jetstream.ReplayInstantPolicy,
+	}
+	if c.MaxDeliver == 0 {
+		c.MaxDeliver = -1
+	}
+	if in.OptStartTime != nil {
+		t := in.OptStartTime.UTC()
+		c.OptStartTime = &t
+	}
+	if len(in.FilterSubjects) == 1 {
+		c.FilterSubject = in.FilterSubjects[0]
+	} else {
+		c.FilterSubjects = in.FilterSubjects
+	}
+	return c, nil
+}
+
+type consumerPath struct {
+	Name     string `path:"name" pattern:"^[A-Za-z0-9_-]{1,64}$"`
+	Consumer string `path:"consumer" pattern:"^[A-Za-z0-9_-]{1,128}$"`
 }
 
 type streamPath struct {
@@ -299,6 +392,60 @@ func registerStreams(api huma.API, d *Deps) {
 			sort.Slice(out.Body, func(i, j int) bool { return out.Body[i].Name < out.Body[j].Name })
 			return out, nil
 		})
+	huma.Register(api, huma.Operation{OperationID: "get-consumer", Method: http.MethodGet, Path: "/streams/{name}/consumers/{consumer}",
+		Summary: "Get a consumer", Tags: []string{"streams"}},
+		func(ctx context.Context, in *consumerPath) (*struct{ Body ConsumerDTO }, error) {
+			c, err := d.JS.Consumer(ctx, in.Name, in.Consumer)
+			if err != nil {
+				return nil, consumerErr(d, "get-consumer", err)
+			}
+			return &struct{ Body ConsumerDTO }{consumerDTO(c.CachedInfo())}, nil
+		})
+	huma.Register(api, huma.Operation{OperationID: "put-consumer", Method: http.MethodPut, Path: "/streams/{name}/consumers/{consumer}",
+		Summary: "Create or update a durable pull consumer", Tags: []string{"streams"},
+		Description: "The consumer name is the durable name; acks are explicit. NATS refuses changes to immutable settings such as the deliver policy."},
+		func(ctx context.Context, in *struct {
+			Name     string `path:"name" pattern:"^[A-Za-z0-9_-]{1,64}$"`
+			Consumer string `path:"consumer" pattern:"^[A-Za-z0-9_-]{1,128}$"`
+			Body     ConsumerInput
+		}) (*struct{ Body ConsumerDTO }, error) {
+			cfg, err := in.Body.toConfig(in.Consumer)
+			if err != nil {
+				return nil, huma.Error422UnprocessableEntity(err.Error())
+			}
+			s, err := d.JS.Stream(ctx, in.Name)
+			if err != nil {
+				return nil, mapQueryErr(d, "put-consumer", err)
+			}
+			if streamKind(in.Name) != "stream" {
+				return nil, huma.Error422UnprocessableEntity(in.Name + " backs a KV bucket or object store; consumers cannot be managed on it")
+			}
+			if subj := s.CachedInfo().Config.Subjects; len(subj) > 0 {
+				for _, f := range in.Body.FilterSubjects {
+					if !slices.ContainsFunc(subj, func(ss string) bool { return SubjectsCollide(f, ss) }) {
+						return nil, huma.Error422UnprocessableEntity(fmt.Sprintf("filter subject %q matches none of the stream's subjects", f))
+					}
+				}
+			}
+			cur, err := s.Consumer(ctx, in.Consumer)
+			created := errors.Is(err, jetstream.ErrConsumerNotFound)
+			switch {
+			case err == nil:
+				if strings.HasPrefix(cur.CachedInfo().Config.Description, internalConsumerPrefix) {
+					return nil, huma.Error409Conflict(in.Consumer + " is managed by pulsed")
+				}
+			case !errors.Is(err, jetstream.ErrConsumerNotFound):
+				return nil, consumerErr(d, "put-consumer", err)
+			}
+			c, err := s.CreateOrUpdateConsumer(ctx, cfg)
+			if err != nil {
+				_ = audit.Write(ctx, d.DB, d.actor(ctx), "consumer.put", in.Name+"/"+in.Consumer, audit.Error, map[string]any{"error": err.Error()})
+				return nil, streamWriteErr(err)
+			}
+			_ = audit.Write(ctx, d.DB, d.actor(ctx), "consumer.put", in.Name+"/"+in.Consumer, audit.OK,
+				map[string]any{"filter_subjects": in.Body.FilterSubjects, "deliver_policy": cfg.DeliverPolicy.String(), "created": created})
+			return &struct{ Body ConsumerDTO }{consumerDTO(c.CachedInfo())}, nil
+		})
 	huma.Register(api, huma.Operation{OperationID: "delete-consumer", Method: http.MethodDelete, Path: "/streams/{name}/consumers/{consumer}",
 		Summary: "Delete a consumer", Tags: []string{"streams"}, DefaultStatus: http.StatusNoContent},
 		func(ctx context.Context, in *struct {
@@ -318,6 +465,13 @@ func registerStreams(api huma.API, d *Deps) {
 			_ = audit.Write(ctx, d.DB, d.actor(ctx), "consumer.delete", in.Name+"/"+in.Consumer, audit.OK, nil)
 			return &struct{}{}, nil
 		})
+}
+
+func consumerErr(d *Deps, op string, err error) error {
+	if errors.Is(err, jetstream.ErrConsumerNotFound) {
+		return huma.Error404NotFound("consumer not found")
+	}
+	return mapQueryErr(d, op, err)
 }
 
 func streamWriteErr(err error) error {

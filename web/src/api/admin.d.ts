@@ -614,7 +614,11 @@ export interface paths {
         /** Update name, description and tags */
         put: operations["update-client"];
         post?: never;
-        delete?: never;
+        /**
+         * Delete a revoked client
+         * @description Removes the record so its name can be reused; the revocation of its credentials stays in force.
+         */
+        delete: operations["delete-client"];
         options?: never;
         head?: never;
         patch?: never;
@@ -980,6 +984,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/kv/{bucket}/config": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** A KV bucket's configuration */
+        get: operations["get-kv-bucket"];
+        /**
+         * Update a KV bucket
+         * @description Replaces description, history, TTL and size limit; omitted fields take their defaults. Other settings are kept.
+         */
+        put: operations["update-kv-bucket"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/kv/{bucket}/entry": {
         parameters: {
             query?: never;
@@ -1046,6 +1071,27 @@ export interface paths {
         post?: never;
         /** Delete an object store */
         delete: operations["delete-object-bucket"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/objects/{bucket}/config": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** An object store's configuration */
+        get: operations["get-object-bucket"];
+        /**
+         * Update an object store
+         * @description Replaces description, TTL and size limit; omitted fields take their defaults. Other settings are kept.
+         */
+        put: operations["update-object-bucket"];
+        post?: never;
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -1378,8 +1424,13 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
-        put?: never;
+        /** Get a consumer */
+        get: operations["get-consumer"];
+        /**
+         * Create or update a durable pull consumer
+         * @description The consumer name is the durable name; acks are explicit. NATS refuses changes to immutable settings such as the deliver policy.
+         */
+        put: operations["put-consumer"];
         post?: never;
         /** Delete a consumer */
         delete: operations["delete-consumer"];
@@ -1543,6 +1594,26 @@ export interface paths {
          */
         post: operations["create-token"];
         delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/tokens/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Delete a revoked or expired HTTP token
+         * @description Removes the record so its name can be reused.
+         */
+        delete: operations["delete-token"];
         options?: never;
         head?: never;
         patch?: never;
@@ -2234,12 +2305,21 @@ export interface components {
             total: number;
         };
         ConsumerDTO: {
+            /**
+             * Format: uri
+             * @description A URL to the JSON Schema for this object.
+             * @example /api/admin/v1/schemas/ConsumerDTO.json
+             */
+            readonly $schema?: string;
             /** Format: int64 */
             ack_floor_stream_seq: number;
             ack_policy: string;
+            /** Format: int64 */
+            ack_wait_seconds: number;
             /** Format: date-time */
             created: string;
-            deliver_policy: string;
+            /** @enum {string} */
+            deliver_policy: "all" | "new" | "last" | "last_per_subject" | "by_start_sequence" | "by_start_time";
             /** Format: int64 */
             delivered_stream_seq: number;
             description: string;
@@ -2249,6 +2329,16 @@ export interface components {
             internal: boolean;
             /** Format: date-time */
             last_active?: string;
+            /**
+             * Format: int64
+             * @description -1: unlimited
+             */
+            max_ack_pending: number;
+            /**
+             * Format: int64
+             * @description -1: unlimited
+             */
+            max_deliver: number;
             name: string;
             /** Format: int64 */
             num_ack_pending: number;
@@ -2258,7 +2348,51 @@ export interface components {
             num_redelivered: number;
             /** Format: int64 */
             num_waiting: number;
+            /** Format: int64 */
+            opt_start_seq?: number;
+            /** Format: date-time */
+            opt_start_time?: string;
             paused: boolean;
+        };
+        ConsumerInput: {
+            /**
+             * Format: uri
+             * @description A URL to the JSON Schema for this object.
+             * @example /api/admin/v1/schemas/ConsumerInput.json
+             */
+            readonly $schema?: string;
+            /**
+             * Format: int64
+             * @description 0: server default (30 s)
+             */
+            ack_wait_seconds?: number;
+            /**
+             * @default all
+             * @enum {string}
+             */
+            deliver_policy: "all" | "new" | "last" | "last_per_subject" | "by_start_sequence" | "by_start_time";
+            description?: string;
+            filter_subjects: string[];
+            /**
+             * Format: int64
+             * @description 0: server default; -1: unlimited
+             */
+            max_ack_pending?: number;
+            /**
+             * Format: int64
+             * @description 0 or -1: unlimited
+             */
+            max_deliver?: number;
+            /**
+             * Format: int64
+             * @description Required with by_start_sequence
+             */
+            opt_start_seq?: number;
+            /**
+             * Format: date-time
+             * @description Required with by_start_time (RFC 3339)
+             */
+            opt_start_time?: string;
         };
         "Create-banRequest": {
             /**
@@ -2747,8 +2881,14 @@ export interface components {
             readonly $schema?: string;
             /** Format: int64 */
             bytes: number;
+            description: string;
             /** Format: int64 */
             history: number;
+            /**
+             * Format: int64
+             * @description -1: unlimited
+             */
+            max_bytes: number;
             name: string;
             /** Format: int64 */
             ttl_seconds: number;
@@ -2987,6 +3127,11 @@ export interface components {
             description?: string;
             /** @description Owned by pulsed (event blobs): read-only here */
             managed: boolean;
+            /**
+             * Format: int64
+             * @description -1: unlimited
+             */
+            max_bytes: number;
             name: string;
             sealed: boolean;
             /** Format: int64 */
@@ -3791,6 +3936,43 @@ export interface components {
             tags?: string[];
             /** Format: int64 */
             version: number;
+        };
+        "Update-kv-bucketRequest": {
+            /**
+             * Format: uri
+             * @description A URL to the JSON Schema for this object.
+             * @example /api/admin/v1/schemas/Update-kv-bucketRequest.json
+             */
+            readonly $schema?: string;
+            description?: string;
+            /**
+             * Format: int32
+             * @default 1
+             */
+            history: number;
+            /**
+             * Format: int64
+             * @description -1 or 0: unlimited
+             */
+            max_bytes?: number;
+            /** Format: int64 */
+            ttl_seconds?: number;
+        };
+        "Update-object-bucketRequest": {
+            /**
+             * Format: uri
+             * @description A URL to the JSON Schema for this object.
+             * @example /api/admin/v1/schemas/Update-object-bucketRequest.json
+             */
+            readonly $schema?: string;
+            description?: string;
+            /**
+             * Format: int64
+             * @description -1 or 0: unlimited
+             */
+            max_bytes?: number;
+            /** Format: int64 */
+            ttl_seconds?: number;
         };
         UpdateInput: {
             /**
@@ -5096,6 +5278,35 @@ export interface operations {
             };
         };
     };
+    "delete-client": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
     "client-connections": {
         parameters: {
             query?: never;
@@ -5998,6 +6209,72 @@ export interface operations {
             };
         };
     };
+    "get-kv-bucket": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                bucket: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["KVBucket"];
+                };
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
+    "update-kv-bucket": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                bucket: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["Update-kv-bucketRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["KVBucket"];
+                };
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
     "get-kv-entry": {
         parameters: {
             query: {
@@ -6218,6 +6495,72 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
+    "get-object-bucket": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                bucket: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ObjectBucket"];
+                };
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
+    "update-object-bucket": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                bucket: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["Update-object-bucketRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ObjectBucket"];
+                };
             };
             /** @description Error */
             default: {
@@ -7053,6 +7396,74 @@ export interface operations {
             };
         };
     };
+    "get-consumer": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                name: string;
+                consumer: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConsumerDTO"];
+                };
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
+    "put-consumer": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                name: string;
+                consumer: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ConsumerInput"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConsumerDTO"];
+                };
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
     "delete-consumer": {
         parameters: {
             query: {
@@ -7413,6 +7824,35 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["Create-tokenResponse"];
                 };
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
+    "delete-token": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Error */
             default: {

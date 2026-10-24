@@ -13,6 +13,7 @@ import (
 	"github.com/aurimasniekis/go-pulse/internal/natsauth"
 	"github.com/aurimasniekis/go-pulse/internal/sysapi"
 	"github.com/aurimasniekis/go-pulse/internal/tokens"
+	"github.com/aurimasniekis/go-pulse/internal/users"
 )
 
 // ClientDTO is a client plus its live connection count.
@@ -95,11 +96,18 @@ func clientErr(d *Deps, op string, err error) error {
 		return huma.Error409Conflict("client was changed by someone else; reload and retry")
 	case errors.Is(err, clients.ErrRevoked):
 		return huma.Error409Conflict("client is revoked")
+	case errors.Is(err, clients.ErrNotRevoked):
+		return preconditionErr(err.Error())
 	case errors.Is(err, clients.ErrInvalid):
 		return huma.Error422UnprocessableEntity(err.Error())
 	default:
 		return d.internalErr(op, err)
 	}
+}
+
+// preconditionErr is a 412 problem with the "precondition" code, as the users and SSO handlers return.
+func preconditionErr(msg string) error {
+	return toProblem(users.Errf(users.KindPrecondition, "%s", msg))
 }
 
 type clientPath struct {
@@ -188,6 +196,15 @@ func registerClients(api huma.API, d *Deps) {
 		func(ctx context.Context, in *clientPath) (*struct{}, error) {
 			if err := d.Clients.Revoke(ctx, in.ID, d.actor(ctx)); err != nil {
 				return nil, clientErr(d, "revoke-client", err)
+			}
+			return &struct{}{}, nil
+		})
+	huma.Register(api, huma.Operation{OperationID: "delete-client", Method: http.MethodDelete, Path: "/clients/{id}", Summary: "Delete a revoked client",
+		Description: "Removes the record so its name can be reused; the revocation of its credentials stays in force.", Tags: tags,
+		DefaultStatus: http.StatusNoContent},
+		func(ctx context.Context, in *clientPath) (*struct{}, error) {
+			if err := d.Clients.Delete(ctx, in.ID, d.actor(ctx)); err != nil {
+				return nil, clientErr(d, "delete-client", err)
 			}
 			return &struct{}{}, nil
 		})
@@ -284,6 +301,22 @@ func registerTokens(api huma.API, d *Deps) {
 			}
 			if err != nil {
 				return nil, d.internalErr("revoke-token", err)
+			}
+			return &struct{}{}, nil
+		})
+	huma.Register(api, huma.Operation{OperationID: "delete-token", Method: http.MethodDelete, Path: "/tokens/{id}", Summary: "Delete a revoked or expired HTTP token",
+		Description: "Removes the record so its name can be reused.", Tags: tags, DefaultStatus: http.StatusNoContent},
+		func(ctx context.Context, in *struct {
+			ID string `path:"id" pattern:"^[a-z0-9]{6,32}$"`
+		}) (*struct{}, error) {
+			err := d.Tokens.Delete(ctx, in.ID, d.actor(ctx))
+			switch {
+			case errors.Is(err, tokens.ErrNotFound):
+				return nil, huma.Error404NotFound("token not found")
+			case errors.Is(err, tokens.ErrActive):
+				return nil, preconditionErr(err.Error())
+			case err != nil:
+				return nil, d.internalErr("delete-token", err)
 			}
 			return &struct{}{}, nil
 		})

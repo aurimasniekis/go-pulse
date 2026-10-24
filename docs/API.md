@@ -56,6 +56,7 @@ Administration: `/users`, `/users/{id}` (+ `/reset-link`, `/sessions`, `/identit
 | GET/PUT/DELETE | `/streams/{name}` | Read, update, delete a user stream (EVENTS and blobs are managed) |
 | POST | `/streams` | Create a user stream; subjects may not overlap `evt.>`, `_sys.>`, `$…`, `_INBOX.>` |
 | GET | `/streams/{name}/consumers` | Consumers with pending/ack-pending/redelivery counts |
+| GET/PUT | `/streams/{name}/consumers/{consumer}` | Read / create or update a durable pull consumer (explicit ack; body: `description`, `filter_subjects` 1–16, `deliver_policy`, `opt_start_seq`, `opt_start_time`, `ack_wait_seconds`, `max_deliver`, `max_ack_pending`). Not on KV/object backing streams (422) or consumers pulsed created (409); immutable changes such as the deliver policy are refused (422) |
 | DELETE | `/streams/{name}/consumers/{consumer}` | Delete a consumer (`?confirm=`) |
 | GET | `/events` | Explorer page (see below) |
 | GET | `/events/{stream}/{seq}` | One event |
@@ -66,12 +67,13 @@ Administration: `/users`, `/users/{id}` (+ `/reset-link`, `/sessions`, `/identit
 | GET | `/subjects/tree` | One level of the subject tree below `prefix` |
 | GET | `/subjects/info` | One indexed subject with sampled JSON keys |
 | GET/POST | `/clients` | List clients (with live connection counts) / create a client and return its `.creds` once |
-| GET/PUT | `/clients/{id}` | Read / update name, description, tags (optimistic `version`) |
+| GET/PUT/DELETE | `/clients/{id}` | Read / update name, description, tags (optimistic `version`) / delete a revoked client's record so the name can be reused (412 while not revoked; the revocation stays in force) |
 | PUT | `/clients/{id}/grants` | Replace grants (no new creds; NATS reconnects live sessions) |
 | POST | `/clients/{id}/rotate` · `/revoke` · `/kick` | New creds (old revoked) · permanent revoke · disconnect |
 | GET | `/clients/{id}/connections` | Live connections from CONNZ |
 | GET/POST | `/tokens` | List / create an HTTP token (secret returned once) |
 | POST | `/tokens/{id}/revoke` | Revoke a token |
+| DELETE | `/tokens/{id}` | Delete a revoked or expired token so the name can be reused (412 while active) |
 | GET | `/audit` | Audit log, newest first; filters `action` (exact or `prefix.`), `actor`, `target`, `result`, `since`, `until`, `before_id` |
 
 ### Explorer (`GET /events`)
@@ -214,9 +216,11 @@ fails its integrity check, returns 422.
 
 Admin: `GET /kv` (KV and object buckets), `POST /kv`, `DELETE /kv/{bucket}?confirm=`, `GET /kv/{bucket}/keys?filter=&limit=`
 (latest revision per key; `truncated` when more exist), `GET|PUT|DELETE /kv/{bucket}/entry?key=` (value as utf8 or base64,
-history; `?purge=true` drops history), `POST /objects`, `DELETE /objects/{bucket}?confirm=`, `GET /objects/{bucket}`,
+history; `?purge=true` drops history), `GET|PUT /kv/{bucket}/config` (description, history 1–64, `ttl_seconds`,
+`max_bytes` with 0 or -1 for unlimited; omitted fields take their defaults), `POST /objects`, `DELETE /objects/{bucket}?confirm=`, `GET /objects/{bucket}`,
 `GET /objects/{bucket}/download?name=` (attachment, `nosniff`), `PUT /objects/{bucket}/upload?name=` (raw body ≤ 64 MiB),
-`DELETE /objects/{bucket}/object?name=`. The managed `blobs` store is read-only here (409). Every change is audited.
+`DELETE /objects/{bucket}/object?name=`, `GET|PUT /objects/{bucket}/config` (description, `ttl_seconds`, `max_bytes`).
+The managed `blobs` store is read-only here (409). Every change is audited.
 
 `GET /system/config` returns the effective configuration for the Settings page; secrets appear only as set / not set.
 

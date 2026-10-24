@@ -88,7 +88,15 @@ curl -s -X POST -H "Authorization: Bearer $PULSE_ADMIN_TOKEN" http://127.0.0.1:8
 | POST | `/streams` | Create a user stream (subjects may not overlap `evt.>`, `_sys.>`, `$…`, `_INBOX.>`) |
 | GET, PUT, DELETE | `/streams/{name}` | Read, update, delete a user stream (`DELETE` needs `confirm`) |
 | GET | `/streams/{name}/consumers` | Consumers with pending, ack-pending and redelivery counts |
+| GET, PUT | `/streams/{name}/consumers/{consumer}` | Read a consumer; create or update a durable pull consumer |
 | DELETE | `/streams/{name}/consumers/{consumer}` | Delete a consumer (`confirm`) |
+
+`PUT /streams/{name}/consumers/{consumer}` creates or updates a durable pull consumer with explicit acks, named by the
+path. The body takes `filter_subjects` (1–16, required, each within the stream's subjects), `description`,
+`deliver_policy` (`all`, the default, `new`, `last`, `last_per_subject`, `by_start_sequence` with `opt_start_seq`,
+`by_start_time` with `opt_start_time`), `ack_wait_seconds` (0: 30 s), `max_deliver` (0 or -1: unlimited) and
+`max_ack_pending` (0: server default). Consumers on KV and object store streams are refused (422), so are consumers
+pulsed created (409); NATS refuses changes to immutable settings such as the deliver policy (422).
 
 `GET /events` takes `stream` (default `EVENTS`), `subject` (repeatable, wildcards), `dir` (`backward`, the default, is
 newest first; `forward`), `start_seq`, `start_time` (forward only), `limit` (1–500), `type` (exact, or `(untyped)`),
@@ -111,7 +119,7 @@ more get 429.
 | Method | Path | Purpose |
 |---|---|---|
 | GET, POST | `/clients` | List clients (with live connection counts); create one and return its `.creds` once |
-| GET, PUT | `/clients/{id}` | Read; update name, description and tags |
+| GET, PUT, DELETE | `/clients/{id}` | Read; update name, description and tags; delete a revoked client so its name can be reused |
 | PUT | `/clients/{id}/grants` | Replace the grants (live; no new creds) |
 | POST | `/clients/{id}/rotate` | New creds; the old user key is revoked |
 | POST | `/clients/{id}/revoke` | Permanent revoke |
@@ -119,6 +127,7 @@ more get 429.
 | GET | `/clients/{id}/connections` | Live connections |
 | GET, POST | `/tokens` | List HTTP tokens; create one (the secret is returned once) |
 | POST | `/tokens/{id}/revoke` | Revoke a token |
+| DELETE | `/tokens/{id}` | Delete a revoked or expired token so its name can be reused |
 | GET | `/audit` | Audit log, newest first: `action` (exact, or a prefix ending in `.`), `actor`, `target`, `result`, `since`, `until`, `before_id`, `limit` |
 
 ### Webhooks
@@ -174,10 +183,12 @@ for that request only. A wrong identity, or an object that fails its integrity c
 |---|---|---|
 | GET, POST | `/kv` | List KV and object buckets; create a KV bucket |
 | DELETE | `/kv/{bucket}` | Delete a KV bucket (`confirm`) |
+| GET, PUT | `/kv/{bucket}/config` | A KV bucket's description, history, TTL and size limit; update them |
 | GET | `/kv/{bucket}/keys` | Keys with their latest revision (`filter`, `limit`; `truncated` when more exist) |
 | GET, PUT, DELETE | `/kv/{bucket}/entry?key=` | A value (utf8 or base64) and its history; set; delete (`purge=true` drops history) |
 | POST | `/objects` | Create an object store |
 | GET, DELETE | `/objects/{bucket}` | List objects; delete the store (`confirm`) |
+| GET, PUT | `/objects/{bucket}/config` | An object store's description, TTL and size limit; update them (not `blobs`) |
 | GET | `/objects/{bucket}/download?name=` | Download (attachment, `nosniff`) |
 | PUT | `/objects/{bucket}/upload?name=` | Upload a raw body up to 64 MiB |
 | DELETE | `/objects/{bucket}/object?name=` | Delete an object |

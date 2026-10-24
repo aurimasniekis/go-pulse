@@ -479,6 +479,25 @@
 - **Consequences:** code comments keep their IDs for traceability. GOAL.md, DECISIONS.md, THREAT_MODEL.md,
   TEST_STRATEGY.md, the status table and the acceptance checklist stay; the removed text remains in git history.
 
+### ADR-0040 — Terraform provider in its own repository; admin API additions for declarative management
+
+- **Status:** accepted (operator request, 2026-10-24). Not security-relevant: no requirement, guarantee or default
+  changes; the new operations sit behind the existing permissions (ADR-0038).
+- **Decision:** a Terraform provider (`aurimasniekis/terraform-provider-pulse`, terraform-plugin-framework, modelled on
+  terraform-provider-porch) manages clients, HTTP tokens, streams, consumers, KV and object buckets, webhooks, alert
+  rules, allowlist entries and bans, dashboard users, SSO providers and mappings and sign-in settings through the admin
+  API. It authenticates with an administrator personal access token, so it works only on the loopback admin listener
+  (on the server or through an SSH tunnel), like the CLI. Its acceptance tests run a real `pulsed` built from a pinned
+  Pulse commit.
+- The admin API gains what declarative management needs: `DELETE /clients/{id}` and `DELETE /tokens/{id}` remove a
+  revoked (or, for tokens, expired) record so its name can be used again (the client's revocation stays in
+  `client_revocations`); `GET`/`PUT /streams/{name}/consumers/{consumer}` read and create or update a durable pull
+  consumer (refusing internal consumers and KV/object backing streams, and filters outside the stream's subjects);
+  `GET`/`PUT /kv/{bucket}/config` and `/objects/{bucket}/config` read and update a bucket, whose DTOs now include
+  `description` and `max_bytes`.
+- **Consequences:** PATs stay loopback-only; running Terraform from CI therefore needs an SSH tunnel to the host.
+  Allowing PATs on the public dashboard would be a separate, security-relevant decision.
+
 ## 2. Open review items
 
 | ID | Item | Default until decided |

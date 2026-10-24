@@ -32,6 +32,8 @@ var (
 	ErrUnauthenticated = errors.New("invalid or missing token")
 	ErrNotFound        = errors.New("token not found")
 	ErrInvalid         = errors.New("invalid token request")
+	// ErrActive refuses deleting a token that is neither revoked nor expired.
+	ErrActive = errors.New("revoke the token first")
 )
 
 // DefaultExpiry for new tokens.
@@ -186,6 +188,27 @@ func (s *Service) Revoke(ctx context.Context, id string, actor audit.Actor) erro
 			return nil // already revoked
 		}
 		return audit.Insert(ctx, tx, actor, "token.revoke", id, audit.OK, nil)
+	})
+}
+
+// Delete removes a revoked or expired token so its name can be reused. An active token returns ErrActive.
+func (s *Service) Delete(ctx context.Context, id string, actor audit.Actor) error {
+	return s.db.Write(ctx, func(tx *sql.Tx) error {
+		var name string
+		var exp, revoked int64
+		err := tx.QueryRowContext(ctx, "SELECT name, expires_at, COALESCE(revoked_at, 0) FROM http_tokens WHERE id = ?", id).Scan(&name, &exp, &revoked)
+		switch {
+		case errors.Is(err, sql.ErrNoRows):
+			return ErrNotFound
+		case err != nil:
+			return err
+		case revoked == 0 && store.FromMs(exp).After(s.now()):
+			return ErrActive
+		}
+		if _, err := tx.ExecContext(ctx, "DELETE FROM http_tokens WHERE id = ?", id); err != nil {
+			return err
+		}
+		return audit.Insert(ctx, tx, actor, "token.delete", id, audit.OK, map[string]any{"name": name})
 	})
 }
 

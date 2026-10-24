@@ -1418,6 +1418,15 @@
       "ConsumerDTO": {
         "additionalProperties": false,
         "properties": {
+          "$schema": {
+            "description": "A URL to the JSON Schema for this object.",
+            "examples": [
+              "/api/admin/v1/schemas/ConsumerDTO.json"
+            ],
+            "format": "uri",
+            "readOnly": true,
+            "type": "string"
+          },
           "ack_floor_stream_seq": {
             "format": "int64",
             "minimum": 0,
@@ -1426,11 +1435,23 @@
           "ack_policy": {
             "type": "string"
           },
+          "ack_wait_seconds": {
+            "format": "int64",
+            "type": "integer"
+          },
           "created": {
             "format": "date-time",
             "type": "string"
           },
           "deliver_policy": {
+            "enum": [
+              "all",
+              "new",
+              "last",
+              "last_per_subject",
+              "by_start_sequence",
+              "by_start_time"
+            ],
             "type": "string"
           },
           "delivered_stream_seq": {
@@ -1458,6 +1479,16 @@
             "format": "date-time",
             "type": "string"
           },
+          "max_ack_pending": {
+            "description": "-1: unlimited",
+            "format": "int64",
+            "type": "integer"
+          },
+          "max_deliver": {
+            "description": "-1: unlimited",
+            "format": "int64",
+            "type": "integer"
+          },
           "name": {
             "type": "string"
           },
@@ -1478,6 +1509,15 @@
             "format": "int64",
             "type": "integer"
           },
+          "opt_start_seq": {
+            "format": "int64",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "opt_start_time": {
+            "format": "date-time",
+            "type": "string"
+          },
           "paused": {
             "type": "boolean"
           }
@@ -1489,6 +1529,9 @@
           "filter_subjects",
           "deliver_policy",
           "ack_policy",
+          "ack_wait_seconds",
+          "max_deliver",
+          "max_ack_pending",
           "created",
           "num_pending",
           "num_ack_pending",
@@ -1498,6 +1541,80 @@
           "ack_floor_stream_seq",
           "paused",
           "internal"
+        ],
+        "type": "object"
+      },
+      "ConsumerInput": {
+        "additionalProperties": false,
+        "properties": {
+          "$schema": {
+            "description": "A URL to the JSON Schema for this object.",
+            "examples": [
+              "/api/admin/v1/schemas/ConsumerInput.json"
+            ],
+            "format": "uri",
+            "readOnly": true,
+            "type": "string"
+          },
+          "ack_wait_seconds": {
+            "description": "0: server default (30 s)",
+            "format": "int64",
+            "maximum": 2147483647,
+            "minimum": 0,
+            "type": "integer"
+          },
+          "deliver_policy": {
+            "default": "all",
+            "enum": [
+              "all",
+              "new",
+              "last",
+              "last_per_subject",
+              "by_start_sequence",
+              "by_start_time"
+            ],
+            "type": "string"
+          },
+          "description": {
+            "maxLength": 512,
+            "type": "string"
+          },
+          "filter_subjects": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 16,
+            "minItems": 1,
+            "type": "array"
+          },
+          "max_ack_pending": {
+            "description": "0: server default; -1: unlimited",
+            "format": "int64",
+            "maximum": 2147483647,
+            "minimum": -1,
+            "type": "integer"
+          },
+          "max_deliver": {
+            "description": "0 or -1: unlimited",
+            "format": "int64",
+            "maximum": 2147483647,
+            "minimum": -1,
+            "type": "integer"
+          },
+          "opt_start_seq": {
+            "description": "Required with by_start_sequence",
+            "format": "int64",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "opt_start_time": {
+            "description": "Required with by_start_time (RFC 3339)",
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "filter_subjects"
         ],
         "type": "object"
       },
@@ -2764,7 +2881,15 @@
             "minimum": 0,
             "type": "integer"
           },
+          "description": {
+            "type": "string"
+          },
           "history": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "max_bytes": {
+            "description": "-1: unlimited",
             "format": "int64",
             "type": "integer"
           },
@@ -2784,10 +2909,12 @@
         },
         "required": [
           "name",
+          "description",
           "values",
           "bytes",
           "history",
-          "ttl_seconds"
+          "ttl_seconds",
+          "max_bytes"
         ],
         "type": "object"
       },
@@ -3387,6 +3514,11 @@
             "description": "Owned by pulsed (event blobs): read-only here",
             "type": "boolean"
           },
+          "max_bytes": {
+            "description": "-1: unlimited",
+            "format": "int64",
+            "type": "integer"
+          },
           "name": {
             "type": "string"
           },
@@ -3407,6 +3539,7 @@
           "name",
           "size",
           "ttl_seconds",
+          "max_bytes",
           "sealed",
           "managed"
         ],
@@ -5584,6 +5717,73 @@
         ],
         "type": "object"
       },
+      "Update-kv-bucketRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "$schema": {
+            "description": "A URL to the JSON Schema for this object.",
+            "examples": [
+              "/api/admin/v1/schemas/Update-kv-bucketRequest.json"
+            ],
+            "format": "uri",
+            "readOnly": true,
+            "type": "string"
+          },
+          "description": {
+            "maxLength": 256,
+            "type": "string"
+          },
+          "history": {
+            "default": 1,
+            "format": "int32",
+            "maximum": 64,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "max_bytes": {
+            "description": "-1 or 0: unlimited",
+            "format": "int64",
+            "minimum": -1,
+            "type": "integer"
+          },
+          "ttl_seconds": {
+            "format": "int64",
+            "minimum": 0,
+            "type": "integer"
+          }
+        },
+        "type": "object"
+      },
+      "Update-object-bucketRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "$schema": {
+            "description": "A URL to the JSON Schema for this object.",
+            "examples": [
+              "/api/admin/v1/schemas/Update-object-bucketRequest.json"
+            ],
+            "format": "uri",
+            "readOnly": true,
+            "type": "string"
+          },
+          "description": {
+            "maxLength": 256,
+            "type": "string"
+          },
+          "max_bytes": {
+            "description": "-1 or 0: unlimited",
+            "format": "int64",
+            "minimum": -1,
+            "type": "integer"
+          },
+          "ttl_seconds": {
+            "format": "int64",
+            "minimum": 0,
+            "type": "integer"
+          }
+        },
+        "type": "object"
+      },
       "UpdateInput": {
         "additionalProperties": false,
         "properties": {
@@ -7265,6 +7465,40 @@
       }
     },
     "/clients/{id}": {
+      "delete": {
+        "description": "Removes the record so its name can be reused; the revocation of its credentials stays in force.",
+        "operationId": "delete-client",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "pattern": "^[a-z0-9]{6,32}$",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Delete a revoked client",
+        "tags": [
+          "clients"
+        ]
+      },
       "get": {
         "operationId": "get-client",
         "parameters": [
@@ -8660,6 +8894,99 @@
         ]
       }
     },
+    "/kv/{bucket}/config": {
+      "get": {
+        "operationId": "get-kv-bucket",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "bucket",
+            "required": true,
+            "schema": {
+              "maxLength": 64,
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/KVBucket"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "A KV bucket's configuration",
+        "tags": [
+          "kv"
+        ]
+      },
+      "put": {
+        "description": "Replaces description, history, TTL and size limit; omitted fields take their defaults. Other settings are kept.",
+        "operationId": "update-kv-bucket",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "bucket",
+            "required": true,
+            "schema": {
+              "maxLength": 64,
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Update-kv-bucketRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/KVBucket"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Update a KV bucket",
+        "tags": [
+          "kv"
+        ]
+      }
+    },
     "/kv/{bucket}/entry": {
       "delete": {
         "operationId": "delete-kv-entry",
@@ -9005,6 +9332,99 @@
           }
         },
         "summary": "Objects in a store",
+        "tags": [
+          "kv"
+        ]
+      }
+    },
+    "/objects/{bucket}/config": {
+      "get": {
+        "operationId": "get-object-bucket",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "bucket",
+            "required": true,
+            "schema": {
+              "maxLength": 64,
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ObjectBucket"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "An object store's configuration",
+        "tags": [
+          "kv"
+        ]
+      },
+      "put": {
+        "description": "Replaces description, TTL and size limit; omitted fields take their defaults. Other settings are kept.",
+        "operationId": "update-object-bucket",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "bucket",
+            "required": true,
+            "schema": {
+              "maxLength": 64,
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Update-object-bucketRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ObjectBucket"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Update an object store",
         "tags": [
           "kv"
         ]
@@ -10135,6 +10555,115 @@
         "tags": [
           "streams"
         ]
+      },
+      "get": {
+        "operationId": "get-consumer",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "name",
+            "required": true,
+            "schema": {
+              "pattern": "^[A-Za-z0-9_-]{1,64}$",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "consumer",
+            "required": true,
+            "schema": {
+              "pattern": "^[A-Za-z0-9_-]{1,128}$",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConsumerDTO"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Get a consumer",
+        "tags": [
+          "streams"
+        ]
+      },
+      "put": {
+        "description": "The consumer name is the durable name; acks are explicit. NATS refuses changes to immutable settings such as the deliver policy.",
+        "operationId": "put-consumer",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "name",
+            "required": true,
+            "schema": {
+              "pattern": "^[A-Za-z0-9_-]{1,64}$",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "consumer",
+            "required": true,
+            "schema": {
+              "pattern": "^[A-Za-z0-9_-]{1,128}$",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConsumerInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConsumerDTO"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Create or update a durable pull consumer",
+        "tags": [
+          "streams"
+        ]
       }
     },
     "/subjects/info": {
@@ -10697,6 +11226,42 @@
           }
         },
         "summary": "Create an HTTP token",
+        "tags": [
+          "tokens"
+        ]
+      }
+    },
+    "/tokens/{id}": {
+      "delete": {
+        "description": "Removes the record so its name can be reused.",
+        "operationId": "delete-token",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "pattern": "^[a-z0-9]{6,32}$",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Delete a revoked or expired HTTP token",
         "tags": [
           "tokens"
         ]

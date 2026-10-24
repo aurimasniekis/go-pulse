@@ -21,11 +21,13 @@ import (
 
 // KVBucket is a key-value bucket in the APP account.
 type KVBucket struct {
-	Name       string `json:"name"`
-	Values     uint64 `json:"values" doc:"Stored values, including history and delete markers"`
-	Bytes      uint64 `json:"bytes"`
-	History    int64  `json:"history"`
-	TTLSeconds int64  `json:"ttl_seconds"`
+	Name        string `json:"name"`
+	Description string `json:"description"`
+	Values      uint64 `json:"values" doc:"Stored values, including history and delete markers"`
+	Bytes       uint64 `json:"bytes"`
+	History     int64  `json:"history"`
+	TTLSeconds  int64  `json:"ttl_seconds"`
+	MaxBytes    int64  `json:"max_bytes" doc:"-1: unlimited"`
 }
 
 // ObjectBucket is an object store bucket in the APP account.
@@ -34,6 +36,7 @@ type ObjectBucket struct {
 	Description string `json:"description,omitempty"`
 	Size        uint64 `json:"size"`
 	TTLSeconds  int64  `json:"ttl_seconds"`
+	MaxBytes    int64  `json:"max_bytes" doc:"-1: unlimited"`
 	Sealed      bool   `json:"sealed"`
 	Managed     bool   `json:"managed" doc:"Owned by pulsed (event blobs): read-only here"`
 }
@@ -107,6 +110,60 @@ func encodeValue(b []byte) (string, string) {
 
 func managedObjectStore(name string) bool { return name == natsauth.BlobsBucket }
 
+func kvBucketDTO(st jetstream.KeyValueStatus) KVBucket {
+	c := st.Config()
+	return KVBucket{Name: st.Bucket(), Description: c.Description, Values: st.Values(), Bytes: st.Bytes(), History: st.History(),
+		TTLSeconds: int64(st.TTL() / time.Second), MaxBytes: c.MaxBytes}
+}
+
+// objectStreamInfo returns the backing stream of an object store status (the nats.go implementation exposes it).
+func objectStreamInfo(st jetstream.ObjectStoreStatus) *jetstream.StreamInfo {
+	if s, ok := st.(interface{ StreamInfo() *jetstream.StreamInfo }); ok {
+		return s.StreamInfo()
+	}
+	return nil
+}
+
+func objectBucketDTO(st jetstream.ObjectStoreStatus) ObjectBucket {
+	b := ObjectBucket{Name: st.Bucket(), Description: st.Description(), Size: st.Size(), TTLSeconds: int64(st.TTL() / time.Second),
+		MaxBytes: -1, Sealed: st.Sealed(), Managed: managedObjectStore(st.Bucket())}
+	if si := objectStreamInfo(st); si != nil {
+		b.MaxBytes = si.Config.MaxBytes
+	}
+	return b
+}
+
+// userMetadata drops the _nats.* keys the server maintains itself, so an update does not send them back.
+func userMetadata(m map[string]string) map[string]string {
+	var out map[string]string
+	for k, v := range m {
+		if strings.HasPrefix(k, "_nats.") {
+			continue
+		}
+		if out == nil {
+			out = map[string]string{}
+		}
+		out[k] = v
+	}
+	return out
+}
+
+func unlimited(n int64) int64 {
+	if n == 0 {
+		return -1
+	}
+	return n
+}
+
+// kvWriteErr maps a bucket configuration change: NATS refusals become 422 with the server's description.
+func kvWriteErr(d *Deps, op string, err error) error {
+	var apiErr *jetstream.APIError
+	if !errors.Is(err, jetstream.ErrBucketNotFound) && !errors.Is(err, jetstream.ErrStreamNotFound) && errors.As(err, &apiErr) {
+		return huma.NewError(http.StatusUnprocessableEntity, apiErr.Description)
+	}
+	return kvErr(d, op, err)
+}
+
 func kvErr(d *Deps, op string, err error) error {
 	switch {
 	case errors.Is(err, jetstream.ErrBucketNotFound), errors.Is(err, jetstream.ErrStreamNotFound):
@@ -133,15 +190,14 @@ func registerKV(api huma.API, d *Deps) {
 			out := Buckets{KV: []KVBucket{}, Objects: []ObjectBucket{}}
 			kl := d.JS.KeyValueStores(ctx)
 			for st := range kl.Status() {
-				out.KV = append(out.KV, KVBucket{Name: st.Bucket(), Values: st.Values(), Bytes: st.Bytes(), History: st.History(), TTLSeconds: int64(st.TTL() / time.Second)})
+				out.KV = append(out.KV, kvBucketDTO(st))
 			}
 			if err := kl.Error(); err != nil {
 				return nil, kvErr(d, "list-buckets", err)
 			}
 			ol := d.JS.ObjectStores(ctx)
 			for st := range ol.Status() {
-				out.Objects = append(out.Objects, ObjectBucket{Name: st.Bucket(), Description: st.Description(), Size: st.Size(),
-					TTLSeconds: int64(st.TTL() / time.Second), Sealed: st.Sealed(), Managed: managedObjectStore(st.Bucket())})
+				out.Objects = append(out.Objects, objectBucketDTO(st))
 			}
 			if err := ol.Error(); err != nil {
 				return nil, kvErr(d, "list-buckets", err)
@@ -161,22 +217,67 @@ func registerKV(api huma.API, d *Deps) {
 			}
 		}) (*struct{ Body KVBucket }, error) {
 			b := in.Body
-			maxB := b.MaxBytes
-			if maxB == 0 {
-				maxB = -1
-			}
 			kv, err := d.JS.CreateKeyValue(ctx, jetstream.KeyValueConfig{Bucket: b.Name, Description: b.Description, History: max(b.History, 1),
-				TTL: time.Duration(b.TTLSeconds) * time.Second, MaxBytes: maxB, Storage: jetstream.FileStorage})
+				TTL: time.Duration(b.TTLSeconds) * time.Second, MaxBytes: unlimited(b.MaxBytes), Storage: jetstream.FileStorage})
 			if err != nil {
 				return nil, kvErr(d, "create-kv-bucket", err)
 			}
 			_ = audit.Write(ctx, d.DB, d.actor(ctx), "kv.create", b.Name, audit.OK, map[string]any{"history": b.History, "ttl_seconds": b.TTLSeconds})
-			st, _ := kv.Status(ctx)
-			out := KVBucket{Name: b.Name}
-			if st != nil {
-				out.History, out.TTLSeconds = st.History(), int64(st.TTL()/time.Second)
+			out := KVBucket{Name: b.Name, Description: b.Description, History: int64(max(b.History, 1)), TTLSeconds: b.TTLSeconds,
+				MaxBytes: unlimited(b.MaxBytes)}
+			if st, err := kv.Status(ctx); err == nil {
+				out = kvBucketDTO(st)
 			}
 			return &struct{ Body KVBucket }{out}, nil
+		})
+
+	huma.Register(api, huma.Operation{OperationID: "get-kv-bucket", Method: http.MethodGet, Path: "/kv/{bucket}/config", Summary: "A KV bucket's configuration",
+		Tags: tags},
+		func(ctx context.Context, in *bucketPath) (*struct{ Body KVBucket }, error) {
+			kv, err := d.JS.KeyValue(ctx, in.Bucket)
+			if err != nil {
+				return nil, kvErr(d, "get-kv-bucket", err)
+			}
+			st, err := kv.Status(ctx)
+			if err != nil {
+				return nil, kvErr(d, "get-kv-bucket", err)
+			}
+			return &struct{ Body KVBucket }{kvBucketDTO(st)}, nil
+		})
+	huma.Register(api, huma.Operation{OperationID: "update-kv-bucket", Method: http.MethodPut, Path: "/kv/{bucket}/config", Summary: "Update a KV bucket",
+		Description: "Replaces description, history, TTL and size limit; omitted fields take their defaults. Other settings are kept.", Tags: tags},
+		func(ctx context.Context, in *struct {
+			Bucket string `path:"bucket" maxLength:"64"`
+			Body   struct {
+				Description string `json:"description,omitempty" maxLength:"256"`
+				History     uint8  `json:"history,omitempty" minimum:"1" maximum:"64" default:"1"`
+				TTLSeconds  int64  `json:"ttl_seconds,omitempty" minimum:"0"`
+				MaxBytes    int64  `json:"max_bytes,omitempty" minimum:"-1" doc:"-1 or 0: unlimited"`
+			}
+		}) (*struct{ Body KVBucket }, error) {
+			kv, err := d.JS.KeyValue(ctx, in.Bucket)
+			if err != nil {
+				return nil, kvErr(d, "update-kv-bucket", err)
+			}
+			st, err := kv.Status(ctx)
+			if err != nil {
+				return nil, kvErr(d, "update-kv-bucket", err)
+			}
+			b := in.Body
+			cfg := st.Config()
+			cfg.Description, cfg.History, cfg.TTL, cfg.MaxBytes = b.Description, max(b.History, 1), time.Duration(b.TTLSeconds)*time.Second, unlimited(b.MaxBytes)
+			cfg.Metadata = userMetadata(cfg.Metadata)
+			kv, err = d.JS.UpdateKeyValue(ctx, cfg)
+			if err != nil {
+				_ = audit.Write(ctx, d.DB, d.actor(ctx), "kv.update", in.Bucket, audit.Error, map[string]any{"error": err.Error()})
+				return nil, kvWriteErr(d, "update-kv-bucket", err)
+			}
+			_ = audit.Write(ctx, d.DB, d.actor(ctx), "kv.update", in.Bucket, audit.OK,
+				map[string]any{"history": cfg.History, "ttl_seconds": b.TTLSeconds, "max_bytes": cfg.MaxBytes})
+			if st, err = kv.Status(ctx); err != nil {
+				return nil, kvErr(d, "update-kv-bucket", err)
+			}
+			return &struct{ Body KVBucket }{kvBucketDTO(st)}, nil
 		})
 
 	huma.Register(api, huma.Operation{OperationID: "delete-kv-bucket", Method: http.MethodDelete, Path: "/kv/{bucket}", Summary: "Delete a KV bucket",
@@ -317,16 +418,72 @@ func registerKV(api huma.API, d *Deps) {
 			}
 		}) (*struct{ Body ObjectBucket }, error) {
 			b := in.Body
-			maxB := b.MaxBytes
-			if maxB == 0 {
-				maxB = -1
-			}
-			if _, err := d.JS.CreateObjectStore(ctx, jetstream.ObjectStoreConfig{Bucket: b.Name, Description: b.Description,
-				TTL: time.Duration(b.TTLSeconds) * time.Second, MaxBytes: maxB, Storage: jetstream.FileStorage, Compression: true}); err != nil {
+			obs, err := d.JS.CreateObjectStore(ctx, jetstream.ObjectStoreConfig{Bucket: b.Name, Description: b.Description,
+				TTL: time.Duration(b.TTLSeconds) * time.Second, MaxBytes: unlimited(b.MaxBytes), Storage: jetstream.FileStorage, Compression: true})
+			if err != nil {
 				return nil, kvErr(d, "create-object-bucket", err)
 			}
 			_ = audit.Write(ctx, d.DB, d.actor(ctx), "object.create_bucket", b.Name, audit.OK, nil)
-			return &struct{ Body ObjectBucket }{ObjectBucket{Name: b.Name, Description: b.Description, TTLSeconds: b.TTLSeconds}}, nil
+			out := ObjectBucket{Name: b.Name, Description: b.Description, TTLSeconds: b.TTLSeconds, MaxBytes: unlimited(b.MaxBytes)}
+			if st, err := obs.Status(ctx); err == nil {
+				out = objectBucketDTO(st)
+			}
+			return &struct{ Body ObjectBucket }{out}, nil
+		})
+	huma.Register(api, huma.Operation{OperationID: "get-object-bucket", Method: http.MethodGet, Path: "/objects/{bucket}/config",
+		Summary: "An object store's configuration", Tags: tags},
+		func(ctx context.Context, in *bucketPath) (*struct{ Body ObjectBucket }, error) {
+			obs, err := d.JS.ObjectStore(ctx, in.Bucket)
+			if err != nil {
+				return nil, kvErr(d, "get-object-bucket", err)
+			}
+			st, err := obs.Status(ctx)
+			if err != nil {
+				return nil, kvErr(d, "get-object-bucket", err)
+			}
+			return &struct{ Body ObjectBucket }{objectBucketDTO(st)}, nil
+		})
+	huma.Register(api, huma.Operation{OperationID: "update-object-bucket", Method: http.MethodPut, Path: "/objects/{bucket}/config",
+		Summary: "Update an object store", Description: "Replaces description, TTL and size limit; omitted fields take their defaults. Other settings are kept.",
+		Tags: tags},
+		func(ctx context.Context, in *struct {
+			Bucket string `path:"bucket" maxLength:"64"`
+			Body   struct {
+				Description string `json:"description,omitempty" maxLength:"256"`
+				TTLSeconds  int64  `json:"ttl_seconds,omitempty" minimum:"0"`
+				MaxBytes    int64  `json:"max_bytes,omitempty" minimum:"-1" doc:"-1 or 0: unlimited"`
+			}
+		}) (*struct{ Body ObjectBucket }, error) {
+			if managedObjectStore(in.Bucket) {
+				return nil, huma.Error409Conflict(in.Bucket + " is managed by pulsed")
+			}
+			obs, err := d.JS.ObjectStore(ctx, in.Bucket)
+			if err != nil {
+				return nil, kvErr(d, "update-object-bucket", err)
+			}
+			st, err := obs.Status(ctx)
+			if err != nil {
+				return nil, kvErr(d, "update-object-bucket", err)
+			}
+			si := objectStreamInfo(st)
+			if si == nil {
+				return nil, d.internalErr("update-object-bucket", errors.New("object store status without stream info"))
+			}
+			b, c := in.Body, si.Config
+			cfg := jetstream.ObjectStoreConfig{Bucket: in.Bucket, Description: b.Description, TTL: time.Duration(b.TTLSeconds) * time.Second,
+				MaxBytes: unlimited(b.MaxBytes), Storage: c.Storage, Replicas: c.Replicas, Placement: c.Placement,
+				Compression: c.Compression != jetstream.NoCompression, Metadata: userMetadata(c.Metadata)}
+			obs, err = d.JS.UpdateObjectStore(ctx, cfg)
+			if err != nil {
+				_ = audit.Write(ctx, d.DB, d.actor(ctx), "object.update_bucket", in.Bucket, audit.Error, map[string]any{"error": err.Error()})
+				return nil, kvWriteErr(d, "update-object-bucket", err)
+			}
+			_ = audit.Write(ctx, d.DB, d.actor(ctx), "object.update_bucket", in.Bucket, audit.OK,
+				map[string]any{"ttl_seconds": b.TTLSeconds, "max_bytes": cfg.MaxBytes})
+			if st, err = obs.Status(ctx); err != nil {
+				return nil, kvErr(d, "update-object-bucket", err)
+			}
+			return &struct{ Body ObjectBucket }{objectBucketDTO(st)}, nil
 		})
 	huma.Register(api, huma.Operation{OperationID: "delete-object-bucket", Method: http.MethodDelete, Path: "/objects/{bucket}", Summary: "Delete an object store",
 		Tags: tags, DefaultStatus: http.StatusNoContent},

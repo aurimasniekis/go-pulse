@@ -53,6 +53,12 @@ versioning: [docs/VERSIONING.md](docs/VERSIONING.md).
   the dashboard optionally on the public listener on its own or the API hostname (`PULSE_ADMIN_PUBLIC`,
   `PULSE_ADMIN_PUBLIC_HOST`, `PULSE_ADMIN_URL`); `PULSE_SESSION_IDLE`, `PULSE_SESSION_MAX`, `PULSE_REAUTH_WINDOW`,
   `PULSE_MFA_REQUIRED_ROLES`; `pulse_dashboard_logins_total`; `make dev-admin`.
+- Admin API endpoints for declarative tooling (such as a Terraform provider): `DELETE /clients/{id}` and
+  `DELETE /tokens/{id}` remove revoked (or, for tokens, expired) records so their names can be reused, keeping client
+  revocations in force; `GET|PUT /streams/{name}/consumers/{consumer}` reads and creates or updates a durable pull
+  consumer; `GET|PUT /kv/{bucket}/config` and `GET|PUT /objects/{bucket}/config` read and update a bucket's
+  description, history, TTL and size limit. Consumers now report `ack_wait_seconds`, `max_deliver`, `max_ack_pending`
+  and the start position; KV buckets report `description` and `max_bytes`, object stores `max_bytes`.
 
 ### Changed
 - Example hostnames are `events.example.com` and `r.events.example.com` everywhere in the repository.

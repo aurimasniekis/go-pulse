@@ -40,6 +40,8 @@ var (
 	ErrConflict = errors.New("client was modified concurrently")
 	ErrRevoked  = errors.New("client is revoked")
 	ErrInvalid  = errors.New("invalid client")
+	// ErrNotRevoked refuses deleting a client that is not revoked.
+	ErrNotRevoked = errors.New("revoke the client first")
 )
 
 // Client is a tool identity.
@@ -293,6 +295,28 @@ func (s *Service) Revoke(ctx context.Context, id string, actor audit.Actor) erro
 	}
 	s.kickUser(ctx, c.UserKey)
 	return nil
+}
+
+// Delete removes the record of a revoked client so its name can be reused. Its client_revocations rows stay: they
+// keep the old user keys revoked in the APP account until the JWTs expire, so the account does not change and nothing
+// is pushed. A client that is not revoked (active or expired) returns ErrNotRevoked.
+func (s *Service) Delete(ctx context.Context, id string, actor audit.Actor) error {
+	return s.db.Write(ctx, func(tx *sql.Tx) error {
+		var name, status string
+		err := tx.QueryRowContext(ctx, "SELECT name, status FROM clients WHERE id = ?", id).Scan(&name, &status)
+		switch {
+		case errors.Is(err, sql.ErrNoRows):
+			return ErrNotFound
+		case err != nil:
+			return err
+		case status != StatusRevoked:
+			return ErrNotRevoked
+		}
+		if _, err := tx.ExecContext(ctx, "DELETE FROM clients WHERE id = ? AND status = 'revoked'", id); err != nil {
+			return err
+		}
+		return audit.Insert(ctx, tx, actor, "client.delete", id, audit.OK, map[string]any{"name": name})
+	})
 }
 
 // Kick disconnects every connection of a client (forces it to reconnect with current permissions). Returns the count.
