@@ -10,6 +10,7 @@
 
 web/node_modules/
 web/tools/
+web/e2e/
 web/test-results/
 web/playwright-report/
 internal/ui/dist/assets/
