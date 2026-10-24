@@ -10,7 +10,7 @@ GOVULNCHECK  ?= $(GO) run golang.org/x/vuln/cmd/govulncheck@v1.9.0
 DEV          := docker compose -f deploy/compose.dev.yaml -p pulse-dev
 
 .DEFAULT_GOAL := help
-.PHONY: help api test-nft test-acme web web-dev build build-go test race vet lint vuln secrets web-test check image dev-up dev-down dev-logs dev-reset spike e2e clean
+.PHONY: help api test-nft test-acme test-s3 drill web web-dev build build-go test race vet lint vuln secrets web-test check image dev-up dev-down dev-logs dev-reset spike e2e clean
 
 help: ## List targets
 	@awk 'BEGIN {FS = ":.*## "} /^[a-zA-Z_-]+:.*## / {printf "  \033[36m%-14s\033[0m %s\n", $$1, $$2}' $(MAKEFILE_LIST)
@@ -67,7 +67,13 @@ deploy/.dev/master.key:
 	@umask 022; openssl rand -hex 32 > $@
 	@echo "generated dev master key $@ (dev only, gitignored)"
 
-dev-up: deploy/.dev/master.key ## Start the dev stack (init, nats, pulsed)
+deploy/.dev/age.key:
+	@mkdir -p deploy/.dev
+	@umask 077; $(GO) run ./cmd/pulsed backup keygen > $@ 2>/dev/null
+	@grep '^# public key: ' $@ | sed 's/^# public key: //' > deploy/.dev/age.pub
+	@echo "generated dev backup identity $@ (dev only, gitignored; restore with it from the Backups page)"
+
+dev-up: deploy/.dev/master.key deploy/.dev/age.key ## Start the dev stack (init, nats, pulsed, alloy, seaweedfs)
 	$(DEV) up -d --build --wait
 
 dev-down: ## Stop the dev stack
@@ -84,6 +90,12 @@ test-nft: ## banagent against real nftables in a privileged Linux container (nee
 
 test-acme: ## ACME DNS-01 against pebble, NATS reload and served-cert check (needs Docker)
 	./scripts/test-acme.sh
+
+drill: ## Restore drill, the PL-BAK-007 release gate (embedded NATS; no Docker)
+	$(GO) test -race -count=1 -v -run TestRestoreDrill ./internal/backup/
+
+test-s3: ## Backups against a real S3 service (SeaweedFS in Docker)
+	$(GO) test -tags s3 -race -count=1 -v -run TestS3 ./internal/backup/
 
 spike: ## M2 sizing spike: ~10 GB / 5k subjects into NATS under mem_limit 900m (heavy; run only when intended)
 	./scripts/spike.sh

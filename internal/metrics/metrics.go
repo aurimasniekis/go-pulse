@@ -45,6 +45,10 @@ var (
 		Help: "Alert notifications, by notifier and result (sent, failed, suppressed)."}, []string{"notifier", "result"})
 	AlertTransitions = f.NewCounterVec(prometheus.CounterOpts{Name: "pulse_alert_transitions_total",
 		Help: "Alert state changes, by rule and state (firing, resolved)."}, []string{"rule", "state"})
+	Backups = f.NewCounterVec(prometheus.CounterOpts{Name: "pulse_backups_total",
+		Help: "Backup runs, by result (ok, failed)."}, []string{"result"})
+	BackupUploadedBytes = f.NewCounter(prometheus.CounterOpts{Name: "pulse_backup_uploaded_bytes_total",
+		Help: "Bytes uploaded by backups (encrypted, after deduplication)."})
 	ACMEAttempts = f.NewCounterVec(prometheus.CounterOpts{Name: "pulse_acme_attempts_total",
 		Help: "ACME issue/renew attempts, by result (ok, error)."}, []string{"result"})
 )

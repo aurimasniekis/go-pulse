@@ -170,8 +170,8 @@ Status values: `planned`, `in-progress`, `implemented`, `tested`, `externally-ve
 | M7 | Webhooks | tested | 26c5b2f |
 | M8 | Security and edge TLS | tested (VM/Cloudflare pending) | bb92060 |
 | M9 | ACME | tested against pebble (Let's Encrypt/Cloudflare pending) | 3155b52 |
-| M10 | Observability | tested (live Telegram/Discord pending) | (this commit) |
-| M11 | Backups | planned | |
+| M10 | Observability | tested (live Telegram/Discord pending) | fc24724 |
+| M11 | Backups | tested; gate PL-BAK-007 passed (production S3 pending) | (this commit) |
 | M12 | Remaining UI | planned | |
 | M13 | Python and TS SDKs | planned | |
 | M14 | Ansible (events-wan-lt) | planned | n/a (no commits in that repo) |
@@ -193,6 +193,7 @@ Status values: `planned`, `in-progress`, `implemented`, `tested`, `externally-ve
 | 2026-10-24 | M8 | Ban detector (NATS AUTH.ERR, HTTP 401, webhook signatures; window, ×4 escalation, never-ban), SQLite bans/allowlist, HTTP 403 middleware, banagent (long-poll feed, nftables interval sets with timeouts; real nft tested in a privileged container), Cloudflare IP-list reconciler (fake API), origin cert hot reload, AOP mTLS (handshake tests), Cloudflare-aware real IP, /ws proxy (NATS over websocket through the proxy), Security page. |
 | 2026-10-24 | M9 | ACME manager on lego (account by key from `keys.enc`, DNS-01 via Cloudflare or challtestsrv), ACME pair listed before the internal leaf in `nats.conf` and selected by SNI (ADR-0032 amends ADR-0023), atomic write → re-render → RELOAD → served-serial check over a raw INFO/TLS handshake, renewal at min(30 d, lifetime/3) (found with pebble's 6-day certificates), `GET /system/certificates`, System page (server, NATS, JetStream, certificates, ACME status). `make test-acme` runs pebble + challtestsrv in Docker against a real nats-server. Canceled requests now return 499 instead of logging a 500. `make secrets` was scanning 0 commits locally (global `color.ui=always` breaks gitleaks' log parser); it now runs with `GIT_CONFIG_GLOBAL=/dev/null` and scans all 9 commits clean. |
 | 2026-10-24 | M10 | Prometheus registry on the metrics listener (pulsed counters, scrape-time VARZ/JSZ/stream gauges, bounded route labels), alert engine (9 built-ins incl. `nats_down`, custom threshold rules on rollups, pending/firing/resolved in SQLite, reminders, `_sys.alert.<rule>` events, history pruned at 90 d), Telegram and Discord notifiers (file secrets, rate limit, retries, URL-free errors), alerts admin API + Alerts page, System page (runtime, VARZ, connections), Alloy in the dev stack (target verified `up`) and a reference prod config. Found: Huma ignores path params on embedded input structs (inlined); e2e overview test was flaky because earlier runs' domains tie in the top-10 (seeding now gives the run a clear lead). |
+| 2026-10-24 | M11 | Backups (ADR-0035). Gate PL-BAK-007 passed: NATS 2.15 snapshots are NATSARC1 and restore keeps sequences and timestamps; republishing keeps none (0/15). pulsed snapshots every APP stream, stores message records in sequence-anchored buckets (HMAC names, S2 + age, deduplicated: an unchanged night uploads ~7 KB), plus `pulse.db` (VACUUM INTO) and `keys.enc`; verification, GFS 7/4/12 with chunk GC, authenticated restore (manifest MAC, chunk HMACs; replace pre-checks all chunks), background restore jobs, `pulsed backup keygen|list|run|restore`, Backups page, `backup_stale` alert wired, SeaweedFS 4.48 in the dev stack, `make test-s3`. Found and fixed while testing: the end-of-snapshot message has no status header when the archive fits one chunk; a restore stream filter that opened up after the first match (regression test). |
 
 ## 6. Acceptance checklist (mapped to requirement IDs)
 
@@ -345,15 +346,15 @@ E browser E2E · C CI/static check · S spike/perf · R restore drill · X exter
 
 #### PL-BAK — Backups
 
-- [ ] `PL-BAK-001` Schedule — M11
-- [ ] `PL-BAK-002` Encryption — M11
-- [ ] `PL-BAK-003` SQLite and small streams — M11
-- [ ] `PL-BAK-004` EVENTS segments — M11
-- [ ] `PL-BAK-005` Retention — M11
-- [ ] `PL-BAK-006` Restore — M11
-- [ ] `PL-BAK-007` Timestamp preservation gate — M11
-- [ ] `PL-BAK-008` Catalog — M11
-- [ ] `PL-BAK-009` S3 compatibility — M11
+- [x] `PL-BAK-001` Schedule — M11 — ✅ tested: daily schedule (TestNextRun), "Back up now" (API, e2e backups.spec); dev stack runs nightly
+- [x] `PL-BAK-002` Encryption — M11 — ✅ tested: every object is age ciphertext and refs.json holds no names (TestBackupRestoreRoundTrip); identity per request only (TestBackupsAPI)
+- [x] `PL-BAK-003` SQLite and small streams — M11 — ✅ tested: pulse.db (VACUUM INTO) and keys.enc restored and opened; KV and object buckets restored (TestBackupRestoreRoundTrip)
+- [x] `PL-BAK-004` EVENTS segments — M11 — ✅ tested (as refined by ADR-0035): deduplicated NATSARC1 buckets; unchanged night uploads 0 chunks, +50 events 1 chunk (TestIncrementalDedupe, TestS3BackupRestore)
+- [x] `PL-BAK-005` Retention — M11 — ✅ tested: GFS selection (TestKeepSet), prune + chunk GC + catalog marking (TestPruneRemovesUnreferencedChunks)
+- [x] `PL-BAK-006` Restore — M11 — ✅ tested: dashboard dry run + restore (e2e backups.spec), CLI list/restore --all/--files dry runs against the dev stack, replace safety and tamper rejection (TestTamperAndWrongIdentity); new-server procedure documented, not yet rehearsed on a VM (X)
+- [x] `PL-BAK-007` Timestamp preservation gate — M11 — ✅ gate passed: internal/backup TestRestoreDrill (sequences, timestamps, payloads, durable ack floor and DeliverByStartTime replay identical after server-snapshot and pulsed-backup restores, latest and older backup)
+- [x] `PL-BAK-008` Catalog — M11 — ✅ tested: catalog with size, duration, status, verification (TestBackupsAPI, e2e)
+- [x] `PL-BAK-009` S3 compatibility — M11 — ◐ tested against SeaweedFS 4.48 with path-style (make test-s3); production provider pending (X)
 
 #### PL-DB — pulsed state database
 
@@ -394,7 +395,7 @@ E browser E2E · C CI/static check · S spike/perf · R restore drill · X exter
 - [ ] `PL-OPS-002` Commands — M0 — ◐ partial: version, healthcheck, init, serve, keys export, openapi, banagent implemented; banagent only unit/nft-container tested
 - [x] `PL-OPS-003` Configuration — M1 — ✅ tested: internal/config tests; docs/operator/configuration.md
 - [ ] `PL-OPS-004` Profiles — M1 — ◐ partial: prod refusals for admin exposure, plain master key, missing key, plain-HTTP public listener and missing AOP CA tested (internal/config); dev master key detection not applicable (prod requires *_FILE)
-- [ ] `PL-OPS-005` Dev stack — M1 — ◐ partial: deploy/compose.dev.yaml runs init → nats → pulsed (verified locally); Alloy added (M10); SeaweedFS (M11) pending; pebble runs in `make test-acme`, not in the dev stack (ADR-0032)
+- [ ] `PL-OPS-005` Dev stack — M1 — ◐ partial: deploy/compose.dev.yaml runs init → nats → pulsed (verified locally); Alloy (M10) and SeaweedFS (M11) added; pebble runs in `make test-acme`, not in the dev stack (ADR-0032)
 - [ ] `PL-OPS-006` Reference prod compose — M1 — ◐ implemented: deploy/examples/compose.yaml; banagent service depends on M8
 - [ ] `PL-OPS-007` CI — M0 — ◐ implemented: .github/workflows/ci.yaml (SHA-pinned, GOTOOLCHAIN=local); `make check` green locally; never run on GitHub (no remote)
 - [ ] `PL-OPS-008` Release — M0 — ◐ implemented: .github/workflows/release.yaml; not externally verified (no remote, no tag)
@@ -424,7 +425,7 @@ E browser E2E · C CI/static check · S spike/perf · R restore drill · X exter
 - [x] `PL-DOC-002` API docs — M3 — ✅ documented: docs/API.md
 - [x] `PL-DOC-003` Envelope docs — M2 — ✅ documented: docs/ENVELOPE.md
 - [ ] `PL-DOC-004` Sizing — M2 — ◐ docs/SIZING.md procedure + budget; results pending the spike run
-- [ ] `PL-DOC-005` Backups — M11
+- [x] `PL-DOC-005` Backups — M11 — ✅ docs/BACKUPS.md (format, layout, restore and DR procedure)
 
 ## 7. Risks
 

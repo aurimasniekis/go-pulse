@@ -40,10 +40,10 @@ func certExpiries(sources []api.CertSource) []alerts.Cert {
 }
 
 // setupObservability starts the alert engine and registers the scrape collector (PL-OBS-002/004).
-func (a *App) setupObservability(ctx context.Context, cfg *config.Config, deps *api.Deps) error {
+func (a *App) setupObservability(ctx context.Context, cfg *config.Config, deps *api.Deps, backupStatus func(context.Context) (alerts.BackupStatus, bool)) error {
 	certs := func() []alerts.Cert { return certExpiries(deps.CertSources) }
 	a.Alerts = alerts.New(a.DB, alerts.Providers{
-		JS: a.JS, Sys: a.Sys, Rollup: a.Rollup, Certs: certs,
+		JS: a.JS, Sys: a.Sys, Rollup: a.Rollup, Certs: certs, Backup: backupStatus,
 		NATSConnected: func() bool { return a.SysConn != nil && a.SysConn.IsConnected() },
 	}, alerts.Options{Interval: cfg.AlertInterval, Repeat: cfg.AlertRepeat, Publish: a.AppConn, Notifiers: notifiers(cfg, a), Log: a.Log.With("component", "alerts")})
 	if err := a.Alerts.Seed(ctx); err != nil {

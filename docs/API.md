@@ -178,3 +178,13 @@ Tools subscribe with a `subscribe` grant on `_sys.alert.>` (the only grantable `
 | `nats_jetstream_{storage,storage_max,memory}_bytes`, `nats_jetstream_{streams,consumers,messages}`, `nats_jetstream_api_{requests,errors}_total` | gauge/counter | — (JSZ) |
 
 Plus the Go and process collectors (`go_*`, `process_*`).
+
+## Backups (PL-BAK-006/008, ADR-0035)
+
+Admin: `GET /backups` (enabled, destination, schedule, retention, recipients, running operation, catalog, last
+restore), `POST /backups/run` (202; 409 while busy), `POST /backups/prune`, `GET /backups/remote` (complete backups in the
+object store, including earlier servers'), `POST /backups/{id}/plan` (dry run) and `POST /backups/{id}/restore`
+(202, background job; `replace` needs `?confirm=<id>`). Plan and restore take `{"identity": "AGE-SECRET-KEY-1…",
+"streams": [...], "replace": bool}`; the identity is used for that request only. A wrong identity, or an object that
+fails its integrity check, returns 422.
+

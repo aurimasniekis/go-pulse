@@ -20,6 +20,7 @@ import (
 	"github.com/aurimasniekis/go-pulse/internal/api"
 	"github.com/aurimasniekis/go-pulse/internal/audit"
 	"github.com/aurimasniekis/go-pulse/internal/auth"
+	"github.com/aurimasniekis/go-pulse/internal/backup"
 	"github.com/aurimasniekis/go-pulse/internal/ban"
 	"github.com/aurimasniekis/go-pulse/internal/bootstrap"
 	"github.com/aurimasniekis/go-pulse/internal/certs"
@@ -46,6 +47,7 @@ type App struct {
 	Keys     *bootstrap.KeySet
 	ACME     *acme.Manager
 	Alerts   *alerts.Engine
+	Backups  *backup.Service
 	SysConn  *nats.Conn
 	AppConn  *nats.Conn
 	JS       jetstream.JetStream
@@ -135,13 +137,9 @@ func Start(ctx context.Context, cfg *config.Config, log *slog.Logger) (*App, err
 	} else if pushed {
 		log.Info("APP account pushed to the resolver")
 	}
-	appJWT, appSeed, err := a.Keys.AppUser()
+	a.AppConn, err = connectApp(ctx, cfg, a.Keys, tlsConf, "pulsed-app", log)
 	if err != nil {
 		return nil, err
-	}
-	a.AppConn, err = natsconn.Connect(ctx, natsconn.Options{URL: cfg.NATSURL, TLS: tlsConf, JWT: appJWT, Seed: appSeed, Name: "pulsed-app", Logger: log})
-	if err != nil {
-		return nil, fmt.Errorf("connect APP: %w", err)
 	}
 	a.JS, err = jetstream.New(a.AppConn)
 	if err != nil {
@@ -190,7 +188,11 @@ func Start(ctx context.Context, cfg *config.Config, log *slog.Logger) (*App, err
 	}
 	deps.Started = time.Now().UTC()
 	deps.AccountNames = map[string]string{a.Keys.Pub(a.Keys.SysAccount): "SYS", a.Keys.Pub(a.Keys.AppAccount): "APP"}
-	if err := a.setupObservability(ctx, cfg, deps); err != nil {
+	backupStatus, err := a.setupBackups(cfg, deps)
+	if err != nil {
+		return nil, fmt.Errorf("backups: %w", err)
+	}
+	if err := a.setupObservability(ctx, cfg, deps, backupStatus); err != nil {
 		return nil, fmt.Errorf("observability: %w", err)
 	}
 	if err := a.serve(ctx, "admin", cfg.AdminAddr, api.NewAdmin(deps)); err != nil {
@@ -218,6 +220,32 @@ func Start(ctx context.Context, cfg *config.Config, log *slog.Logger) (*App, err
 	ok = true
 	log.Info("pulsed ready", "version", Version)
 	return a, nil
+}
+
+func connectApp(ctx context.Context, cfg *config.Config, keys *bootstrap.KeySet, tlsConf *tls.Config, name string, log *slog.Logger) (*nats.Conn, error) {
+	appJWT, appSeed, err := keys.AppUser()
+	if err != nil {
+		return nil, err
+	}
+	nc, err := natsconn.Connect(ctx, natsconn.Options{URL: cfg.NATSURL, TLS: tlsConf, JWT: appJWT, Seed: appSeed, Name: name, Logger: log})
+	if err != nil {
+		return nil, fmt.Errorf("connect APP: %w", err)
+	}
+	return nc, nil
+}
+
+// ConnectApp opens an APP-account connection as pulsed does (for `pulsed backup restore`). pulsed serve must have
+// pushed the APP account to the resolver at least once.
+func ConnectApp(ctx context.Context, cfg *config.Config, log *slog.Logger) (*nats.Conn, error) {
+	keys, err := bootstrap.LoadKeySet(cfg.Layout.KeysFile(), cfg.MasterKey)
+	if err != nil {
+		return nil, err
+	}
+	tlsConf, err := certs.ClientTLS(cfg.NATSTLSName, []byte(keys.CACert))
+	if err != nil {
+		return nil, err
+	}
+	return connectApp(ctx, cfg, keys, tlsConf, "pulsed-backup-cli", log)
 }
 
 // goLoop runs fn every interval until ctx ends. ctx is the app's loop context, deliberately not the startup ctx.

@@ -361,6 +361,32 @@
 - **Consequences:** Without remote_write the scrapes only feed Alloy's own UI (target health). Shipping metrics is a
   one-block change.
 
+### ADR-0035 — Backups: deduplicated NATSARC1 snapshots for every stream; the timestamp gate passes — refines PL-BAK-004
+- **Status:** accepted (M11). Gate PL-BAK-007 / RG-4 passed: `internal/backup` `TestRestoreDrill`.
+- **Findings:**
+  - NATS 2.15's snapshot API produces NATSARC1 (S2: `state.json`, `consumers/*`, message records with sequence and
+    timestamp, sentinel). Its restore stores each record with its archived sequence and timestamp (`StoreRawMsg`).
+  - Republishing events cannot do that: every publish is stamped "now". The drill shows 0/15 timestamps kept.
+  - So timestamps survive only if restores go through the restore API.
+- **Decision:**
+  - pulsed snapshots every APP stream nightly through the API and parses the records. Message records go into buckets
+    anchored to sequence windows of 1024, split at 16 MiB. Each bucket is stored once under its HMAC name, S2 + age.
+    The state and consumer records are inlined in the encrypted manifest.
+  - Restore rebuilds the archive (magic, state, consumers, buckets, sentinel) and streams it into the restore API.
+  - The daily upload is only the new records (the append-only daily segments of PL-BAK-004). Every backup is still a
+    complete snapshot, so the weekly full snapshot is unnecessary and dropped.
+  - `pulse.db` (`VACUUM INTO`) and `keys.enc` are whole-file objects. The master key is not backed up.
+  - Integrity: chunk HMAC names and the manifest MAC (keyed from the master key), file SHA-256s, and age. A
+    `--replace` restore checks every chunk before it deletes the stream.
+  - Retention: GFS 7/4/12 over complete backups (`refs.json`), then garbage-collect unreferenced chunks.
+  - The catalog is in SQLite; the object store is the source of truth, listable from a new server.
+  - Restores run in the background (one lock with backup and prune). The age identity is accepted per request and
+    never stored. Files are restored offline with the CLI (`--files`, guarded by the data-directory lock).
+- **Consequences:**
+  - The server reads and sends each stream in full every night (S2 over loopback). Fine at the planned size
+    (tens of GB); revisit if a stream grows far beyond that.
+  - A snapshot after a mid-window delete re-uploads that window.
+
 ## 2. Open review items
 
 | ID | Item | Default until decided |

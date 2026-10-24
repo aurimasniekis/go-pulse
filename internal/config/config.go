@@ -87,6 +87,24 @@ type Config struct {
 	DiscordWebhookURL   string
 	DiscordMinSeverity  string
 
+	// Backups (PL-BAK-001..009)
+	BackupEnabled        bool
+	BackupAt             string // HH:MM UTC
+	BackupKeepDaily      int
+	BackupKeepWeekly     int
+	BackupKeepMonthly    int
+	BackupAgeRecipients  string
+	BackupS3Endpoint     string
+	BackupS3Bucket       string
+	BackupS3Prefix       string
+	BackupS3Region       string
+	BackupS3Lookup       string // auto | path | virtual
+	BackupS3Insecure     bool
+	BackupS3CAFile       string
+	BackupS3CreateBucket bool
+	BackupS3AccessKey    string
+	BackupS3SecretKey    string
+
 	ShutdownTimeout time.Duration
 }
 
@@ -159,6 +177,31 @@ func Load(getenv Getenv) (*Config, error) {
 	c.TelegramMinSeverity = e.str("PULSE_TELEGRAM_MIN_SEVERITY", "warning")
 	c.DiscordMinSeverity = e.str("PULSE_DISCORD_MIN_SEVERITY", "warning")
 	for name, dst := range map[string]*string{"PULSE_TELEGRAM_BOT_TOKEN": &c.TelegramToken, "PULSE_DISCORD_WEBHOOK_URL": &c.DiscordWebhookURL} {
+		if v, err := e.secret(name, c.Profile == ProfileProd); err != nil {
+			e.errs = append(e.errs, err)
+		} else {
+			*dst = v
+		}
+	}
+	c.BackupEnabled = e.bool("PULSE_BACKUP_ENABLED", false)
+	c.BackupAt = e.str("PULSE_BACKUP_AT", "03:30")
+	c.BackupKeepDaily = e.int("PULSE_BACKUP_KEEP_DAILY", 7)
+	c.BackupKeepWeekly = e.int("PULSE_BACKUP_KEEP_WEEKLY", 4)
+	c.BackupKeepMonthly = e.int("PULSE_BACKUP_KEEP_MONTHLY", 12)
+	c.BackupS3Endpoint = e.str("PULSE_BACKUP_S3_ENDPOINT", "")
+	c.BackupS3Bucket = e.str("PULSE_BACKUP_S3_BUCKET", "")
+	c.BackupS3Prefix = e.str("PULSE_BACKUP_S3_PREFIX", "pulse/")
+	c.BackupS3Region = e.str("PULSE_BACKUP_S3_REGION", "us-east-1")
+	c.BackupS3Lookup = e.str("PULSE_BACKUP_S3_LOOKUP", "auto")
+	c.BackupS3Insecure = e.bool("PULSE_BACKUP_S3_INSECURE", false)
+	c.BackupS3CAFile = e.str("PULSE_BACKUP_S3_CA_FILE", "")
+	c.BackupS3CreateBucket = e.bool("PULSE_BACKUP_S3_CREATE_BUCKET", false)
+	if v, err := e.secret("PULSE_BACKUP_AGE_RECIPIENTS", false); err != nil { // public keys: plain or _FILE
+		e.errs = append(e.errs, err)
+	} else {
+		c.BackupAgeRecipients = v
+	}
+	for name, dst := range map[string]*string{"PULSE_BACKUP_S3_ACCESS_KEY": &c.BackupS3AccessKey, "PULSE_BACKUP_S3_SECRET_KEY": &c.BackupS3SecretKey} {
 		if v, err := e.secret(name, c.Profile == ProfileProd); err != nil {
 			e.errs = append(e.errs, err)
 		} else {
@@ -273,6 +316,28 @@ func (c *Config) Validate() error {
 		case "info", "warning", "critical":
 		default:
 			errs = append(errs, fmt.Errorf("%s must be info, warning or critical, got %q", k, v))
+		}
+	}
+	if c.BackupEnabled {
+		if c.BackupS3Endpoint == "" || c.BackupS3Bucket == "" || c.BackupS3AccessKey == "" || c.BackupS3SecretKey == "" {
+			errs = append(errs, errors.New("PULSE_BACKUP_ENABLED needs PULSE_BACKUP_S3_ENDPOINT, _BUCKET, _ACCESS_KEY_FILE and _SECRET_KEY_FILE"))
+		}
+		if strings.TrimSpace(c.BackupAgeRecipients) == "" {
+			errs = append(errs, errors.New("PULSE_BACKUP_ENABLED needs PULSE_BACKUP_AGE_RECIPIENTS(_FILE): backups are always encrypted (PL-BAK-002)"))
+		}
+		if _, err := time.Parse("15:04", c.BackupAt); err != nil {
+			errs = append(errs, fmt.Errorf("PULSE_BACKUP_AT must be HH:MM (UTC), got %q", c.BackupAt))
+		}
+		if c.BackupKeepDaily < 1 || c.BackupKeepWeekly < 0 || c.BackupKeepMonthly < 0 {
+			errs = append(errs, errors.New("backup retention: keep at least 1 daily; weekly and monthly must not be negative"))
+		}
+		switch c.BackupS3Lookup {
+		case "auto", "path", "virtual":
+		default:
+			errs = append(errs, fmt.Errorf("PULSE_BACKUP_S3_LOOKUP must be auto, path or virtual, got %q", c.BackupS3Lookup))
+		}
+		if c.Profile == ProfileProd && (c.BackupS3Insecure || c.BackupS3CreateBucket) {
+			errs = append(errs, errors.New("the prod profile refuses PULSE_BACKUP_S3_INSECURE and PULSE_BACKUP_S3_CREATE_BUCKET"))
 		}
 	}
 	if c.AlertInterval < 5*time.Second {

@@ -32,6 +32,9 @@ versioning: [docs/VERSIONING.md](docs/VERSIONING.md).
   threshold rules, `_sys.alert.<rule>` events and history; Telegram and Discord notifiers (`PULSE_TELEGRAM_*`,
   `PULSE_DISCORD_*`); Alerts page; System page with runtime, server stats and connections; Grafana Alloy in the dev
   stack and a reference config.
+- M11: nightly age-encrypted backups to S3 (`PULSE_BACKUP_*`): SQLite, `keys.enc` and every stream as NATSARC1
+  snapshots stored deduplicated; verification, GFS retention, authenticated restores from the Backups page and
+  `pulsed backup keygen|list|run|restore`; SeaweedFS in the dev stack.
 
 ### Fixed
 - Admin API requests canceled by the browser return 499 instead of logging an internal error.

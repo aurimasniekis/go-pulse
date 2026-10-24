@@ -6,9 +6,11 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
+	"github.com/aurimasniekis/go-pulse/internal/backup"
 	"github.com/aurimasniekis/go-pulse/internal/secretbox"
 	"github.com/aurimasniekis/go-pulse/internal/store"
 )
@@ -81,5 +83,24 @@ func TestInitAndKeysExport(t *testing.T) {
 	_ = db.R().QueryRow("SELECT COUNT(*) FROM audit WHERE action = 'keys.export'").Scan(&n)
 	if n != 1 {
 		t.Fatalf("audit records: %d", n)
+	}
+}
+
+func TestBackupKeygen(t *testing.T) {
+	cmd := newRootCmd()
+	var out, errOut bytes.Buffer
+	cmd.SetOut(&out)
+	cmd.SetErr(&errOut)
+	cmd.SetArgs([]string{"backup", "keygen"})
+	if err := cmd.Execute(); err != nil {
+		t.Fatal(err)
+	}
+	ids, err := backup.ParseIdentities(out.String())
+	if err != nil || len(ids) != 1 {
+		t.Fatalf("identity file does not parse: %v\n%s", err, out.String())
+	}
+	rcpt := strings.TrimSpace(strings.TrimPrefix(errOut.String(), "recipient:"))
+	if _, err := backup.ParseRecipients(rcpt); err != nil || !strings.Contains(out.String(), "# public key: "+rcpt) {
+		t.Fatalf("recipient %q: %v", rcpt, err)
 	}
 }

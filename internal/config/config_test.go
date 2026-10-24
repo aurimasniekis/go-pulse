@@ -158,3 +158,39 @@ func TestNotifiers(t *testing.T) {
 		}
 	}
 }
+
+func TestBackups(t *testing.T) {
+	kf := keyFile(t)
+	dir := t.TempDir()
+	ak, sk := filepath.Join(dir, "ak"), filepath.Join(dir, "sk")
+	_ = os.WriteFile(ak, []byte("AKID\n"), 0o600)
+	_ = os.WriteFile(sk, []byte("secret\n"), 0o600) // gitleaks:allow (test literal)
+	base := func(kv ...string) map[string]string {
+		m := map[string]string{"PULSE_MASTER_KEY_FILE": kf, "PULSE_PUBLIC_ADDR": "off", "PULSE_BACKUP_ENABLED": "true",
+			"PULSE_BACKUP_S3_ENDPOINT": "s3.example.test", "PULSE_BACKUP_S3_BUCKET": "pulse", "PULSE_BACKUP_S3_ACCESS_KEY_FILE": ak,
+			"PULSE_BACKUP_S3_SECRET_KEY_FILE": sk, "PULSE_BACKUP_AGE_RECIPIENTS": "age1example"}
+		for i := 0; i+1 < len(kv); i += 2 {
+			m[kv[i]] = kv[i+1]
+		}
+		return m
+	}
+	c, err := Load(env(base()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if c.BackupS3AccessKey != "AKID" || c.BackupAt != "03:30" || c.BackupKeepDaily != 7 || c.BackupS3Prefix != "pulse/" {
+		t.Fatalf("%+v", c)
+	}
+	for name, m := range map[string]map[string]string{
+		"no recipients":      base("PULSE_BACKUP_AGE_RECIPIENTS", ""),
+		"no bucket":          base("PULSE_BACKUP_S3_BUCKET", ""),
+		"bad time":           base("PULSE_BACKUP_AT", "25:99"),
+		"insecure in prod":   base("PULSE_BACKUP_S3_INSECURE", "true"),
+		"bad lookup":         base("PULSE_BACKUP_S3_LOOKUP", "magic"),
+		"no daily retention": base("PULSE_BACKUP_KEEP_DAILY", "0"),
+	} {
+		if _, err := Load(env(m)); err == nil {
+			t.Errorf("%s: accepted", name)
+		}
+	}
+}

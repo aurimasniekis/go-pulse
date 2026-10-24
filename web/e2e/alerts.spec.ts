@@ -7,8 +7,8 @@ test('alerts: built-in rules, custom dead-man rule, toggle, delete', async ({ pa
   await expect(rules.getByTestId('rule-cert_expiry')).toContainText('Certificate expiry')
   await page.getByRole('button', { name: 'Evaluate now' }).click()
   await expect(page.getByText(/Evaluated: \d+ firing/)).toBeVisible()
-  // Backups arrive with M11: the rule reports no data instead of firing or claiming ok.
-  await expect(rules.getByTestId('rule-backup_stale')).toContainText('no data')
+  // The dev stack backs up to SeaweedFS, so the backup rule has data and is healthy.
+  await expect(rules.getByTestId('rule-backup_stale')).toContainText(/ok$/)
 
   // A dead-man switch on a prefix nobody publishes to fires on the next evaluation.
   await page.getByRole('button', { name: 'New rule' }).click()

@@ -330,6 +330,269 @@
         ],
         "type": "object"
       },
+      "BackupFile": {
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "size": {
+            "format": "int64",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "name",
+          "size"
+        ],
+        "type": "object"
+      },
+      "BackupPlan": {
+        "additionalProperties": false,
+        "properties": {
+          "$schema": {
+            "description": "A URL to the JSON Schema for this object.",
+            "examples": [
+              "/api/admin/v1/schemas/BackupPlan.json"
+            ],
+            "format": "uri",
+            "readOnly": true,
+            "type": "string"
+          },
+          "created": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "files": {
+            "items": {
+              "$ref": "#/components/schemas/BackupFile"
+            },
+            "type": "array"
+          },
+          "id": {
+            "type": "string"
+          },
+          "pulsed_version": {
+            "type": "string"
+          },
+          "streams": {
+            "items": {
+              "$ref": "#/components/schemas/StreamPlan"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "id",
+          "created",
+          "pulsed_version",
+          "files",
+          "streams"
+        ],
+        "type": "object"
+      },
+      "BackupRecord": {
+        "additionalProperties": false,
+        "properties": {
+          "chunks_new": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "chunks_total": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "duration_ms": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "error": {
+            "type": "string"
+          },
+          "finished_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "logical_bytes": {
+            "description": "Size of everything the backup restores",
+            "format": "int64",
+            "type": "integer"
+          },
+          "pruned": {
+            "description": "Removed from the object store by retention",
+            "type": "boolean"
+          },
+          "started_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "running",
+              "ok",
+              "failed"
+            ],
+            "type": "string"
+          },
+          "streams": {
+            "items": {
+              "$ref": "#/components/schemas/StreamStats"
+            },
+            "type": "array"
+          },
+          "trigger": {
+            "enum": [
+              "schedule",
+              "manual"
+            ],
+            "type": "string"
+          },
+          "uploaded_bytes": {
+            "description": "What this run uploaded (new chunks and files)",
+            "format": "int64",
+            "type": "integer"
+          },
+          "verified": {
+            "type": "boolean"
+          },
+          "verify_error": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "trigger",
+          "status",
+          "started_at",
+          "duration_ms",
+          "logical_bytes",
+          "uploaded_bytes",
+          "chunks_total",
+          "chunks_new",
+          "streams",
+          "verified",
+          "pruned"
+        ],
+        "type": "object"
+      },
+      "BackupSettings": {
+        "additionalProperties": false,
+        "properties": {
+          "at": {
+            "description": "Daily schedule, HH:MM UTC",
+            "type": "string"
+          },
+          "keep": {
+            "$ref": "#/components/schemas/BackupSettingsKeepStruct"
+          },
+          "next_run": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "recipients": {
+            "description": "age recipients backups are encrypted to",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "running": {
+            "description": "backup, prune or restore while one runs",
+            "type": "string"
+          }
+        },
+        "required": [
+          "at",
+          "next_run",
+          "keep",
+          "recipients"
+        ],
+        "type": "object"
+      },
+      "BackupSettingsKeepStruct": {
+        "additionalProperties": false,
+        "properties": {
+          "daily": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "monthly": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "weekly": {
+            "format": "int64",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "daily",
+          "weekly",
+          "monthly"
+        ],
+        "type": "object"
+      },
+      "BackupStore": {
+        "additionalProperties": false,
+        "properties": {
+          "bucket": {
+            "type": "string"
+          },
+          "endpoint": {
+            "type": "string"
+          },
+          "prefix": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "endpoint",
+          "bucket",
+          "prefix"
+        ],
+        "type": "object"
+      },
+      "BackupsOverview": {
+        "additionalProperties": false,
+        "properties": {
+          "$schema": {
+            "description": "A URL to the JSON Schema for this object.",
+            "examples": [
+              "/api/admin/v1/schemas/BackupsOverview.json"
+            ],
+            "format": "uri",
+            "readOnly": true,
+            "type": "string"
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "last_restore": {
+            "$ref": "#/components/schemas/RestoreJob"
+          },
+          "records": {
+            "items": {
+              "$ref": "#/components/schemas/BackupRecord"
+            },
+            "type": "array"
+          },
+          "settings": {
+            "$ref": "#/components/schemas/BackupSettings"
+          },
+          "store": {
+            "$ref": "#/components/schemas/BackupStore"
+          }
+        },
+        "required": [
+          "enabled",
+          "store",
+          "records"
+        ],
+        "type": "object"
+      },
       "Ban": {
         "additionalProperties": false,
         "properties": {
@@ -2263,6 +2526,33 @@
         ],
         "type": "object"
       },
+      "RemoteBackup": {
+        "additionalProperties": false,
+        "properties": {
+          "chunks": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "created": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "logical_bytes": {
+            "format": "int64",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "created",
+          "logical_bytes",
+          "chunks"
+        ],
+        "type": "object"
+      },
       "Remove-allowRequest": {
         "additionalProperties": false,
         "properties": {
@@ -2282,6 +2572,94 @@
         },
         "required": [
           "network"
+        ],
+        "type": "object"
+      },
+      "RestoreInput": {
+        "additionalProperties": false,
+        "properties": {
+          "$schema": {
+            "description": "A URL to the JSON Schema for this object.",
+            "examples": [
+              "/api/admin/v1/schemas/RestoreInput.json"
+            ],
+            "format": "uri",
+            "readOnly": true,
+            "type": "string"
+          },
+          "identity": {
+            "description": "age identity (AGE-SECRET-KEY-1…), used for this request only",
+            "minLength": 10,
+            "type": "string",
+            "writeOnly": true
+          },
+          "replace": {
+            "description": "Delete existing streams first (needs ?confirm=\u003cbackup id\u003e)",
+            "type": "boolean"
+          },
+          "streams": {
+            "description": "Streams to restore; empty restores every stream in the backup",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "identity"
+        ],
+        "type": "object"
+      },
+      "RestoreJob": {
+        "additionalProperties": false,
+        "properties": {
+          "$schema": {
+            "description": "A URL to the JSON Schema for this object.",
+            "examples": [
+              "/api/admin/v1/schemas/RestoreJob.json"
+            ],
+            "format": "uri",
+            "readOnly": true,
+            "type": "string"
+          },
+          "backup_id": {
+            "type": "string"
+          },
+          "error": {
+            "type": "string"
+          },
+          "finished_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "replace": {
+            "type": "boolean"
+          },
+          "started_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "running",
+              "ok",
+              "failed"
+            ],
+            "type": "string"
+          },
+          "streams": {
+            "items": {
+              "$ref": "#/components/schemas/StreamPlan"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "backup_id",
+          "status",
+          "started_at",
+          "replace",
+          "streams"
         ],
         "type": "object"
       },
@@ -2909,6 +3287,61 @@
         ],
         "type": "object"
       },
+      "StreamPlan": {
+        "additionalProperties": false,
+        "properties": {
+          "action": {
+            "description": "What a restore with the given options does",
+            "enum": [
+              "restore",
+              "replace",
+              "skip"
+            ],
+            "type": "string"
+          },
+          "bytes": {
+            "format": "int64",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "exists": {
+            "description": "A stream with this name exists now; restoring needs replace",
+            "type": "boolean"
+          },
+          "first_seq": {
+            "format": "int64",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "last_seq": {
+            "format": "int64",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "msgs": {
+            "format": "int64",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "name": {
+            "type": "string"
+          },
+          "result": {
+            "description": "After a restore: restored, skipped or the error",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "msgs",
+          "bytes",
+          "first_seq",
+          "last_seq",
+          "exists",
+          "action"
+        ],
+        "type": "object"
+      },
       "StreamState": {
         "additionalProperties": false,
         "properties": {
@@ -2964,6 +3397,42 @@
           "consumers",
           "num_subjects",
           "num_deleted"
+        ],
+        "type": "object"
+      },
+      "StreamStats": {
+        "additionalProperties": false,
+        "properties": {
+          "bytes": {
+            "format": "int64",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "first_seq": {
+            "format": "int64",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "last_seq": {
+            "format": "int64",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "msgs": {
+            "format": "int64",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "name": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "msgs",
+          "bytes",
+          "first_seq",
+          "last_seq"
         ],
         "type": "object"
       },
@@ -3729,6 +4198,231 @@
         "summary": "Audit log",
         "tags": [
           "audit"
+        ]
+      }
+    },
+    "/backups": {
+      "get": {
+        "operationId": "get-backups",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BackupsOverview"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Backup catalog and settings",
+        "tags": [
+          "backups"
+        ]
+      }
+    },
+    "/backups/prune": {
+      "post": {
+        "operationId": "prune-backups",
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Apply retention now",
+        "tags": [
+          "backups"
+        ]
+      }
+    },
+    "/backups/remote": {
+      "get": {
+        "operationId": "list-remote-backups",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/RemoteBackup"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Complete backups in the object store (also those made by an earlier server)",
+        "tags": [
+          "backups"
+        ]
+      }
+    },
+    "/backups/run": {
+      "post": {
+        "operationId": "run-backup",
+        "responses": {
+          "202": {
+            "description": "Accepted"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Back up now (runs in the background)",
+        "tags": [
+          "backups"
+        ]
+      }
+    },
+    "/backups/{id}/plan": {
+      "post": {
+        "operationId": "plan-restore",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RestoreInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BackupPlan"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Dry run: what a restore would do",
+        "tags": [
+          "backups"
+        ]
+      }
+    },
+    "/backups/{id}/restore": {
+      "post": {
+        "operationId": "restore-backup",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Must repeat the backup id when replace is set",
+            "explode": false,
+            "in": "query",
+            "name": "confirm",
+            "schema": {
+              "description": "Must repeat the backup id when replace is set",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RestoreInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RestoreJob"
+                }
+              }
+            },
+            "description": "Accepted"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Restore streams from a backup (runs in the background)",
+        "tags": [
+          "backups"
         ]
       }
     },

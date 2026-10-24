@@ -11,7 +11,7 @@
 | E | Browser E2E | Playwright against `make dev-up` | `make e2e`, CI e2e workflow |
 | C | Static checks | golangci-lint, go vet, govulncheck, gitleaks, tsc | `make check`, CI |
 | S | Spike / performance | `cmd/pulse-spike` (M2), recorded in SIZING.md | manual, recorded |
-| R | Restore drill | Go test against SeaweedFS + embedded NATS (M11) | `make drill`, release gate |
+| R | Restore drill | Go test on embedded NATS through the real backup pipeline (`TestRestoreDrill`); S3 path covered by `make test-s3` | `make drill`, release gate |
 | X | External verification | `events-wan-lt/scripts/vm-verify.sh`, real Cloudflare | manual, recorded in PROGRESS.md |
 
 ## 2. Obligations per area
@@ -27,7 +27,7 @@
 | PL-BAN | U (windows, escalation, never-ban) + I (advisory → ban) + Linux-only nft test (privileged container) + X |
 | PL-HOOK | U (GitHub/Stripe doc vectors, HMAC, tolerance) + I (dispatcher retries against httptest, SSRF dialer) |
 | PL-OBS | U (route labels, notifier payloads/limits/secrecy, rule validation) + I (alert transitions on SQLite, alert events on NATS, /metrics scrape of a running app) + E (Alerts and System pages) + X (live Telegram/Discord) |
-| PL-BAK | R (restore drill incl. timestamp preservation) |
+| PL-BAK | R (restore drill incl. timestamp preservation: TestRestoreDrill) + I (pipeline on an in-memory store: dedupe, GFS, tamper, wrong identity) + Docker S3 test against SeaweedFS (`make test-s3`) + E (Backups page) |
 | PL-UI | U (vitest) + E (Playwright smoke for every page) |
 | PL-SDK | U (conformance) + I (interop e2e) |
 | PL-OPS | C + image build + container smoke in CI |
@@ -35,7 +35,7 @@
 ## 3. Rules
 
 - Tests generate their own keys, certificates and secrets at runtime. No secret fixtures.
-- Integration tests use random ports and temp dirs; no reliance on Docker except where noted (`make e2e`, `make drill`, `make test-nft`, `make test-acme`).
+- Integration tests use random ports and temp dirs; no reliance on Docker except where noted (`make e2e`, `make test-nft`, `make test-acme`, `make test-s3`).
 - Every bug fix adds a regression test.
 - Tests that issue `$SYS.REQ.SERVER.<id>.RELOAD` run a real `nats-server` subprocess built from the version pinned in
   `go.mod` (`natstest.Options{Process: true}`): the embedded server has an internal data race during config reload with

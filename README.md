@@ -19,6 +19,7 @@ Status: under construction; see [docs/PLAN.md](docs/PLAN.md) §5.2 for milestone
 | [docs/DECISIONS.md](docs/DECISIONS.md) | ADRs |
 | [docs/THREAT_MODEL.md](docs/THREAT_MODEL.md) | Threats and controls |
 | [docs/TEST_STRATEGY.md](docs/TEST_STRATEGY.md) | Test layers |
+| [docs/BACKUPS.md](docs/BACKUPS.md) | Backup format and restore procedures |
 | [docs/operator/](docs/operator) | Configuration contract and operations |
 
 ## Development

@@ -19,6 +19,7 @@ import (
 	"github.com/aurimasniekis/go-pulse/internal/alerts"
 	"github.com/aurimasniekis/go-pulse/internal/audit"
 	"github.com/aurimasniekis/go-pulse/internal/auth"
+	"github.com/aurimasniekis/go-pulse/internal/backup"
 	"github.com/aurimasniekis/go-pulse/internal/ban"
 	"github.com/aurimasniekis/go-pulse/internal/clients"
 	"github.com/aurimasniekis/go-pulse/internal/hooks"
@@ -77,6 +78,8 @@ type Deps struct {
 	Started     time.Time
 	// AccountNames maps account public keys to display names (SYS, APP).
 	AccountNames map[string]string
+	Backups      *backup.Service
+	BackupStore  BackupStore
 }
 
 func (d *Deps) accountNames() map[string]string {
@@ -145,6 +148,7 @@ func NewAdminAPI(mux *http.ServeMux, d *Deps) huma.API {
 	registerWebhooks(api, d)
 	registerSecurity(api, d)
 	registerAlerts(api, d)
+	registerBackups(api, d)
 	registerConnections(api, d)
 	return api
 }

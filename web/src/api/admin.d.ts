@@ -124,6 +124,108 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/backups": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Backup catalog and settings */
+        get: operations["get-backups"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/backups/prune": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Apply retention now */
+        post: operations["prune-backups"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/backups/remote": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Complete backups in the object store (also those made by an earlier server) */
+        get: operations["list-remote-backups"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/backups/run": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Back up now (runs in the background) */
+        post: operations["run-backup"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/backups/{id}/plan": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Dry run: what a restore would do */
+        post: operations["plan-restore"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/backups/{id}/restore": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Restore streams from a backup (runs in the background) */
+        post: operations["restore-backup"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/clients": {
         parameters: {
             query?: never;
@@ -912,6 +1014,95 @@ export interface components {
              */
             next?: number;
         };
+        BackupFile: {
+            name: string;
+            /** Format: int64 */
+            size: number;
+        };
+        BackupPlan: {
+            /**
+             * Format: uri
+             * @description A URL to the JSON Schema for this object.
+             * @example /api/admin/v1/schemas/BackupPlan.json
+             */
+            readonly $schema?: string;
+            /** Format: date-time */
+            created: string;
+            files: components["schemas"]["BackupFile"][];
+            id: string;
+            pulsed_version: string;
+            streams: components["schemas"]["StreamPlan"][];
+        };
+        BackupRecord: {
+            /** Format: int64 */
+            chunks_new: number;
+            /** Format: int64 */
+            chunks_total: number;
+            /** Format: int64 */
+            duration_ms: number;
+            error?: string;
+            /** Format: date-time */
+            finished_at?: string;
+            id: string;
+            /**
+             * Format: int64
+             * @description Size of everything the backup restores
+             */
+            logical_bytes: number;
+            /** @description Removed from the object store by retention */
+            pruned: boolean;
+            /** Format: date-time */
+            started_at: string;
+            /** @enum {string} */
+            status: "running" | "ok" | "failed";
+            streams: components["schemas"]["StreamStats"][];
+            /** @enum {string} */
+            trigger: "schedule" | "manual";
+            /**
+             * Format: int64
+             * @description What this run uploaded (new chunks and files)
+             */
+            uploaded_bytes: number;
+            verified: boolean;
+            verify_error?: string;
+        };
+        BackupSettings: {
+            /** @description Daily schedule, HH:MM UTC */
+            at: string;
+            keep: components["schemas"]["BackupSettingsKeepStruct"];
+            /** Format: date-time */
+            next_run: string;
+            /** @description age recipients backups are encrypted to */
+            recipients: string[];
+            /** @description backup, prune or restore while one runs */
+            running?: string;
+        };
+        BackupSettingsKeepStruct: {
+            /** Format: int64 */
+            daily: number;
+            /** Format: int64 */
+            monthly: number;
+            /** Format: int64 */
+            weekly: number;
+        };
+        BackupStore: {
+            bucket: string;
+            endpoint: string;
+            prefix: string;
+        };
+        BackupsOverview: {
+            /**
+             * Format: uri
+             * @description A URL to the JSON Schema for this object.
+             * @example /api/admin/v1/schemas/BackupsOverview.json
+             */
+            readonly $schema?: string;
+            enabled: boolean;
+            last_restore?: components["schemas"]["RestoreJob"];
+            records: components["schemas"]["BackupRecord"][];
+            settings?: components["schemas"]["BackupSettings"];
+            store: components["schemas"]["BackupStore"];
+        };
         Ban: {
             /**
              * Format: uri
@@ -1647,6 +1838,15 @@ export interface components {
             seq: number;
             stream: string;
         };
+        RemoteBackup: {
+            /** Format: int64 */
+            chunks: number;
+            /** Format: date-time */
+            created: string;
+            id: string;
+            /** Format: int64 */
+            logical_bytes: number;
+        };
         "Remove-allowRequest": {
             /**
              * Format: uri
@@ -1655,6 +1855,38 @@ export interface components {
              */
             readonly $schema?: string;
             network: string;
+        };
+        RestoreInput: {
+            /**
+             * Format: uri
+             * @description A URL to the JSON Schema for this object.
+             * @example /api/admin/v1/schemas/RestoreInput.json
+             */
+            readonly $schema?: string;
+            /** @description age identity (AGE-SECRET-KEY-1…), used for this request only */
+            identity: string;
+            /** @description Delete existing streams first (needs ?confirm=<backup id>) */
+            replace?: boolean;
+            /** @description Streams to restore; empty restores every stream in the backup */
+            streams?: string[];
+        };
+        RestoreJob: {
+            /**
+             * Format: uri
+             * @description A URL to the JSON Schema for this object.
+             * @example /api/admin/v1/schemas/RestoreJob.json
+             */
+            readonly $schema?: string;
+            backup_id: string;
+            error?: string;
+            /** Format: date-time */
+            finished_at?: string;
+            replace: boolean;
+            /** Format: date-time */
+            started_at: string;
+            /** @enum {string} */
+            status: "running" | "ok" | "failed";
+            streams: components["schemas"]["StreamPlan"][];
         };
         "Rotate-clientRequest": {
             /**
@@ -1910,6 +2142,26 @@ export interface components {
             storage: "file" | "memory";
             subjects: string[];
         };
+        StreamPlan: {
+            /**
+             * @description What a restore with the given options does
+             * @enum {string}
+             */
+            action: "restore" | "replace" | "skip";
+            /** Format: int64 */
+            bytes: number;
+            /** @description A stream with this name exists now; restoring needs replace */
+            exists: boolean;
+            /** Format: int64 */
+            first_seq: number;
+            /** Format: int64 */
+            last_seq: number;
+            /** Format: int64 */
+            msgs: number;
+            name: string;
+            /** @description After a restore: restored, skipped or the error */
+            result?: string;
+        };
         StreamState: {
             /** Format: int64 */
             bytes: number;
@@ -1929,6 +2181,17 @@ export interface components {
             num_deleted: number;
             /** Format: int64 */
             num_subjects: number;
+        };
+        StreamStats: {
+            /** Format: int64 */
+            bytes: number;
+            /** Format: int64 */
+            first_seq: number;
+            /** Format: int64 */
+            last_seq: number;
+            /** Format: int64 */
+            msgs: number;
+            name: string;
         };
         SubjectInfo: {
             /**
@@ -2300,6 +2563,191 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AuditPage"];
+                };
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
+    "get-backups": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BackupsOverview"];
+                };
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
+    "prune-backups": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
+    "list-remote-backups": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RemoteBackup"][];
+                };
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
+    "run-backup": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Accepted */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
+    "plan-restore": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RestoreInput"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BackupPlan"];
+                };
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
+    "restore-backup": {
+        parameters: {
+            query?: {
+                /** @description Must repeat the backup id when replace is set */
+                confirm?: string;
+            };
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RestoreInput"];
+            };
+        };
+        responses: {
+            /** @description Accepted */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RestoreJob"];
                 };
             };
             /** @description Error */

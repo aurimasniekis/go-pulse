@@ -100,6 +100,22 @@ Notifiers send at most 20 (Telegram) / 25 (Discord) messages per minute with a s
 as suppressed and the next delivered message says how many were dropped. Tokens and webhook URLs never appear in logs
 or API errors. Rules are edited on the Alerts page; their settings live in SQLite.
 
+## Backups (PL-BAK-001..009, ADR-0035)
+
+| Variable | Default | Meaning |
+|---|---|---|
+| `PULSE_BACKUP_ENABLED` | `false` | Nightly encrypted backups to S3 ([BACKUPS.md](../BACKUPS.md)). |
+| `PULSE_BACKUP_AT` | `03:30` | Daily start time, HH:MM UTC. |
+| `PULSE_BACKUP_KEEP_DAILY` / `_WEEKLY` / `_MONTHLY` | `7` / `4` / `12` | GFS retention. |
+| `PULSE_BACKUP_AGE_RECIPIENTS` or `_FILE` | — | age recipients (`age1…`, comma- or newline-separated) from `pulsed backup keygen`. Required. |
+| `PULSE_BACKUP_S3_ENDPOINT` | — | `host[:port]` of the S3-compatible service. |
+| `PULSE_BACKUP_S3_BUCKET` / `_PREFIX` | — / `pulse/` | Bucket (must exist) and key prefix. |
+| `PULSE_BACKUP_S3_REGION` | `us-east-1` | Region for signing. |
+| `PULSE_BACKUP_S3_LOOKUP` | `auto` | `path` or `virtual` (host) style addressing. |
+| `PULSE_BACKUP_S3_ACCESS_KEY_FILE` / `_SECRET_KEY_FILE` | — | Credentials (files in prod). Least privilege: list/get/put/delete on the prefix. |
+| `PULSE_BACKUP_S3_CA_FILE` | — | Extra CA for a private S3 endpoint. |
+| `PULSE_BACKUP_S3_INSECURE` / `_CREATE_BUCKET` | `false` | Plain HTTP and bucket creation; dev only (refused in prod). |
+
 ## Files the deployment provides
 
 | Secret / file | Used by | Notes |
@@ -110,6 +126,7 @@ or API errors. Rules are edited on the Alerts page; their settings live in SQLit
 | Cloudflare ban-list token | pulsed | optional, `PULSE_CF_BANLIST_TOKEN_FILE`. |
 | Cloudflare ACME DNS token | pulsed | with ACME, `PULSE_ACME_CF_TOKEN_FILE`. |
 | Telegram bot token, Discord webhook URL | pulsed | optional, `PULSE_TELEGRAM_BOT_TOKEN_FILE`, `PULSE_DISCORD_WEBHOOK_URL_FILE`. |
+| Backup S3 credentials | pulsed | `PULSE_BACKUP_S3_ACCESS_KEY_FILE`, `PULSE_BACKUP_S3_SECRET_KEY_FILE`. The age **identity** never goes on the server. |
 | Alloy config | alloy | `deploy/examples/config.alloy` (scrapes `127.0.0.1:9464` and the host; no remote_write). |
 
-More secrets (S3, age recipients) are added with M11.
+

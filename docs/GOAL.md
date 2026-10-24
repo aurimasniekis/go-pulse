@@ -286,8 +286,8 @@ Requirement IDs are stable: `PL-<AREA>-NNN`. They are never reused or renumbered
 |---|---|
 | PL-BAK-001 | **Schedule.** Nightly backups at a configurable time. |
 | PL-BAK-002 | **Encryption.** Every backup object is encrypted with age to configured recipients before upload. The identity is not stored on the server. |
-| PL-BAK-003 | **SQLite and small streams.** The SQLite database is snapshotted online with `VACUUM INTO`. Non-EVENTS streams and KV/Object Store buckets get full snapshots via the JetStream snapshot API. |
-| PL-BAK-004 | **EVENTS segments.** EVENTS is backed up as append-only daily segments (NATSARC1 format: length-prefixed records with subject, headers, data, sequence and timestamp), plus a weekly full snapshot. |
+| PL-BAK-003 | **SQLite and small streams.** The SQLite database is snapshotted online with `VACUUM INTO`. Non-EVENTS streams and KV/Object Store buckets get full snapshots via the JetStream snapshot API. `keys.enc` (sealed) is included. |
+| PL-BAK-004 | **EVENTS segments.** EVENTS is backed up as append-only daily segments (NATSARC1 format: length-prefixed records with subject, headers, data, sequence and timestamp). As refined by ADR-0035, the segments are deduplicated buckets of the nightly snapshot's records: each night uploads only new records, and every backup is a complete snapshot (this replaces the separate weekly full snapshot). |
 | PL-BAK-005 | **Retention.** GFS pruning: 7 daily, 4 weekly, 12 monthly. |
 | PL-BAK-006 | **Restore.** Restore from the dashboard and the CLI, into the same or a fresh server, with a dry-run listing. |
 | PL-BAK-007 | **Timestamp preservation gate.** A restore drill test proves that restored events keep their original timestamps so `DeliverByStartTime` replay works. If segments cannot preserve timestamps, the fallback (full snapshots only) is recorded in DECISIONS.md. |

@@ -1,0 +1,9 @@
+{
+  "identities": [
+    {
+      "name": "pulse-dev",
+      "credentials": [{ "accessKey": "pulse-dev", "secretKey": "pulse-dev-not-a-secret" }],
+      "actions": ["Admin", "Read", "Write", "List", "Tagging"]
+    }
+  ]
+}

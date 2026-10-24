@@ -225,3 +225,12 @@ export function useConnections() {
     refetchInterval: 10_000,
   })
 }
+
+export function useBackups() {
+  return useQuery({
+    queryKey: ['backups'],
+    queryFn: async () => unwrap(await admin.GET('/backups')),
+    // Poll faster while a backup or restore runs.
+    refetchInterval: (q) => (q.state.data?.settings?.running || q.state.data?.last_restore?.status === 'running' ? 2_000 : 15_000),
+  })
+}
