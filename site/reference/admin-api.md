@@ -6,29 +6,53 @@ The full OpenAPI 3.1 description is generated from the code:
 API that tools use is described in [HTTP API](/clients/http)
 ([`api/public.openapi.json`](https://github.com/aurimasniekis/go-pulse/blob/main/api/public.openapi.json)).
 
-## Listener and access
+## Listeners and authentication
 
 | | |
 |---|---|
-| Listener | `PULSE_ADMIN_ADDR`, default `127.0.0.1:8080`; published on host loopback only |
-| Base path | `/api/admin/v1` (the dashboard is served at `/`) |
-| Authentication | None (`PULSE_AUTH_MODE=none`). Reach it with `ssh -L 8080:127.0.0.1:8080 <vps>` |
+| Listeners | The loopback admin listener (`PULSE_ADMIN_ADDR`, default `127.0.0.1:8080`, published on host loopback only, reached with `ssh -L 8080:127.0.0.1:8080 <vps>`); with `PULSE_ADMIN_PUBLIC=true` also the dashboard host on the public listener (behind Cloudflare and AOP) |
+| Base path | `/api/admin/v1` (the dashboard is served at `/`; SSO redirects use `/auth/oidc/…`) |
+| Authentication | A signed-in user's session cookie, or a personal access token (loopback listener only). See [Users and single sign-on](/operators/users) |
 
-Because there is no login, the listener defends against the browser being used against it:
+Every operation needs a permission that the user's roles grant (administrator, operator, auditor, viewer); otherwise
+**403**. Without a session the answer is **401**.
 
-- **CSRF header.** Every `POST`, `PUT`, `PATCH` and `DELETE` must send `X-Pulse-CSRF: 1` (without it: 403). Browsers cannot add it to a
-  cross-site form or a simple request.
-- **Host allowlist.** Only `Host` values `127.0.0.1`, `localhost`, `::1` (with any port) and `PULSE_ADMIN_HOSTS` are
-  accepted; anything else gets **421**. This stops DNS-rebinding pages from talking to the tunnel.
-- **No CORS**, a strict Content-Security-Policy and `X-Frame-Options: DENY` on every response.
+**Browser sessions.** `POST /auth/login` with `{"email","password"}` sets the session cookie (`__Host-pulse_session` on
+https, `pulse_session` on the plain-http loopback listener) and returns `{mfa_pending, must_enroll, me}`; finish with
+`POST /auth/mfa` (or TOTP enrollment). `GET /auth/me` returns the user, their permissions and the session's
+`csrf_token`. Every `POST`, `PUT`, `PATCH` and `DELETE` with a session must send:
+
+- `X-Pulse-CSRF: <csrf_token>` (the session's token; without it or with a wrong one: 403), and
+- an `Origin` equal to the dashboard's own origin (browsers send it; cross-site requests get 403).
+
+**Personal access tokens** for scripts and the CLI: `Authorization: Bearer pulse_pat_…`. Accepted only on the loopback
+listener (401 on the public dashboard), no CSRF token or Origin needed, limited to the token's role while the user
+still holds it.
+
+**Errors** carry a stable `code` next to the RFC 9457 fields:
+
+| `code` | Status | Meaning |
+|---|---|---|
+| `unauthorized` | 401 | No valid session or token; sign in |
+| `reauth_required` | 401 | The action needs a sign-in from the last `PULSE_REAUTH_WINDOW` (5 min): `POST /auth/reauth` or an SSO step-up, then retry |
+| `mfa_required` | 401 | Same, with a second factor (or the session still waits for its TOTP code) |
+| `forbidden` | 403 | Missing permission, CSRF token or same origin |
+| `invalid`, `not_found`, `conflict`, `precondition`, `rate_limited`, `unavailable` | 422, 404, 409, 412, 429, 503 | As named |
+
+Other protections:
+
+- **Host allowlist** on the loopback listener: only `127.0.0.1`, `localhost`, `::1` (any port) and `PULSE_ADMIN_HOSTS`;
+  anything else gets **421** (DNS rebinding). The public listener routes only the configured dashboard host.
+- **No CORS**, a strict Content-Security-Policy and `X-Frame-Options: DENY` on every response; HSTS on https.
 - **Confirmation.** Destructive calls take `?confirm=<name>` that repeats the target's name: deleting a stream, a
   consumer, a KV bucket or an object store, and a restore with `replace` (the backup id).
 
-Every change is written to the audit log with the actor.
+Every change is written to the audit log with the user (and the token, for token calls) as actor.
 
 ```sh
-curl -s http://127.0.0.1:8080/api/admin/v1/system/info | jq .version
-curl -s -X POST http://127.0.0.1:8080/api/admin/v1/backups/run -H 'X-Pulse-CSRF: 1'
+export PULSE_ADMIN_TOKEN=pulse_pat_…   # Account → Personal access tokens
+curl -s -H "Authorization: Bearer $PULSE_ADMIN_TOKEN" http://127.0.0.1:8080/api/admin/v1/system/info | jq .version
+curl -s -X POST -H "Authorization: Bearer $PULSE_ADMIN_TOKEN" http://127.0.0.1:8080/api/admin/v1/backups/run
 ```
 
 ## Conventions
@@ -47,7 +71,7 @@ curl -s -X POST http://127.0.0.1:8080/api/admin/v1/backups/run -H 'X-Pulse-CSRF:
 
 | Method | Path | Purpose |
 |---|---|---|
-| GET | `/system/info` | Version, profile, auth mode, NATS connection and server stats, JetStream usage, pulsed runtime, connect info |
+| GET | `/system/info` | Version, profile, NATS connection and server stats, JetStream usage, pulsed runtime, connect info |
 | GET | `/system/connections` | NATS connections across accounts, busiest first (`sort`, `limit`) |
 | GET | `/system/certificates` | Every certificate (names, issuer, serial, expiry, days left) and the ACME status |
 | GET | `/system/config` | Effective configuration for the Settings page; secrets only as set / not set |
@@ -159,3 +183,44 @@ for that request only. A wrong identity, or an object that fails its integrity c
 | DELETE | `/objects/{bucket}/object?name=` | Delete an object |
 
 The managed `blobs` store is read-only here (409).
+
+### Sign-in and account
+
+| Method | Path | Purpose |
+|---|---|---|
+| GET | `/auth/config` | Sign-in options: password sign-in on or off, SSO providers, whether SSO runs on this origin, whether the first administrator is still missing (public) |
+| POST | `/auth/login` | Email and password; sets the session cookie (public) |
+| POST | `/auth/mfa` | Finish signing in with a TOTP or recovery code |
+| POST | `/auth/logout` | End the session; may return the provider's logout URL |
+| GET | `/auth/me` | The user, permissions, session and CSRF token |
+| POST | `/auth/reauth`, `/auth/reauth/totp` | Confirm it is you (password and code, or TOTP for SSO sessions whose provider allows it) |
+| POST | `/auth/setup`, `/auth/recover` | Redeem the setup token (`pulsed admin bootstrap`) or a break-glass token (`pulsed admin recover`) (public) |
+| POST | `/auth/invitations/{token}/accept`, `/auth/reset/{token}` | Accept an invitation, set a password with a password link (public) |
+| GET, DELETE | `/account/sessions`, `/account/sessions/{id}` | Your sessions; end one |
+| POST | `/account/password` | Change your password |
+| POST, DELETE | `/account/totp/begin`, `/account/totp/confirm`, `/account/totp` | Enroll, replace or remove TOTP |
+| POST | `/account/recovery-codes` | New recovery codes (shown once) |
+| GET | `/account/identities` | Your linked SSO identities |
+| GET, POST, DELETE | `/account/tokens`, `/account/tokens/{id}` | Your personal access tokens (the secret is returned once) |
+
+SSO itself is a browser redirect: `GET /auth/oidc/{provider}/start?purpose=login|stepup|test|link&return_to=…` and
+`GET /auth/oidc/callback`.
+
+### Users and single sign-on
+
+| Method | Path | Purpose |
+|---|---|---|
+| GET, POST | `/users` | List users; create one (no password: send a password link or link an SSO identity) |
+| GET, PATCH, DELETE | `/users/{id}` | Read; change name, roles, status or MFA requirement; delete |
+| POST | `/users/{id}/reset-link` | Single-use password link (1 h, shown once) |
+| GET, DELETE | `/users/{id}/sessions` | The user's sessions; sign them out everywhere |
+| POST | `/users/{id}/clear-throttle` | Clear sign-in throttling |
+| GET, DELETE | `/users/{id}/tokens`, `/users/{id}/tokens/{token}` | The user's personal access tokens; revoke one |
+| GET, POST, DELETE | `/users/{id}/identities` | Linked SSO identities; link one (provider and subject); unlink (`issuer`, `subject`) |
+| POST | `/users/{id}/link-invite` | Single-use link that binds the next SSO login to this user (72 h) |
+| GET, POST, DELETE | `/invitations`, `/invitations/{id}` | Pending invitations; invite by email with roles (link shown once); revoke |
+| GET, POST | `/sso/providers` | SSO providers (with the redirect URI to register); add one |
+| GET, PUT, DELETE | `/sso/providers/{id}` | Read; change (with `version`; the client secret is write-only); remove |
+| GET, POST, DELETE | `/sso/providers/{id}/mappings`, `/sso/providers/{id}/mappings/{mapping}` | Group → role mappings |
+| GET | `/sso/providers/{id}/test-result` | The result of your latest test login with that provider |
+| GET, PUT | `/sso/settings` | Password sign-in on or off (SSO-only) |

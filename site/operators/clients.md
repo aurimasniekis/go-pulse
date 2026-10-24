@@ -47,7 +47,8 @@ each event. The consumer name is always prefixed with the client ID, so one clie
 
 ## Create a client
 
-On the **Clients** page: **New client**, a name, a description, tags and grants. Or through the tunnel:
+On the **Clients** page (operators and administrators): **New client**, a name, a description, tags and grants. Or
+through the tunnel with a [personal access token](/operators/users#personal-access-tokens):
 
 ```sh
 pulse clients create door-bot \

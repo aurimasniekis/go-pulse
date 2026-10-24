@@ -8,6 +8,7 @@ import { admin, unwrap } from '@/api/client'
 import { useSecurity } from '@/api/queries'
 import { ErrorAlert } from '@/components/ErrorAlert'
 import { PageHeader } from '@/components/PageHeader'
+import { Can } from '@/components/Can'
 import { formatTime, timeAgo } from '@/lib/format'
 import { notifyErr, notifyOk } from '@/lib/notify'
 
@@ -104,14 +105,14 @@ function Security() {
         title="Security"
         description="Automatic bans from failed NATS logins, bad HTTP tokens and bad webhook signatures, enforced in pulsed and nftables."
         actions={
-          <>
+          <Can perm="security.write">
             <Button variant="default" leftSection={<IconShieldCheck size={14} />} onClick={() => setAllowing(true)}>
               Allow network
             </Button>
             <Button color="red" variant="light" leftSection={<IconBan size={14} />} onClick={() => setBanning(true)}>
               Ban network
             </Button>
-          </>
+          </Can>
         }
       />
       <ErrorAlert error={sec.error} />
@@ -166,11 +167,13 @@ function Security() {
                       <Table.Td>{untilText(b.expires_at)}</Table.Td>
                       <Table.Td ta="right">{b.offences}</Table.Td>
                       <Table.Td>
-                        <Tooltip label="Lift ban">
-                          <ActionIcon aria-label={`Lift ban on ${b.network}`} onClick={() => lift.mutate(b.network)}>
-                            <IconLockOpen size={14} />
-                          </ActionIcon>
-                        </Tooltip>
+                        <Can perm="security.write">
+                          <Tooltip label="Lift ban">
+                            <ActionIcon aria-label={`Lift ban on ${b.network}`} onClick={() => lift.mutate(b.network)}>
+                              <IconLockOpen size={14} />
+                            </ActionIcon>
+                          </Tooltip>
+                        </Can>
                       </Table.Td>
                     </Table.Tr>
                   ))}
@@ -255,9 +258,11 @@ function Security() {
                         {timeAgo(a.created_at)} by {a.actor}
                       </Table.Td>
                       <Table.Td>
-                        <ActionIcon color="red" aria-label={`Remove ${a.network} from the allowlist`} onClick={() => disallow.mutate(a.network)}>
-                          <IconTrash size={14} />
-                        </ActionIcon>
+                        <Can perm="security.write">
+                          <ActionIcon color="red" aria-label={`Remove ${a.network} from the allowlist`} onClick={() => disallow.mutate(a.network)}>
+                            <IconTrash size={14} />
+                          </ActionIcon>
+                        </Can>
                       </Table.Td>
                     </Table.Tr>
                   ))}

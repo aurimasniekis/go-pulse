@@ -20,8 +20,11 @@ The threats Pulse defends against, and the residual risks it accepts, are in
 [docs/THREAT_MODEL.md](docs/THREAT_MODEL.md) and on the [security page](https://aurimasniekis.github.io/go-pulse/security/).
 In particular:
 
-- The dashboard has no login (`PULSE_AUTH_MODE=none`). It binds to host loopback and is reached through an SSH
-  tunnel; anyone with a shell on the host is an administrator.
+- Every dashboard request needs a signed-in user (password with TOTP, or OIDC single sign-on) whose role allows it.
+  The dashboard is reachable through an SSH tunnel and, when enabled, behind Cloudflare. A session can do what its role
+  allows until it expires; sensitive actions ask for a fresh sign-in after 5 minutes.
+- An identity provider (or whoever controls it) can sign in any identity linked to it, with the mapped roles.
+- Anyone with a shell on the host and the master key can issue a break-glass recovery login (`pulsed admin recover`).
 - Root on the host can read the master key and `keys.enc`, and so mint any credential.
 - Events are not encrypted at rest inside NATS; disk encryption is the host's job. Backups are age-encrypted.
 - A client can read every event on the subjects it is granted.
@@ -30,6 +33,7 @@ In particular:
 ## Hardening references
 
 - Deployment, secrets and the SSH tunnel: [docs/operator/deployment.md](docs/operator/deployment.md)
+- Dashboard users, TOTP and single sign-on: [docs/operator/users.md](docs/operator/users.md)
 - Keys and credentials: [docs/operator/keys.md](docs/operator/keys.md)
 - Firewall and bans: [docs/operator/firewall.md](docs/operator/firewall.md), [docs/operator/bans.md](docs/operator/bans.md)
 - TLS and Cloudflare Authenticated Origin Pulls: [docs/operator/tls.md](docs/operator/tls.md)

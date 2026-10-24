@@ -10,5 +10,5 @@
 | [bans.md](bans.md) | Detection, escalation, enforcement and lifting bans |
 | [backups.md](backups.md) | Running and checking backups; restores (details in [../BACKUPS.md](../BACKUPS.md)) |
 | [upgrades.md](upgrades.md) | Releases, digests, migrations, rollback |
-| [sso.md](sso.md) | The admin authentication seam and the future OIDC mode |
+| [users.md](users.md) | Dashboard users, roles, TOTP, single sign-on, access tokens, break-glass |
 | [troubleshooting.md](troubleshooting.md) | Symptoms and fixes |

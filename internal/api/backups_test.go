@@ -17,7 +17,7 @@ import (
 func TestBackupsAPI(t *testing.T) {
 	h := newHarness(t)
 	base := h.admin.URL + AdminPrefix
-	csrf := map[string]string{CSRFHeader: "1"}
+	csrf := csrfH
 	// Disabled: the page says so, actions return 503.
 	_, body := do(t, http.MethodGet, base+"/backups", "", nil)
 	if !strings.Contains(body, `"enabled":false`) {

@@ -4,6 +4,177 @@
  */
 
 export interface paths {
+    "/account/identities": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** My linked SSO identities */
+        get: operations["list-my-identities"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/account/password": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Change my password */
+        post: operations["change-my-password"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/account/recovery-codes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Replace my recovery codes (shown once) */
+        post: operations["regenerate-recovery-codes"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/account/sessions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** My active sessions */
+        get: operations["list-my-sessions"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/account/sessions/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Sign out one of my sessions */
+        delete: operations["revoke-my-session"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/account/tokens": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** My personal access tokens */
+        get: operations["list-my-tokens"];
+        put?: never;
+        /** Create a personal access token for the pulse CLI (loopback listener only) */
+        post: operations["create-my-token"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/account/tokens/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Revoke one of my tokens */
+        delete: operations["revoke-my-token"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/account/totp": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Remove my second factor */
+        delete: operations["disable-totp"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/account/totp/begin": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Start TOTP enrollment (secret shown once) */
+        post: operations["begin-totp"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/account/totp/confirm": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Finish TOTP enrollment */
+        post: operations["confirm-totp"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/alerts": {
         parameters: {
             query?: never;
@@ -118,6 +289,193 @@ export interface paths {
         get: operations["list-audit"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/config": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Sign-in options */
+        get: operations["get-auth-config"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/invitations/{token}/accept": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Accept an invitation and set a password */
+        post: operations["accept-invitation"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/login": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Sign in with email and password */
+        post: operations["login"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/logout": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Sign out */
+        post: operations["logout"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/me": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The signed-in user */
+        get: operations["get-me"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/mfa": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Finish signing in with a second factor */
+        post: operations["verify-mfa"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/reauth": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Confirm it is you (password, and code when enrolled) */
+        post: operations["reauth"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/reauth/totp": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Confirm it is you with TOTP (SSO sessions whose provider allows it) */
+        post: operations["reauth-totp"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/recover": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Redeem a break-glass recovery token (pulsed admin recover) */
+        post: operations["recover-login"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/reset/{token}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Set a password with a reset link */
+        post: operations["reset-password"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/setup": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Create the first administrator with the setup token */
+        post: operations["setup"];
         delete?: never;
         options?: never;
         head?: never;
@@ -552,6 +910,41 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/invitations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Pending invitations */
+        get: operations["list-invitations"];
+        put?: never;
+        /** Invite someone by email with preset roles (link shown once) */
+        post: operations["create-invitation"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/invitations/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Revoke an invitation */
+        delete: operations["revoke-invitation"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/kv": {
         parameters: {
             query?: never;
@@ -814,6 +1207,113 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/sso/providers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** SSO providers */
+        get: operations["list-sso-providers"];
+        put?: never;
+        /** Add an SSO provider */
+        post: operations["create-sso-provider"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/sso/providers/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** An SSO provider */
+        get: operations["get-sso-provider"];
+        /** Change an SSO provider */
+        put: operations["update-sso-provider"];
+        post?: never;
+        /** Remove an SSO provider */
+        delete: operations["delete-sso-provider"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/sso/providers/{id}/mappings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Group → role mappings */
+        get: operations["list-sso-mappings"];
+        put?: never;
+        /** Map a group to a role */
+        post: operations["add-sso-mapping"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/sso/providers/{id}/mappings/{mapping}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Remove a mapping */
+        delete: operations["delete-sso-mapping"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/sso/providers/{id}/test-result": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The result of my latest test login with this provider */
+        get: operations["get-sso-test-result"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/sso/settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Sign-in settings */
+        get: operations["get-auth-settings"];
+        /** Change sign-in settings */
+        put: operations["update-auth-settings"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/streams": {
         parameters: {
             query?: never;
@@ -1065,6 +1565,165 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/users": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List users */
+        get: operations["list-users"];
+        put?: never;
+        /** Create a user (they set a password through a reset link, or sign in with SSO) */
+        post: operations["create-user"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/users/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get a user */
+        get: operations["get-user"];
+        put?: never;
+        post?: never;
+        /** Delete a user */
+        delete: operations["delete-user"];
+        options?: never;
+        head?: never;
+        /** Change a user's name, roles or status */
+        patch: operations["update-user"];
+        trace?: never;
+    };
+    "/users/{id}/clear-throttle": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Clear a user's sign-in throttling */
+        post: operations["clear-user-throttle"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/users/{id}/identities": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** A user's linked SSO identities */
+        get: operations["list-user-identities"];
+        put?: never;
+        /** Link an expected SSO identity (provider + subject) */
+        post: operations["link-user-identity"];
+        /** Unlink an SSO identity (signs the user out) */
+        delete: operations["unlink-user-identity"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/users/{id}/link-invite": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Issue a single-use link that binds the next SSO login to this user */
+        post: operations["issue-link-invite"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/users/{id}/reset-link": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Issue a single-use password link (shown once) */
+        post: operations["issue-reset-link"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/users/{id}/sessions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** A user's sessions */
+        get: operations["list-user-sessions"];
+        put?: never;
+        post?: never;
+        /** Sign a user out everywhere */
+        delete: operations["revoke-user-sessions"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/users/{id}/tokens": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** A user's personal access tokens */
+        get: operations["list-user-tokens"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/users/{id}/tokens/{token}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Revoke a user's personal access token */
+        delete: operations["revoke-user-token"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -1084,6 +1743,16 @@ export interface components {
             /** @description NATS was seen serving this certificate after the last reload */
             verified: boolean;
         };
+        "Accept-invitationRequest": {
+            /**
+             * Format: uri
+             * @description A URL to the JSON Schema for this object.
+             * @example /api/admin/v1/schemas/Accept-invitationRequest.json
+             */
+            readonly $schema?: string;
+            display_name?: string;
+            password: string;
+        };
         "Add-allowRequest": {
             /**
              * Format: uri
@@ -1093,6 +1762,17 @@ export interface components {
             readonly $schema?: string;
             network: string;
             note?: string;
+        };
+        "Add-sso-mappingRequest": {
+            /**
+             * Format: uri
+             * @description A URL to the JSON Schema for this object.
+             * @example /api/admin/v1/schemas/Add-sso-mappingRequest.json
+             */
+            readonly $schema?: string;
+            group_value: string;
+            /** @enum {string} */
+            role: "administrator" | "operator" | "auditor" | "viewer";
         };
         AlertHistoryEntry: {
             /** Format: int64 */
@@ -1187,6 +1867,32 @@ export interface components {
              * @description Pass as before_id for the next page
              */
             next?: number;
+        };
+        AuthConfig: {
+            /**
+             * Format: uri
+             * @description A URL to the JSON Schema for this object.
+             * @example /api/admin/v1/schemas/AuthConfig.json
+             */
+            readonly $schema?: string;
+            /** @description No user exists yet: run pulsed admin bootstrap */
+            bootstrap_required: boolean;
+            local_login: boolean;
+            providers: components["schemas"]["PublicProvider"][];
+            /** @description SSO runs on this origin; otherwise use sso_url */
+            sso_here: boolean;
+            /** @description The dashboard origin SSO redirects to */
+            sso_url?: string;
+        };
+        AuthSettings: {
+            /**
+             * Format: uri
+             * @description A URL to the JSON Schema for this object.
+             * @example /api/admin/v1/schemas/AuthSettings.json
+             */
+            readonly $schema?: string;
+            /** @description SSO-only: password sign-in is refused (break-glass recovery still works) */
+            local_login_disabled: boolean;
         };
         BackupFile: {
             name: string;
@@ -1307,6 +2013,18 @@ export interface components {
             /** Format: int64 */
             size: number;
         };
+        BootstrapInput: {
+            /**
+             * Format: uri
+             * @description A URL to the JSON Schema for this object.
+             * @example /api/admin/v1/schemas/BootstrapInput.json
+             */
+            readonly $schema?: string;
+            display_name?: string;
+            email: string;
+            password: string;
+            token: string;
+        };
         Buckets: {
             /**
              * Format: uri
@@ -1343,6 +2061,29 @@ export interface components {
             /** @description Present when ACME is enabled */
             acme?: components["schemas"]["ACMEStatus"];
             certificates: components["schemas"]["CertificateInfo"][];
+        };
+        "Change-my-passwordRequest": {
+            /**
+             * Format: uri
+             * @description A URL to the JSON Schema for this object.
+             * @example /api/admin/v1/schemas/Change-my-passwordRequest.json
+             */
+            readonly $schema?: string;
+            current_password: string;
+            new_password: string;
+        };
+        Claims: {
+            acr?: string;
+            /** Format: int64 */
+            auth_time?: number;
+            email?: string;
+            email_verified: boolean;
+            groups?: string[];
+            hd?: string;
+            iss: string;
+            name?: string;
+            sub: string;
+            tid?: string;
         };
         ClientDTO: {
             /**
@@ -1391,6 +2132,15 @@ export interface components {
             name: string;
             tags?: string[];
         };
+        CodeInBody: {
+            /**
+             * Format: uri
+             * @description A URL to the JSON Schema for this object.
+             * @example /api/admin/v1/schemas/CodeInBody.json
+             */
+            readonly $schema?: string;
+            code: string;
+        };
         Config: {
             /**
              * @description hmac digest encoding (default hex)
@@ -1420,6 +2170,25 @@ export interface components {
         ConfigSection: {
             items: components["schemas"]["ConfigItem"][];
             title: string;
+        };
+        "Confirm-totpRequest": {
+            /**
+             * Format: uri
+             * @description A URL to the JSON Schema for this object.
+             * @example /api/admin/v1/schemas/Confirm-totpRequest.json
+             */
+            readonly $schema?: string;
+            code: string;
+        };
+        ConfirmOut: {
+            /**
+             * Format: uri
+             * @description A URL to the JSON Schema for this object.
+             * @example /api/admin/v1/schemas/ConfirmOut.json
+             */
+            readonly $schema?: string;
+            /** @description Single-use recovery codes, shown once */
+            recovery_codes: string[];
         };
         ConnDTO: {
             /** @description Account name (APP, SYS); set on the System page */
@@ -1507,6 +2276,16 @@ export interface components {
             network: string;
             reason: string;
         };
+        "Create-invitationRequest": {
+            /**
+             * Format: uri
+             * @description A URL to the JSON Schema for this object.
+             * @example /api/admin/v1/schemas/Create-invitationRequest.json
+             */
+            readonly $schema?: string;
+            email: string;
+            roles: string[];
+        };
         "Create-kv-bucketRequest": {
             /**
              * Format: uri
@@ -1528,6 +2307,22 @@ export interface components {
             name: string;
             /** Format: int64 */
             ttl_seconds?: number;
+        };
+        "Create-my-tokenRequest": {
+            /**
+             * Format: uri
+             * @description A URL to the JSON Schema for this object.
+             * @example /api/admin/v1/schemas/Create-my-tokenRequest.json
+             */
+            readonly $schema?: string;
+            /**
+             * Format: int64
+             * @description Lifetime (default 90)
+             */
+            days?: number;
+            name: string;
+            /** @enum {string} */
+            role: "administrator" | "operator" | "auditor" | "viewer";
         };
         "Create-object-bucketRequest": {
             /**
@@ -1552,6 +2347,20 @@ export interface components {
             readonly $schema?: string;
             secret: string;
             token: components["schemas"]["Token"];
+        };
+        CreateInput: {
+            /**
+             * Format: uri
+             * @description A URL to the JSON Schema for this object.
+             * @example /api/admin/v1/schemas/CreateInput.json
+             */
+            readonly $schema?: string;
+            display_name: string;
+            /** @description Optional for SSO-only users */
+            email?: string;
+            /** @description Require TOTP even for roles that do not need it */
+            mfa_required?: boolean;
+            roles: string[];
         };
         Delivery: {
             /**
@@ -1798,6 +2607,17 @@ export interface components {
             updated_at: string;
             url: string;
         };
+        Identity: {
+            /** Format: date-time */
+            created_at: string;
+            issuer: string;
+            /** Format: date-time */
+            last_login_at?: string;
+            linked_via: string;
+            provider_id: string;
+            subject: string;
+            user_id: string;
+        };
         InboundHook: {
             config: components["schemas"]["Config"];
             /** Format: date-time */
@@ -1849,6 +2669,25 @@ export interface components {
             /** Format: int64 */
             indexed: number;
         };
+        Invitation: {
+            /** Format: date-time */
+            created_at: string;
+            created_by: string;
+            email: string;
+            /** Format: date-time */
+            expires_at: string;
+            id: string;
+            roles: string[];
+        };
+        "Issue-link-inviteRequest": {
+            /**
+             * Format: uri
+             * @description A URL to the JSON Schema for this object.
+             * @example /api/admin/v1/schemas/Issue-link-inviteRequest.json
+             */
+            readonly $schema?: string;
+            provider_id: string;
+        };
         Issued: {
             /**
              * Format: uri
@@ -1859,6 +2698,16 @@ export interface components {
             client: components["schemas"]["ClientDTO"];
             /** @description The .creds file. Shown once; pulsed does not keep the seed. */
             creds: string;
+        };
+        JITRules: {
+            /** @description Require email_verified=true and an email in one of these domains */
+            email_domains: string[];
+            /** @description Require one of these values in the groups claim */
+            groups: string[];
+            /** @description Match the hd claim (Google Workspace) */
+            hosted_domains: string[];
+            /** @description Match the tid claim (Microsoft Entra ID) */
+            tenants: string[];
         };
         Jsz: {
             api: components["schemas"]["JszAPIStruct"];
@@ -1990,6 +2839,90 @@ export interface components {
             readonly $schema?: string;
             network: string;
         };
+        "Link-user-identityRequest": {
+            /**
+             * Format: uri
+             * @description A URL to the JSON Schema for this object.
+             * @example /api/admin/v1/schemas/Link-user-identityRequest.json
+             */
+            readonly $schema?: string;
+            provider_id: string;
+            subject: string;
+        };
+        LoginOut: {
+            /**
+             * Format: uri
+             * @description A URL to the JSON Schema for this object.
+             * @example /api/admin/v1/schemas/LoginOut.json
+             */
+            readonly $schema?: string;
+            me: components["schemas"]["Me"];
+            mfa_pending: boolean;
+            must_enroll: boolean;
+        };
+        LoginRequest: {
+            /**
+             * Format: uri
+             * @description A URL to the JSON Schema for this object.
+             * @example /api/admin/v1/schemas/LoginRequest.json
+             */
+            readonly $schema?: string;
+            email: string;
+            password: string;
+        };
+        LogoutOut: {
+            /**
+             * Format: uri
+             * @description A URL to the JSON Schema for this object.
+             * @example /api/admin/v1/schemas/LogoutOut.json
+             */
+            readonly $schema?: string;
+            /** @description Optional RP-initiated logout at the identity provider */
+            provider_logout_url?: string;
+        };
+        Mapping: {
+            /**
+             * Format: uri
+             * @description A URL to the JSON Schema for this object.
+             * @example /api/admin/v1/schemas/Mapping.json
+             */
+            readonly $schema?: string;
+            /** Format: date-time */
+            created_at: string;
+            group_value: string;
+            id: string;
+            provider_id: string;
+            role: string;
+        };
+        Me: {
+            /**
+             * Format: uri
+             * @description A URL to the JSON Schema for this object.
+             * @example /api/admin/v1/schemas/Me.json
+             */
+            readonly $schema?: string;
+            /** Format: date-time */
+            auth_at: string;
+            /** @enum {string} */
+            auth_method: "password" | "oidc" | "breakglass" | "token";
+            auth_provider?: string;
+            /** @description Send as X-Pulse-CSRF on state-changing requests */
+            csrf_token?: string;
+            /** Format: date-time */
+            expires_at: string;
+            listener: string;
+            /** @description Enter a TOTP or recovery code (POST /auth/mfa) to finish signing in */
+            mfa_pending: boolean;
+            /** @description Enroll TOTP (POST /account/totp/begin + confirm) to finish signing in */
+            must_enroll: boolean;
+            permissions: string[];
+            /** Format: int64 */
+            reauth_window_seconds: number;
+            /** Format: int64 */
+            recovery_codes_left: number;
+            session_id: string;
+            user: components["schemas"]["User"];
+        };
         Node: {
             /** Format: int64 */
             bytes: number;
@@ -2088,6 +3021,19 @@ export interface components {
             last_at: string;
             network: string;
         };
+        OneTimeLink: {
+            /**
+             * Format: uri
+             * @description A URL to the JSON Schema for this object.
+             * @example /api/admin/v1/schemas/OneTimeLink.json
+             */
+            readonly $schema?: string;
+            /** Format: date-time */
+            expires_at: string;
+            token: string;
+            /** @description Path on the dashboard origin */
+            url: string;
+        };
         OutboundInput: {
             /**
              * Format: uri
@@ -2134,6 +3080,32 @@ export interface components {
             top_subjects_7d: components["schemas"]["KeyCount"][];
             top_types_24h: components["schemas"]["KeyCount"][];
         };
+        PAT: {
+            /** Format: date-time */
+            created_at: string;
+            /** Format: date-time */
+            expires_at: string;
+            id: string;
+            /** Format: date-time */
+            last_used_at?: string;
+            last_used_ip?: string;
+            name: string;
+            prefix: string;
+            revoked: boolean;
+            role: string;
+            user_id: string;
+        };
+        PatOut: {
+            /**
+             * Format: uri
+             * @description A URL to the JSON Schema for this object.
+             * @example /api/admin/v1/schemas/PatOut.json
+             */
+            readonly $schema?: string;
+            /** @description Shown once */
+            secret: string;
+            token: components["schemas"]["PAT"];
+        };
         Point: {
             /** Format: int64 */
             bytes: number;
@@ -2141,6 +3113,41 @@ export interface components {
             msgs: number;
             /** Format: int64 */
             t: number;
+        };
+        ProviderInput: {
+            /**
+             * Format: uri
+             * @description A URL to the JSON Schema for this object.
+             * @example /api/admin/v1/schemas/ProviderInput.json
+             */
+            readonly $schema?: string;
+            acr_values?: string[];
+            allow_cross_origin_endpoints?: boolean;
+            allow_private_network?: boolean;
+            ca_bundle_pem?: string;
+            client_id?: string;
+            client_secret?: string;
+            display_name?: string;
+            enabled?: boolean;
+            end_session_enabled?: boolean;
+            groups_claim?: string;
+            issuer?: string;
+            jit?: components["schemas"]["JITRules"];
+            /** @enum {string} */
+            provisioning?: "preprovisioned" | "jit";
+            scopes?: string[];
+            slug?: string;
+            /** @enum {string} */
+            stepup_fallback?: "none" | "local_totp";
+            /**
+             * Format: int64
+             * @description Required on update (optimistic concurrency)
+             */
+            version?: number;
+        };
+        PublicProvider: {
+            display_name: string;
+            slug: string;
         };
         PublishInput: {
             /**
@@ -2191,6 +3198,42 @@ export interface components {
             encoding: "utf8" | "base64";
             value: string;
         };
+        ReauthRequest: {
+            /**
+             * Format: uri
+             * @description A URL to the JSON Schema for this object.
+             * @example /api/admin/v1/schemas/ReauthRequest.json
+             */
+            readonly $schema?: string;
+            code?: string;
+            password: string;
+        };
+        "Recover-loginRequest": {
+            /**
+             * Format: uri
+             * @description A URL to the JSON Schema for this object.
+             * @example /api/admin/v1/schemas/Recover-loginRequest.json
+             */
+            readonly $schema?: string;
+            token: string;
+        };
+        RecoverOut: {
+            /**
+             * Format: uri
+             * @description A URL to the JSON Schema for this object.
+             * @example /api/admin/v1/schemas/RecoverOut.json
+             */
+            readonly $schema?: string;
+            me: components["schemas"]["Me"];
+            must_enroll: boolean;
+            /** @description Set a password you know with this single-use token */
+            password_reset?: components["schemas"]["RecoverOutPasswordResetStruct"];
+        };
+        RecoverOutPasswordResetStruct: {
+            /** Format: date-time */
+            expires_at: string;
+            token: string;
+        };
         RemoteBackup: {
             /** Format: int64 */
             chunks: number;
@@ -2208,6 +3251,15 @@ export interface components {
              */
             readonly $schema?: string;
             network: string;
+        };
+        "Reset-passwordRequest": {
+            /**
+             * Format: uri
+             * @description A URL to the JSON Schema for this object.
+             * @example /api/admin/v1/schemas/Reset-passwordRequest.json
+             */
+            readonly $schema?: string;
+            password: string;
         };
         RestoreInput: {
             /**
@@ -2240,6 +3292,11 @@ export interface components {
             /** @enum {string} */
             status: "running" | "ok" | "failed";
             streams: components["schemas"]["StreamPlan"][];
+        };
+        RoleAssignment: {
+            role: string;
+            source: string;
+            source_ref?: string;
         };
         "Rotate-clientRequest": {
             /**
@@ -2331,6 +3388,41 @@ export interface components {
              * @description Memory obtained from the OS
              */
             sys_bytes: number;
+        };
+        SSOProvider: {
+            /**
+             * Format: uri
+             * @description A URL to the JSON Schema for this object.
+             * @example /api/admin/v1/schemas/SSOProvider.json
+             */
+            readonly $schema?: string;
+            acr_values: string[];
+            allow_cross_origin_endpoints: boolean;
+            allow_private_network: boolean;
+            ca_bundle_pem: string;
+            client_id: string;
+            /** Format: date-time */
+            created_at: string;
+            display_name: string;
+            enabled: boolean;
+            end_session_enabled: boolean;
+            groups_claim: string;
+            has_client_secret: boolean;
+            id: string;
+            issuer: string;
+            jit: components["schemas"]["JITRules"];
+            provisioning: string;
+            redirect_uri: string;
+            scopes: string[];
+            slug: string;
+            stepup_fallback: string;
+            test_login_by?: string;
+            /** Format: date-time */
+            test_login_ok_at?: string;
+            /** Format: date-time */
+            updated_at: string;
+            /** Format: int64 */
+            version: number;
         };
         SecretOutHookBody: {
             /**
@@ -2425,6 +3517,21 @@ export interface components {
             /** Format: int64 */
             total_connections: number;
             uptime: string;
+        };
+        SessionInfo: {
+            auth_method: string;
+            auth_provider?: string;
+            /** Format: date-time */
+            created_at: string;
+            current: boolean;
+            /** Format: date-time */
+            expires_at: string;
+            id: string;
+            ip: string;
+            /** Format: date-time */
+            last_seen_at: string;
+            listener: string;
+            user_agent: string;
         };
         StreamDTO: {
             /**
@@ -2576,7 +3683,6 @@ export interface components {
              * @example /api/admin/v1/schemas/SystemInfo.json
              */
             readonly $schema?: string;
-            auth_mode: string;
             connect: components["schemas"]["SystemInfoConnectStruct"];
             jetstream?: components["schemas"]["Jsz"];
             nats: components["schemas"]["SystemInfoNATSStruct"];
@@ -2601,6 +3707,30 @@ export interface components {
             rtt_ms: number;
             server_name: string;
             version: string;
+        };
+        TOTPEnrollment: {
+            /**
+             * Format: uri
+             * @description A URL to the JSON Schema for this object.
+             * @example /api/admin/v1/schemas/TOTPEnrollment.json
+             */
+            readonly $schema?: string;
+            otpauth_uri: string;
+            secret: string;
+        };
+        TestResult: {
+            /**
+             * Format: uri
+             * @description A URL to the JSON Schema for this object.
+             * @example /api/admin/v1/schemas/TestResult.json
+             */
+            readonly $schema?: string;
+            claims: components["schemas"]["Claims"];
+            effective_roles: string[];
+            linked_user_id?: string;
+            mapped_roles: string[];
+            provision_reason?: string;
+            would_provision: boolean;
         };
         Token: {
             /** @description Allowed source networks; empty means any */
@@ -2662,6 +3792,43 @@ export interface components {
             /** Format: int64 */
             version: number;
         };
+        UpdateInput: {
+            /**
+             * Format: uri
+             * @description A URL to the JSON Schema for this object.
+             * @example /api/admin/v1/schemas/UpdateInput.json
+             */
+            readonly $schema?: string;
+            display_name?: string;
+            enabled?: boolean;
+            mfa_required?: boolean;
+            /** @description Replaces the manually assigned roles; SSO-mapped roles are kept */
+            roles?: string[];
+        };
+        User: {
+            /**
+             * Format: uri
+             * @description A URL to the JSON Schema for this object.
+             * @example /api/admin/v1/schemas/User.json
+             */
+            readonly $schema?: string;
+            /** Format: date-time */
+            created_at: string;
+            display_name: string;
+            email?: string;
+            enabled: boolean;
+            has_password: boolean;
+            id: string;
+            /** Format: date-time */
+            last_login_at?: string;
+            mfa_enrolled: boolean;
+            mfa_required: boolean;
+            provisioned_via: string;
+            role_assignments: components["schemas"]["RoleAssignment"][];
+            roles: string[];
+            /** Format: int64 */
+            version: number;
+        };
     };
     responses: never;
     parameters: never;
@@ -2671,6 +3838,334 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    "list-my-identities": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Identity"][];
+                };
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
+    "change-my-password": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["Change-my-passwordRequest"];
+            };
+        };
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
+    "regenerate-recovery-codes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConfirmOut"];
+                };
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
+    "list-my-sessions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SessionInfo"][];
+                };
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
+    "revoke-my-session": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
+    "list-my-tokens": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PAT"][];
+                };
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
+    "create-my-token": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["Create-my-tokenRequest"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PatOut"];
+                };
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
+    "revoke-my-token": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
+    "disable-totp": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
+    "begin-totp": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TOTPEnrollment"];
+                };
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
+    "confirm-totp": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["Confirm-totpRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    "Set-Cookie"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConfirmOut"];
+                };
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
     "get-alerts": {
         parameters: {
             query?: never;
@@ -2916,6 +4411,365 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AuditPage"];
+                };
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
+    "get-auth-config": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuthConfig"];
+                };
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
+    "accept-invitation": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                token: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["Accept-invitationRequest"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["User"];
+                };
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
+    login: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LoginRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    "Set-Cookie"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LoginOut"];
+                };
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
+    logout: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    "Set-Cookie"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LogoutOut"];
+                };
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
+    "get-me": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Me"];
+                };
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
+    "verify-mfa": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CodeInBody"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    "Set-Cookie"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Me"];
+                };
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
+    reauth: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReauthRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    "Set-Cookie"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Me"];
+                };
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
+    "reauth-totp": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CodeInBody"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    "Set-Cookie"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Me"];
+                };
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
+    "recover-login": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["Recover-loginRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    "Set-Cookie"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RecoverOut"];
+                };
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
+    "reset-password": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                token: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["Reset-passwordRequest"];
+            };
+        };
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
+    setup: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BootstrapInput"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["User"];
                 };
             };
             /** @description Error */
@@ -3960,6 +5814,97 @@ export interface operations {
             };
         };
     };
+    "list-invitations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Invitation"][];
+                };
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
+    "create-invitation": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["Create-invitationRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OneTimeLink"];
+                };
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
+    "revoke-invitation": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
     "list-buckets": {
         parameters: {
             query?: never;
@@ -4572,6 +6517,352 @@ export interface operations {
             };
         };
     };
+    "list-sso-providers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SSOProvider"][];
+                };
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
+    "create-sso-provider": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProviderInput"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SSOProvider"];
+                };
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
+    "get-sso-provider": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SSOProvider"];
+                };
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
+    "update-sso-provider": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProviderInput"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SSOProvider"];
+                };
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
+    "delete-sso-provider": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
+    "list-sso-mappings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Mapping"][];
+                };
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
+    "add-sso-mapping": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["Add-sso-mappingRequest"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Mapping"];
+                };
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
+    "delete-sso-mapping": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                mapping: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
+    "get-sso-test-result": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TestResult"];
+                };
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
+    "get-auth-settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuthSettings"];
+                };
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
+    "update-auth-settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AuthSettings"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuthSettings"];
+                };
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
     "list-streams": {
         parameters: {
             query?: never;
@@ -5140,6 +7431,475 @@ export interface operations {
             header?: never;
             path: {
                 id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
+    "list-users": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["User"][];
+                };
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
+    "create-user": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateInput"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["User"];
+                };
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
+    "get-user": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["User"];
+                };
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
+    "delete-user": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
+    "update-user": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateInput"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["User"];
+                };
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
+    "clear-user-throttle": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
+    "list-user-identities": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Identity"][];
+                };
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
+    "link-user-identity": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["Link-user-identityRequest"];
+            };
+        };
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
+    "unlink-user-identity": {
+        parameters: {
+            query?: {
+                issuer?: string;
+                subject?: string;
+            };
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
+    "issue-link-invite": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["Issue-link-inviteRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OneTimeLink"];
+                };
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
+    "issue-reset-link": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OneTimeLink"];
+                };
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
+    "list-user-sessions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SessionInfo"][];
+                };
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
+    "revoke-user-sessions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
+    "list-user-tokens": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PAT"][];
+                };
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
+    "revoke-user-token": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                token: string;
             };
             cookie?: never;
         };

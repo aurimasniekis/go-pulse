@@ -9,6 +9,7 @@ import { useClients, useSystemInfo } from '@/api/queries'
 import { ErrorAlert } from '@/components/ErrorAlert'
 import { cleanGrants, GrantsEditor } from '@/components/GrantsEditor'
 import { PageHeader } from '@/components/PageHeader'
+import { Can } from '@/components/Can'
 import { SecretModal } from '@/components/SecretModal'
 import { Snippets } from '@/components/Snippets'
 import { timeAgo } from '@/lib/format'
@@ -110,9 +111,11 @@ function Clients() {
         title="Clients"
         description="Tool identities on NATS. New clients have no permissions until you add grants."
         actions={
-          <Button leftSection={<IconPlus size={14} />} onClick={() => setCreating(true)}>
-            Create client
-          </Button>
+          <Can perm="clients.write">
+            <Button leftSection={<IconPlus size={14} />} onClick={() => setCreating(true)}>
+              Create client
+            </Button>
+          </Can>
         }
       />
       <ErrorAlert error={clients.error} />

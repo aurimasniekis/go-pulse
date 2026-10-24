@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs'
 import { expect, test } from '@playwright/test'
+import { csrf } from './admin'
 
-const csrf = { 'X-Pulse-CSRF': '1' }
 
 test('backups: back up now, then restore a deleted stream with the dev identity', async ({ page, request }) => {
   test.setTimeout(120_000)

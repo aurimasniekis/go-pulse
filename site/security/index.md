@@ -24,13 +24,15 @@ where your provider offers it, and keep the master key and the backup identity o
 | Client `.creds` | Each tool's host |
 | HTTP tokens, webhook secrets, notifier tokens | SQLite (hashes or sealed values), secret files |
 | pulsed state: clients, grants, audit, bans | SQLite `pulse.db` |
+| Dashboard users: password hashes, TOTP secrets, sessions, SSO client secrets | SQLite `pulse.db` (Argon2id hashes; secrets sealed and tokens MACed with keys derived from the master key) |
 | TLS keys: origin certificate, Let's Encrypt, internal CA | Data volume, secrets |
 | Backups | S3, encrypted with age |
 | Cloudflare and S3 API tokens | Secret files |
 
 Against: internet attackers on 4222 and 443, direct-to-origin traffic that bypasses Cloudflare, other Cloudflare
 customers, a compromised tool holding one client's credentials, forged webhooks, outbound webhooks steered at internal
-addresses, the backup storage provider, and unprivileged local processes.
+addresses, the backup storage provider, password guessing and stolen sessions on the dashboard, a misbehaving
+identity provider, and unprivileged local processes.
 
 ## What Pulse guarantees
 
@@ -43,7 +45,7 @@ real deployment or by someone outside the implementing work. **No guarantee is e
 | G-1 | A tool client can publish or subscribe only on subjects its grants allow. A new client has no permissions. | tested (embedded NATS) |
 | G-2 | A revoked client is disconnected within 5 seconds and cannot reconnect with the same credentials. | tested |
 | G-3 | Client seeds are shown once and never stored by pulsed. | tested |
-| G-4 | The admin UI and API are never reachable from the network while auth is `none`. | tested (config refusals, Host allowlist) |
+| G-4 | Every admin UI and API request is made by a signed-in user and allowed only by that user's role; sign-in failures are throttled and audited. | tested (every operation mapped to a permission, role, CSRF, Origin, session, TOTP and SSO tests; SSO against an in-process identity provider only) |
 | G-5 | In the prod profile, public HTTP routes accept only connections that passed Cloudflare Authenticated Origin Pulls. | tested locally with a self-made CA |
 | G-6 | The real client IP comes from `CF-Connecting-IP` only when the peer is in Cloudflare's ranges and passed mTLS. | tested |
 | G-7 | Inbound webhooks are accepted only with a valid signature or secret for that hook. | tested (GitHub's documented vector; Stripe against its documented scheme) |
@@ -61,7 +63,12 @@ real deployment or by someone outside the implementing work. **No guarantee is e
 | Traffic straight to the origin, bypassing Cloudflare | nftables accepts 443 only from Cloudflare's ranges; mTLS (AOP) is required in prod |
 | Another Cloudflare customer pointing a zone at the origin | Per-hostname AOP with your own CA, not Cloudflare's shared one |
 | Spoofed `CF-Connecting-IP` or `X-Forwarded-For` | Trusted only from Cloudflare peers that passed mTLS; the `/ws` proxy replaces `X-Forwarded-For` with exactly one trusted value (NATS trusts the first) |
-| The dashboard, which has no login | Loopback-only listener, prod refusals, `X-Pulse-CSRF` on every write, a Host allowlist against DNS rebinding (421 otherwise), strict CSP, no CORS |
+| Unauthorized dashboard use | Sign-in for every request (no anonymous mode); every operation needs a permission from the user's role; server-side sessions bound to the listener that created them; the session's CSRF token and a same-origin `Origin` on every write; a Host allowlist against DNS rebinding (421 otherwise); strict CSP, no CORS; on the internet only behind Cloudflare and AOP |
+| Password guessing on the dashboard | Argon2id; one answer for every failure after the same work; throttling per account and per address (up to 15 min); TOTP mandatory for administrators and operators; failed public sign-ins feed the ban detector; audit |
+| A stolen session cookie | `HttpOnly` `__Host-` cookie; strict CSP; 30-minute idle and 12-hour absolute expiry; re-authentication within 5 minutes for secrets, deletes, restores and user or SSO changes; session list and revocation |
+| A forged or replayed SSO login | PKCE, single-use state bound to the browser, nonce; ID token signature (RS256, ES256, EdDSA only), issuer, audience, `azp` and time checks; users matched by issuer and subject, never email; JIT provisioning only with restrictions |
+| A leaked CLI token | Personal access tokens work only on the loopback listener, carry one role capped by the user's current roles, expire and are revocable |
+| Every administrator locked out | Last-administrator guards; SSO-only only after a test login with an SSO administrator; break-glass `pulsed admin recover` on the host |
 | A compromised tool trying to do more | Least-privilege grants, fixed denies (stream admin, `$SYS`, `$KV`, unfiltered direct get), a per-client inbox prefix |
 | A compromised tool keeping access | Revoke: revocation list, account push and kick within 5 seconds |
 | Forged or replayed webhooks | Per-hook verifiers, constant-time comparison, timestamp tolerance, bans |
@@ -91,6 +98,10 @@ cryptography. TLS verification is never disabled.
 - **Replay protection for shared-secret webhooks.** Use a signing verifier whenever the sender supports one.
 - **Consumer isolation between clients on the same stream.** A `subscribe` grant lets a client pull from any consumer on that stream whose name it knows, including another client's durable with a wider filter, so it could read events outside its own grants. Durable names start with the owning client's ID, an 80-bit random ULID that other clients are never shown, so this needs a leaked client ID. A fix that scopes
   pulls to the client's own consumers is open (R-05 in DECISIONS.md).
+- **Protection from your identity provider.** A provider (or whoever controls it) can sign in any identity linked to
+  it, with the roles its group mappings grant.
+- **A stolen session within the reauth window.** A session cookie stolen from your browser can do what your role
+  allows until it expires, except the actions that ask you to re-authenticate after 5 minutes.
 - **High availability.** One NATS server and one pulsed. Recovery is a restore from backup.
 - **Backups against deletion** by someone holding the server's S3 key. Use versioned or object-locked buckets.
 - **Recovery without the master key and the age identity.** Losing either is final, by design.
@@ -108,6 +119,8 @@ items are still open:
   the sizing spike (about 10 GB of events, 5,000 subjects) has not been run.
 - **CI on GitHub** runs only since the repository was published; the release workflow has not produced a release yet.
 - **Webhook verifiers** are tested against documented vectors and schemes, not live GitHub or Stripe deliveries.
+- **Single sign-on** is tested against an in-process identity provider (discovery, PKCE, JWKS rotation, token
+  validation, step-up, linking), not yet against a live provider such as Keycloak or Entra ID.
 - **No visual regression tests** for the dashboard; browser tests run in Chromium only.
 - **Consumer scoping (R-05).** A `subscribe` grant can pull from another client's consumer on the same stream if it
   knows the consumer's name (see the limits above).

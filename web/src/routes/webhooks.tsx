@@ -21,6 +21,7 @@ import { useDeliveries, useInboundHooks, useOutboundHooks } from '@/api/queries'
 import { ConfirmModal } from '@/components/ConfirmModal'
 import { ErrorAlert } from '@/components/ErrorAlert'
 import { PageHeader } from '@/components/PageHeader'
+import { Can } from '@/components/Can'
 import { SecretModal } from '@/components/SecretModal'
 import { formatNumber, formatTime, timeAgo } from '@/lib/format'
 import { notifyErr, notifyOk } from '@/lib/notify'
@@ -209,9 +210,11 @@ function Inbound() {
         <Text size="sm" c="dimmed">
           Providers POST to these URLs; verified requests become events. Bad signatures get 401 and count toward bans.
         </Text>
-        <Button leftSection={<IconPlus size={14} />} onClick={() => setEditing('new')}>
-          Create inbound hook
-        </Button>
+        <Can perm="webhooks.write">
+          <Button leftSection={<IconPlus size={14} />} onClick={() => setEditing('new')}>
+            Create inbound hook
+          </Button>
+        </Can>
       </Group>
       <ErrorAlert error={hooks.error} />
       <Table.ScrollContainer minWidth={900}>
@@ -260,6 +263,7 @@ function Inbound() {
                 <Table.Td>{h.last_received_at ? timeAgo(h.last_received_at) : 'never'}</Table.Td>
                 <Table.Td>
                   <Group gap={2} wrap="nowrap">
+                    <Can perm="webhooks.write">
                     <Tooltip label="Edit">
                       <ActionIcon aria-label={`Edit ${h.name}`} onClick={() => setEditing(h)}>
                         <IconEdit size={14} />
@@ -275,6 +279,7 @@ function Inbound() {
                         <IconTrash size={14} />
                       </ActionIcon>
                     </Tooltip>
+                    </Can>
                   </Group>
                 </Table.Td>
               </Table.Tr>
@@ -445,11 +450,13 @@ function DeliveryLog({ hook, onClose }: { hook: OutboundHook | null; onClose: ()
               <Table.Td ta="right">{d.latency_ms}</Table.Td>
               <Table.Td>
                 {d.seq > 0 && (
+                  <Can perm="webhooks.write">
                   <Tooltip label="Deliver this event again">
                     <ActionIcon aria-label={`Retry delivery ${d.id}`} onClick={() => retry.mutate(d.id)} loading={retry.isPending && retry.variables === d.id}>
                       <IconRefresh size={14} />
                     </ActionIcon>
                   </Tooltip>
+                  </Can>
                 )}
               </Table.Td>
             </Table.Tr>
@@ -500,9 +507,11 @@ function Outbound() {
         <Text size="sm" c="dimmed">
           Matching events are POSTed with a Pulse-Signature header (t=…,v1=hex HMAC-SHA256 of &quot;t.body&quot;).
         </Text>
-        <Button leftSection={<IconPlus size={14} />} onClick={() => setEditing('new')}>
-          Create outbound hook
-        </Button>
+        <Can perm="webhooks.write">
+          <Button leftSection={<IconPlus size={14} />} onClick={() => setEditing('new')}>
+            Create outbound hook
+          </Button>
+        </Can>
       </Group>
       <ErrorAlert error={hooks.error} />
       <Table.ScrollContainer minWidth={900}>
@@ -562,6 +571,7 @@ function Outbound() {
                         <IconHistory size={14} />
                       </ActionIcon>
                     </Tooltip>
+                    <Can perm="webhooks.write">
                     <Tooltip label="Send a test event">
                       <ActionIcon aria-label={`Test ${h.name}`} onClick={() => action.mutate({ h, op: 'test' })}>
                         <IconSend size={14} />
@@ -582,6 +592,7 @@ function Outbound() {
                         <IconTrash size={14} />
                       </ActionIcon>
                     </Tooltip>
+                    </Can>
                   </Group>
                 </Table.Td>
               </Table.Tr>

@@ -41,11 +41,21 @@ and replay "since" uses it. So an import of old data is stored with today's stre
 NATS reports permission violations asynchronously on the connection. The JetStream call itself just never gets its
 acknowledgement and times out. Check the client's grants.
 
-### Why is there no login on the dashboard?
+### How do I sign in, and can the dashboard be on the internet?
 
-The dashboard binds to the server's loopback and is reached only through `ssh -L`, so SSH is the login. The admin
-listener also checks the `Host` header (against DNS rebinding) and requires a CSRF header on writes. A single sign-on
-mode (OIDC) is specified but not implemented, and `pulsed` refuses to expose the dashboard publicly without it.
+Everyone signs in: with an email, a password and a TOTP code, or through an OpenID Connect provider. There are no default
+credentials; `pulsed admin bootstrap` prints a one-time link for the first administrator, who then invites others.
+Roles (administrator, operator, auditor, viewer) decide what each person can see and change.
+
+The dashboard is always reachable through `ssh -L 8080:127.0.0.1:8080 <vps>`. With `PULSE_ADMIN_PUBLIC=true` it is
+also served behind Cloudflare, on its own hostname or on the API hostname. See
+[Users and single sign-on](/operators/users).
+
+### I lost my second factor. What now?
+
+Use one of your recovery codes instead of the TOTP code, then enroll a new authenticator on the Account page. Without
+recovery codes, another administrator can't remove your factor; on the server run
+`docker compose exec pulsed pulsed admin recover --email you@example.com` for a single-use recovery login.
 
 ### Can I run it without Cloudflare?
 

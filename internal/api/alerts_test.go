@@ -30,7 +30,7 @@ func TestAlertsAPI(t *testing.T) {
 	srv := httptest.NewServer(NewAdmin(h.deps))
 	defer srv.Close()
 	base := srv.URL + AdminPrefix
-	csrf := map[string]string{CSRFHeader: "1"}
+	csrf := csrfH
 
 	resp, body := do(t, http.MethodPost, base+"/alerts/evaluate", "", csrf)
 	if resp.StatusCode != http.StatusOK {

@@ -9,6 +9,7 @@ import { ConfirmModal } from '@/components/ConfirmModal'
 import { ErrorAlert } from '@/components/ErrorAlert'
 import { cleanGrants, GrantsEditor } from '@/components/GrantsEditor'
 import { PageHeader } from '@/components/PageHeader'
+import { Can } from '@/components/Can'
 import { Snippets } from '@/components/Snippets'
 import { formatBytes, formatNumber, formatTime, timeAgo } from '@/lib/format'
 import { notifyErr, notifyOk } from '@/lib/notify'
@@ -78,7 +79,7 @@ function ClientDetail() {
         description={c?.description || undefined}
         actions={
           c && (
-            <>
+            <Can perm="clients.write">
               <Button variant="default" leftSection={<IconPlugConnectedX size={14} />} disabled={!active || !c.connections} onClick={() => kick.mutate()} loading={kick.isPending}>
                 Disconnect
               </Button>
@@ -88,7 +89,7 @@ function ClientDetail() {
               <Button color="red" variant="light" leftSection={<IconBan size={14} />} disabled={c.status === 'revoked'} onClick={() => setRevoking(true)}>
                 Revoke
               </Button>
-            </>
+            </Can>
           )
         }
       />
@@ -139,6 +140,7 @@ function ClientDetail() {
                 Grants
               </Title>
               <GrantsEditor value={grants} onChange={setGrants} />
+              <Can perm="clients.write">
               <Group justify="flex-end" mt="xs">
                 <Button size="xs" variant="default" disabled={!dirty} onClick={() => setGrants(c.grants)}>
                   Discard
@@ -147,6 +149,7 @@ function ClientDetail() {
                   Save grants
                 </Button>
               </Group>
+              </Can>
               <Text size="xs" c="dimmed" mt={6}>
                 Saving takes effect without new credentials; NATS reconnects live sessions with the new permissions.
               </Text>

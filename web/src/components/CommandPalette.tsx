@@ -1,21 +1,23 @@
 import { Spotlight, type SpotlightActionData } from '@mantine/spotlight'
-import { IconSearch } from '@tabler/icons-react'
+import { IconSearch, IconUser } from '@tabler/icons-react'
 import { useNavigate } from '@tanstack/react-router'
 import { useMemo } from 'react'
-import { nav } from '@/lib/nav'
+import { useMe } from '@/api/auth'
+import { visibleNav } from '@/lib/nav'
 
 export function CommandPalette() {
   const navigate = useNavigate()
+  const me = useMe().data
   const actions = useMemo<SpotlightActionData[]>(
     () =>
-      nav.map((n) => ({
+      [...visibleNav(me?.permissions ?? []), { to: '/account', label: 'Account', icon: IconUser }].map((n) => ({
         id: n.to,
         label: n.label,
         description: `Go to ${n.label}`,
         leftSection: <n.icon size={16} stroke={1.6} />,
         onClick: () => void navigate({ to: n.to }),
       })),
-    [navigate],
+    [navigate, me],
   )
   return (
     <Spotlight

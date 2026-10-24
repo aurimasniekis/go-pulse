@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test'
+import { csrf } from './admin'
 
-const csrf = { 'X-Pulse-CSRF': '1' }
 
 test('kv: create bucket, set and read a key, history, delete', async ({ page, request }) => {
   const bucket = `e2e_kv_${Date.now().toString(36)}`

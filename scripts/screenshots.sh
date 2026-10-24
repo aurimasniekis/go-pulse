@@ -32,5 +32,5 @@ make -C "$root" deploy/.dev/master.key deploy/.dev/age.key >/dev/null
 
 cd "$root/web"
 PULSE_E2E_URL="http://127.0.0.1:$PULSE_DEV_ADMIN_PORT" PULSE_E2E_PUBLIC_URL="http://127.0.0.1:$PULSE_DEV_PUBLIC_PORT" \
-  PULSE_SCREENSHOTS_OUT="$out" pnpm exec playwright test e2e/screenshots.spec.ts --reporter=list
+  PULSE_E2E_PULSED="${compose[*]} exec -T pulsed pulsed" PULSE_E2E_ADMIN_EMAIL=alex@example.com PULSE_E2E_ADMIN_NAME="Alex Admin" PULSE_SCREENSHOTS_OUT="$out" pnpm exec playwright test e2e/screenshots.spec.ts --reporter=list
 echo "screenshots written to $out"

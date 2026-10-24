@@ -54,6 +54,9 @@ type Options struct {
 	Path     string // database file
 	LockPath string // flock file; defaults to <dir>/pulsed.lock
 	Readers  int    // reader pool size (default 4)
+	// Shared lets a short-lived command (pulsed admin) open the database while pulsed serve holds the lock. It then
+	// runs no migrations and requires the schema to be exactly this binary's version.
+	Shared bool
 }
 
 // ErrLocked means another process owns the data directory.
@@ -75,6 +78,10 @@ func Open(ctx context.Context, o Options) (*DB, error) {
 		o.Readers = 4
 	}
 	lock, err := acquireLock(o.LockPath)
+	shared := false
+	if errors.Is(err, ErrLocked) && o.Shared {
+		lock, err, shared = nil, nil, true
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -106,7 +113,11 @@ func Open(ctx context.Context, o Options) (*DB, error) {
 	if err := quickCheck(ctx, db.writer); err != nil {
 		return nil, err
 	}
-	if err := migrate(ctx, db.writer); err != nil {
+	if shared {
+		if err := requireCurrentSchema(ctx, db.writer); err != nil {
+			return nil, err
+		}
+	} else if err := migrate(ctx, db.writer); err != nil {
 		return nil, err
 	}
 	db.reader, err = sql.Open("sqlite", dsn(o.Path, true))

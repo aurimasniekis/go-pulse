@@ -1,14 +1,31 @@
-import { Badge, Card, Code, Group, SegmentedControl, SimpleGrid, Stack, Table, Text, Title, useMantineColorScheme } from '@mantine/core'
-import { createFileRoute } from '@tanstack/react-router'
+import { Badge, Card, Code, Group, SegmentedControl, SimpleGrid, Stack, Table, Tabs, Text, Title, useMantineColorScheme } from '@mantine/core'
+import { createFileRoute, useNavigate } from '@tanstack/react-router'
+import { useCan } from '@/api/auth'
+import { SSOSettings } from '@/features/sso/SSOSettings'
 import { useState } from 'react'
 import { useConfig } from '@/api/queries'
 import { ErrorAlert } from '@/components/ErrorAlert'
 import { PageHeader } from '@/components/PageHeader'
 import { formatTime, getTimeZone, setTimeZone, type TimeZonePref } from '@/lib/format'
 
-export const Route = createFileRoute('/settings')({ component: Settings })
+interface SettingsSearch {
+  tab?: 'sso'
+  test_login?: string
+}
+
+export const Route = createFileRoute('/settings')({
+  validateSearch: (s: Record<string, unknown>): SettingsSearch => ({
+    tab: s.tab === 'sso' ? 'sso' : undefined,
+    test_login: typeof s.test_login === 'string' ? s.test_login : undefined,
+  }),
+  component: Settings,
+})
 
 function Settings() {
+  const { tab, test_login } = Route.useSearch()
+  const navigate = useNavigate({ from: Route.fullPath })
+  const canSSO = useCan('auth.settings')
+  const active = tab === 'sso' && canSSO ? 'sso' : 'general'
   const cfg = useConfig()
   const { colorScheme, setColorScheme } = useMantineColorScheme()
   const [tz, setTz] = useState<TimeZonePref>(getTimeZone())
@@ -18,6 +35,12 @@ function Settings() {
         title="Settings"
         description="Display preferences for this browser, and the server's effective configuration. pulsed is configured with PULSE_* environment variables (docs/operator/configuration.md); restart to change them."
       />
+      <Tabs value={active} onChange={(v) => void navigate({ search: v === 'sso' ? { tab: 'sso' } : {} })} keepMounted={false}>
+        <Tabs.List mb="sm">
+          <Tabs.Tab value="general">General</Tabs.Tab>
+          {canSSO && <Tabs.Tab value="sso">Single sign-on</Tabs.Tab>}
+        </Tabs.List>
+        <Tabs.Panel value="general">
       <Card mb="sm">
         <Title order={5} mb="xs">
           Display (this browser)
@@ -93,6 +116,13 @@ function Settings() {
           </Card>
         ))}
       </SimpleGrid>
+        </Tabs.Panel>
+        {canSSO && (
+          <Tabs.Panel value="sso">
+            <SSOSettings testLogin={test_login} />
+          </Tabs.Panel>
+        )}
+      </Tabs>
     </>
   )
 }

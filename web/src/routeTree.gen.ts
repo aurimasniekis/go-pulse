@@ -10,13 +10,17 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AccountRouteImport } from './routes/account'
 import { Route as AlertsRouteImport } from './routes/alerts'
 import { Route as AuditRouteImport } from './routes/audit'
 import { Route as BackupsRouteImport } from './routes/backups'
 import { Route as ExplorerRouteImport } from './routes/explorer'
 import { Route as KvRouteImport } from './routes/kv'
+import { Route as LoginRouteImport } from './routes/login'
+import { Route as RecoverRouteImport } from './routes/recover'
 import { Route as SecurityRouteImport } from './routes/security'
 import { Route as SettingsRouteImport } from './routes/settings'
+import { Route as SetupRouteImport } from './routes/setup'
 import { Route as SubjectsRouteImport } from './routes/subjects'
 import { Route as SystemRouteImport } from './routes/system'
 import { Route as TailRouteImport } from './routes/tail'
@@ -24,12 +28,21 @@ import { Route as TokensRouteImport } from './routes/tokens'
 import { Route as WebhooksRouteImport } from './routes/webhooks'
 import { Route as ClientsIndexRouteImport } from './routes/clients/index'
 import { Route as ClientsIdRouteImport } from './routes/clients/$id'
+import { Route as InviteTokenRouteImport } from './routes/invite/$token'
+import { Route as ResetTokenRouteImport } from './routes/reset/$token'
 import { Route as StreamsIndexRouteImport } from './routes/streams/index'
 import { Route as StreamsNameRouteImport } from './routes/streams/$name'
+import { Route as UsersIndexRouteImport } from './routes/users/index'
+import { Route as UsersIdRouteImport } from './routes/users/$id'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AccountRoute = AccountRouteImport.update({
+  id: '/account',
+  path: '/account',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AlertsRoute = AlertsRouteImport.update({
@@ -57,6 +70,16 @@ const KvRoute = KvRouteImport.update({
   path: '/kv',
   getParentRoute: () => rootRouteImport,
 } as any)
+const LoginRoute = LoginRouteImport.update({
+  id: '/login',
+  path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RecoverRoute = RecoverRouteImport.update({
+  id: '/recover',
+  path: '/recover',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SecurityRoute = SecurityRouteImport.update({
   id: '/security',
   path: '/security',
@@ -65,6 +88,11 @@ const SecurityRoute = SecurityRouteImport.update({
 const SettingsRoute = SettingsRouteImport.update({
   id: '/settings',
   path: '/settings',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SetupRoute = SetupRouteImport.update({
+  id: '/setup',
+  path: '/setup',
   getParentRoute: () => rootRouteImport,
 } as any)
 const SubjectsRoute = SubjectsRouteImport.update({
@@ -102,6 +130,16 @@ const ClientsIdRoute = ClientsIdRouteImport.update({
   path: '/clients/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
+const InviteTokenRoute = InviteTokenRouteImport.update({
+  id: '/invite/$token',
+  path: '/invite/$token',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ResetTokenRoute = ResetTokenRouteImport.update({
+  id: '/reset/$token',
+  path: '/reset/$token',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const StreamsIndexRoute = StreamsIndexRouteImport.update({
   id: '/streams/',
   path: '/streams/',
@@ -112,143 +150,209 @@ const StreamsNameRoute = StreamsNameRouteImport.update({
   path: '/streams/$name',
   getParentRoute: () => rootRouteImport,
 } as any)
+const UsersIndexRoute = UsersIndexRouteImport.update({
+  id: '/users/',
+  path: '/users/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const UsersIdRoute = UsersIdRouteImport.update({
+  id: '/users/$id',
+  path: '/users/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/account': typeof AccountRoute
   '/alerts': typeof AlertsRoute
   '/audit': typeof AuditRoute
   '/backups': typeof BackupsRoute
   '/explorer': typeof ExplorerRoute
   '/kv': typeof KvRoute
+  '/login': typeof LoginRoute
+  '/recover': typeof RecoverRoute
   '/security': typeof SecurityRoute
   '/settings': typeof SettingsRoute
+  '/setup': typeof SetupRoute
   '/subjects': typeof SubjectsRoute
   '/system': typeof SystemRoute
   '/tail': typeof TailRoute
   '/tokens': typeof TokensRoute
   '/webhooks': typeof WebhooksRoute
   '/clients/$id': typeof ClientsIdRoute
+  '/invite/$token': typeof InviteTokenRoute
+  '/reset/$token': typeof ResetTokenRoute
   '/streams/$name': typeof StreamsNameRoute
+  '/users/$id': typeof UsersIdRoute
   '/clients/': typeof ClientsIndexRoute
   '/streams/': typeof StreamsIndexRoute
+  '/users/': typeof UsersIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/account': typeof AccountRoute
   '/alerts': typeof AlertsRoute
   '/audit': typeof AuditRoute
   '/backups': typeof BackupsRoute
   '/explorer': typeof ExplorerRoute
   '/kv': typeof KvRoute
+  '/login': typeof LoginRoute
+  '/recover': typeof RecoverRoute
   '/security': typeof SecurityRoute
   '/settings': typeof SettingsRoute
+  '/setup': typeof SetupRoute
   '/subjects': typeof SubjectsRoute
   '/system': typeof SystemRoute
   '/tail': typeof TailRoute
   '/tokens': typeof TokensRoute
   '/webhooks': typeof WebhooksRoute
   '/clients/$id': typeof ClientsIdRoute
+  '/invite/$token': typeof InviteTokenRoute
+  '/reset/$token': typeof ResetTokenRoute
   '/streams/$name': typeof StreamsNameRoute
+  '/users/$id': typeof UsersIdRoute
   '/clients': typeof ClientsIndexRoute
   '/streams': typeof StreamsIndexRoute
+  '/users': typeof UsersIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/account': typeof AccountRoute
   '/alerts': typeof AlertsRoute
   '/audit': typeof AuditRoute
   '/backups': typeof BackupsRoute
   '/explorer': typeof ExplorerRoute
   '/kv': typeof KvRoute
+  '/login': typeof LoginRoute
+  '/recover': typeof RecoverRoute
   '/security': typeof SecurityRoute
   '/settings': typeof SettingsRoute
+  '/setup': typeof SetupRoute
   '/subjects': typeof SubjectsRoute
   '/system': typeof SystemRoute
   '/tail': typeof TailRoute
   '/tokens': typeof TokensRoute
   '/webhooks': typeof WebhooksRoute
   '/clients/$id': typeof ClientsIdRoute
+  '/invite/$token': typeof InviteTokenRoute
+  '/reset/$token': typeof ResetTokenRoute
   '/streams/$name': typeof StreamsNameRoute
+  '/users/$id': typeof UsersIdRoute
   '/clients/': typeof ClientsIndexRoute
   '/streams/': typeof StreamsIndexRoute
+  '/users/': typeof UsersIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/account'
     | '/alerts'
     | '/audit'
     | '/backups'
     | '/explorer'
     | '/kv'
+    | '/login'
+    | '/recover'
     | '/security'
     | '/settings'
+    | '/setup'
     | '/subjects'
     | '/system'
     | '/tail'
     | '/tokens'
     | '/webhooks'
     | '/clients/$id'
+    | '/invite/$token'
+    | '/reset/$token'
     | '/streams/$name'
+    | '/users/$id'
     | '/clients/'
     | '/streams/'
+    | '/users/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/account'
     | '/alerts'
     | '/audit'
     | '/backups'
     | '/explorer'
     | '/kv'
+    | '/login'
+    | '/recover'
     | '/security'
     | '/settings'
+    | '/setup'
     | '/subjects'
     | '/system'
     | '/tail'
     | '/tokens'
     | '/webhooks'
     | '/clients/$id'
+    | '/invite/$token'
+    | '/reset/$token'
     | '/streams/$name'
+    | '/users/$id'
     | '/clients'
     | '/streams'
+    | '/users'
   id:
     | '__root__'
     | '/'
+    | '/account'
     | '/alerts'
     | '/audit'
     | '/backups'
     | '/explorer'
     | '/kv'
+    | '/login'
+    | '/recover'
     | '/security'
     | '/settings'
+    | '/setup'
     | '/subjects'
     | '/system'
     | '/tail'
     | '/tokens'
     | '/webhooks'
     | '/clients/$id'
+    | '/invite/$token'
+    | '/reset/$token'
     | '/streams/$name'
+    | '/users/$id'
     | '/clients/'
     | '/streams/'
+    | '/users/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AccountRoute: typeof AccountRoute
   AlertsRoute: typeof AlertsRoute
   AuditRoute: typeof AuditRoute
   BackupsRoute: typeof BackupsRoute
   ExplorerRoute: typeof ExplorerRoute
   KvRoute: typeof KvRoute
+  LoginRoute: typeof LoginRoute
+  RecoverRoute: typeof RecoverRoute
   SecurityRoute: typeof SecurityRoute
   SettingsRoute: typeof SettingsRoute
+  SetupRoute: typeof SetupRoute
   SubjectsRoute: typeof SubjectsRoute
   SystemRoute: typeof SystemRoute
   TailRoute: typeof TailRoute
   TokensRoute: typeof TokensRoute
   WebhooksRoute: typeof WebhooksRoute
   ClientsIdRoute: typeof ClientsIdRoute
+  InviteTokenRoute: typeof InviteTokenRoute
+  ResetTokenRoute: typeof ResetTokenRoute
   StreamsNameRoute: typeof StreamsNameRoute
+  UsersIdRoute: typeof UsersIdRoute
   ClientsIndexRoute: typeof ClientsIndexRoute
   StreamsIndexRoute: typeof StreamsIndexRoute
+  UsersIndexRoute: typeof UsersIndexRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -258,6 +362,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/account': {
+      id: '/account'
+      path: '/account'
+      fullPath: '/account'
+      preLoaderRoute: typeof AccountRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/alerts': {
@@ -295,6 +406,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof KvRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/recover': {
+      id: '/recover'
+      path: '/recover'
+      fullPath: '/recover'
+      preLoaderRoute: typeof RecoverRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/security': {
       id: '/security'
       path: '/security'
@@ -307,6 +432,13 @@ declare module '@tanstack/react-router' {
       path: '/settings'
       fullPath: '/settings'
       preLoaderRoute: typeof SettingsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/setup': {
+      id: '/setup'
+      path: '/setup'
+      fullPath: '/setup'
+      preLoaderRoute: typeof SetupRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/subjects': {
@@ -358,6 +490,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ClientsIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/invite/$token': {
+      id: '/invite/$token'
+      path: '/invite/$token'
+      fullPath: '/invite/$token'
+      preLoaderRoute: typeof InviteTokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/reset/$token': {
+      id: '/reset/$token'
+      path: '/reset/$token'
+      fullPath: '/reset/$token'
+      preLoaderRoute: typeof ResetTokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/streams/': {
       id: '/streams/'
       path: '/streams'
@@ -372,27 +518,49 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof StreamsNameRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/users/': {
+      id: '/users/'
+      path: '/users'
+      fullPath: '/users/'
+      preLoaderRoute: typeof UsersIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/users/$id': {
+      id: '/users/$id'
+      path: '/users/$id'
+      fullPath: '/users/$id'
+      preLoaderRoute: typeof UsersIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AccountRoute: AccountRoute,
   AlertsRoute: AlertsRoute,
   AuditRoute: AuditRoute,
   BackupsRoute: BackupsRoute,
   ExplorerRoute: ExplorerRoute,
   KvRoute: KvRoute,
+  LoginRoute: LoginRoute,
+  RecoverRoute: RecoverRoute,
   SecurityRoute: SecurityRoute,
   SettingsRoute: SettingsRoute,
+  SetupRoute: SetupRoute,
   SubjectsRoute: SubjectsRoute,
   SystemRoute: SystemRoute,
   TailRoute: TailRoute,
   TokensRoute: TokensRoute,
   WebhooksRoute: WebhooksRoute,
   ClientsIdRoute: ClientsIdRoute,
+  InviteTokenRoute: InviteTokenRoute,
+  ResetTokenRoute: ResetTokenRoute,
   StreamsNameRoute: StreamsNameRoute,
+  UsersIdRoute: UsersIdRoute,
   ClientsIndexRoute: ClientsIndexRoute,
   StreamsIndexRoute: StreamsIndexRoute,
+  UsersIndexRoute: UsersIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

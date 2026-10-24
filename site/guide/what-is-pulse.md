@@ -49,8 +49,8 @@ Pulse is deliberately small. It is not:
 - **a schema registry.** `ce-type` is a label (`home.door.opened.v1`), not a validated schema.
 - **exactly once.** JetStream de-duplicates retries with the same event ID for two minutes. Beyond that, delivery is
   at least once; consumers should be idempotent.
-- **a public dashboard.** The dashboard has no login yet and is reachable only through an SSH tunnel. Single sign-on
-  (OIDC) is planned, not implemented.
+- **an anonymous dashboard.** Every dashboard request needs a signed-in user (password with TOTP, or OIDC single
+  sign-on). It is reachable through an SSH tunnel and, if you enable it, on its own hostname behind Cloudflare.
 - **encrypted at rest inside NATS.** Disk encryption is the host's job. Backups are encrypted.
 
 ## Status

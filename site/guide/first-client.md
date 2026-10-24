@@ -18,15 +18,17 @@ A tool that must not miss events across restarts would use a `durable` grant ins
 
 ## 2. Create the client
 
-**In the dashboard:** Clients → **Create client**, name `door-bot`, add the two grants, create. The dialog shows the
+**In the dashboard** (as an operator or administrator): Clients → **Create client**, name `door-bot`, add the two grants, create. The dialog shows the
 `.creds` **once**, with a download button and ready-made snippets for Go, Python, TypeScript, the `pulse` CLI and the
 `nats` CLI.
 
 <Shot name="client-creds" alt="The new client dialog showing the .creds once, with connection snippets" caption="Credentials are shown once, with snippets" />
 
-**From a terminal** (through the tunnel):
+**From a terminal** (through the tunnel), with a personal access token from your dashboard **Account** page (role
+`operator` or `administrator`; it works only through the tunnel):
 
 ```sh
+export PULSE_ADMIN_TOKEN=pulse_pat_…          # or --admin-token-file / pulse context add … --admin-token-file
 pulse clients create door-bot \
   --grant 'publish:evt.home.door.>' --grant 'subscribe:evt.home.>' \
   --description "Front and back door sensors"

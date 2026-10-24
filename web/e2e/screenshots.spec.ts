@@ -3,6 +3,8 @@ import { existsSync, readFileSync } from 'node:fs'
 import { createServer } from 'node:http'
 import { join } from 'node:path'
 import { expect, test, type APIRequestContext, type Browser, type Page } from '@playwright/test'
+import { csrf } from './admin'
+import { stateFile } from './paths'
 
 /**
  * Documentation screenshots (scripts/screenshots.sh). Runs only when PULSE_SCREENSHOTS_OUT is set, against a fresh
@@ -19,7 +21,6 @@ const wsURL = publicURL.replace(/^http/, 'ws') + '/ws'
 const seedMinutes = Number(process.env.PULSE_SCREENSHOTS_MINUTES ?? '12')
 const receiverPort = Number(process.env.PULSE_SCREENSHOTS_RECEIVER_PORT ?? '28099')
 const bundle = '../sdk/ts/dist/pulse.browser.js'
-const csrf = { 'X-Pulse-CSRF': '1' }
 const viewport = { width: 1440, height: 900 }
 
 type Grant = { action: string; subject?: string; name?: string; stream?: string }
@@ -32,6 +33,25 @@ async function admin<T>(request: APIRequestContext, method: string, path: string
 }
 
 const pick = <T,>(xs: T[]): T => xs[Math.floor(Math.random() * xs.length)]
+
+/** Dashboard users (ADR-0038): a few people with different roles, a pending invitation and an SSO provider. */
+async function seedUsers(request: APIRequestContext): Promise<void> {
+  for (const [email, name, roles] of [
+    ['mira@example.com', 'Mira Operator', ['operator']],
+    ['tomas@example.com', 'Tomas Auditor', ['auditor']],
+    ['ieva@example.com', 'Ieva Viewer', ['viewer']],
+  ] as const) {
+    await admin(request, 'POST', '/users', { email, display_name: name, roles })
+  }
+  await admin(request, 'POST', '/invitations', { email: 'jonas@example.com', roles: ['viewer'] })
+  const prov = await admin<{ id: string }>(request, 'POST', '/sso/providers', {
+    slug: 'authentik', display_name: 'Authentik', issuer: 'https://auth.example.com/application/o/pulse/', client_id: 'pulse-dashboard',
+    groups_claim: 'groups', enabled: true,
+  })
+  await admin(request, 'POST', `/sso/providers/${prov.id}/mappings`, { group_value: 'pulse-admins', role: 'administrator' })
+  await admin(request, 'POST', `/sso/providers/${prov.id}/mappings`, { group_value: 'pulse-ops', role: 'operator' })
+  await admin(request, 'POST', '/account/tokens', { name: 'laptop CLI', role: 'administrator', days: 90 })
+}
 
 /** Clients that connect over /ws from a background page and publish with their own credentials. */
 const clients: { name: string; description: string; tags: string[]; grants: Grant[] }[] = [
@@ -279,8 +299,10 @@ async function sendFailures(request: APIRequestContext): Promise<void> {
   await request.post(`${publicURL}/hooks/github`, { headers: { 'X-GitHub-Event': 'push', 'X-Hub-Signature-256': 'sha256=00' }, data: '{}' })
 }
 
-async function shoot(browser: Browser, scheme: 'light' | 'dark', path: string, file: string, prepare?: (p: Page) => Promise<void>): Promise<void> {
-  const ctx = await browser.newContext({ baseURL: adminURL, viewport, colorScheme: scheme, deviceScaleFactor: 1, timezoneId: 'Europe/Vilnius', locale: 'en-GB' })
+async function shoot(browser: Browser, scheme: 'light' | 'dark', path: string, file: string, prepare?: (p: Page) => Promise<void>,
+  signedIn = true): Promise<void> {
+  const ctx = await browser.newContext({ baseURL: adminURL, viewport, colorScheme: scheme, deviceScaleFactor: 1, timezoneId: 'Europe/Vilnius', locale: 'en-GB',
+    storageState: signedIn ? stateFile : { cookies: [], origins: [] } })
   const page = await ctx.newPage()
   page.setDefaultTimeout(20_000)
   await page.goto(path)
@@ -309,6 +331,7 @@ test('documentation screenshots', async ({ browser, request }) => {
   await new Promise<void>((r) => receiver.listen(receiverPort, '0.0.0.0', r))
 
   const seeded = await seedConfig(request)
+  await seedUsers(request)
   const bg = await (await browser.newContext()).newPage()
   await startClients(bg, seeded.creds, (seedMinutes + 12) * 60_000) // keep publishing (and connected) while shooting
   await sendFailures(request)
@@ -385,6 +408,12 @@ test('documentation screenshots', async ({ browser, request }) => {
   })
   await shoot(browser, 'light', '/audit', 'audit.png', (p) => rows(p, 'audit-table'))
   await shoot(browser, 'light', '/settings', 'settings.png')
+  await shoot(browser, 'light', '/settings?tab=sso', 'sso.png')
+  await shoot(browser, 'light', '/users', 'users.png')
+  await shoot(browser, 'light', '/account', 'account.png')
+  for (const scheme of ['light', 'dark'] as const) {
+    await shoot(browser, scheme, '/login', `login-${scheme}.png`, (p) => expect(p.getByRole('link', { name: 'Sign in with Authentik' })).toBeVisible(), false)
+  }
 
   receiver.close()
 })

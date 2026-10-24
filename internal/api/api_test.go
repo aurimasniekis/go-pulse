@@ -3,6 +3,7 @@ package api
 import (
 	"bufio"
 	"context"
+	"encoding/base32"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -16,10 +17,11 @@ import (
 
 	"github.com/nats-io/nats.go/jetstream"
 
-	"github.com/aurimasniekis/go-pulse/internal/auth"
+	"github.com/aurimasniekis/go-pulse/internal/audit"
 	"github.com/aurimasniekis/go-pulse/internal/ban"
 	"github.com/aurimasniekis/go-pulse/internal/clients"
 	"github.com/aurimasniekis/go-pulse/internal/hooks"
+	"github.com/aurimasniekis/go-pulse/internal/oidc"
 	"github.com/aurimasniekis/go-pulse/internal/outbound"
 	"github.com/aurimasniekis/go-pulse/internal/query"
 	"github.com/aurimasniekis/go-pulse/internal/rollup"
@@ -29,6 +31,7 @@ import (
 	"github.com/aurimasniekis/go-pulse/internal/tail"
 	"github.com/aurimasniekis/go-pulse/internal/testutil/natstest"
 	"github.com/aurimasniekis/go-pulse/internal/tokens"
+	"github.com/aurimasniekis/go-pulse/internal/users"
 	"github.com/aurimasniekis/go-pulse/pkg/pulse"
 )
 
@@ -41,6 +44,8 @@ type harness struct {
 	app    *pulse.Client
 	db     *store.DB
 	deps   *Deps
+	// totpSecret is the signed-in administrator's TOTP secret.
+	totpSecret []byte
 }
 
 func newHarness(t *testing.T) *harness {
@@ -68,7 +73,7 @@ func newHarness(t *testing.T) *harness {
 	go func() { ro.Run(rctx); close(rdone) }()
 	t.Cleanup(func() { rcancel(); <-rdone })
 	d := &Deps{Version: "test", Profile: "dev", DB: db, NC: nc, JS: js, Sys: sys, Query: query.New(js, 4, query.DefaultBudget),
-		Tail: tail.New(js, 2, 1000), Rollup: ro, Auth: auth.None{}, Ready: func() bool { return true },
+		Tail: tail.New(js, 2, 1000), Rollup: ro, Ready: func() bool { return true },
 		Tokens: tokens.New(db), Clients: clients.New(db, env.Keys, sys, nil), PublicURL: "https://events.example.test"}
 	d.Hooks = hooks.New(db, js, env.MasterKey, nil)
 	ob, err := outbound.New(db, js, env.MasterKey, outbound.Options{Allow: []string{"127.0.0.0/8"}, Backoff: []time.Duration{50 * time.Millisecond}})
@@ -102,10 +107,118 @@ func newHarness(t *testing.T) *harness {
 			d.Bans.Fail(context.Background(), ip, source, "")
 		}
 	}
-	h := &harness{env: env, admin: httptest.NewServer(NewAdmin(d)), public: httptest.NewServer(NewPublic(d)), app: app, db: db, deps: d}
+	keys, err := users.DeriveKeys(env.MasterKey)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// No mandatory TOTP in API tests (an empty, non-nil list); the users package tests cover MFA.
+	d.Users = users.New(db, keys, users.Options{MFARequiredRoles: []string{}})
+	d.ReauthWindow = 5 * time.Minute
+	h := &harness{env: env, app: app, db: db, deps: d}
+	h.admin = httptest.NewServer(NewAdmin(d))
+	h.public = httptest.NewServer(NewPublic(d))
+	d.OIDC = oidc.New(d.Users, oidc.Options{BaseURL: h.admin.URL, DevMode: true})
 	t.Cleanup(h.admin.Close)
 	t.Cleanup(h.public.Close)
+	h.signIn(t)
 	return h
+}
+
+// testAdmin is the administrator every harness signs in as.
+const (
+	testAdminEmail    = "admin@example.com"
+	testAdminPassword = "correct horse battery staple"
+)
+
+// signIn bootstraps the first administrator and routes every admin request of http.DefaultClient through a session
+// (cookie, CSRF token and Origin). A request with X-Test-Anonymous set goes out without them.
+func (h *harness) signIn(t *testing.T) {
+	t.Helper()
+	ctx := context.Background()
+	tok, _, err := h.deps.Users.IssueSetupToken(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	u, err := h.deps.Users.Bootstrap(ctx, users.BootstrapInput{Token: tok, Email: testAdminEmail, Password: testAdminPassword}, "127.0.0.1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	off := false // the bootstrap administrator must enroll TOTP; these tests sign in with a password only
+	if _, err := h.deps.Users.Update(ctx, audit.System, u.ID, users.UpdateInput{MFARequired: &off}); err != nil {
+		t.Fatal(err)
+	}
+	call := func(method, path, cookie, csrf, body string) (*http.Response, []byte) {
+		req, _ := http.NewRequestWithContext(ctx, method, h.admin.URL+AdminPrefix+path, strings.NewReader(body))
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("Origin", h.admin.URL)
+		req.Header.Set(CSRFHeader, csrf)
+		if cookie != "" {
+			req.AddCookie(&http.Cookie{Name: "pulse_session", Value: cookie})
+		}
+		resp, err := http.DefaultTransport.RoundTrip(req)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer resp.Body.Close()
+		b, _ := io.ReadAll(resp.Body)
+		if resp.StatusCode >= 300 {
+			t.Fatalf("%s %s: %d %s", method, path, resp.StatusCode, b)
+		}
+		return resp, b
+	}
+	session := func(resp *http.Response, old string) string {
+		for _, c := range resp.Cookies() {
+			if c.Name == "pulse_session" {
+				return c.Value
+			}
+		}
+		return old
+	}
+	// Password sign-in, then TOTP enrollment (which rotates the session with a fresh second factor): the session
+	// satisfies every operation, including those that need recent MFA.
+	resp, b := call(http.MethodPost, "/auth/login", "", "", `{"email":"`+testAdminEmail+`","password":"`+testAdminPassword+`"}`)
+	var login struct {
+		Me Me `json:"me"`
+	}
+	_ = json.Unmarshal(b, &login)
+	cookie := session(resp, "")
+	_, b = call(http.MethodPost, "/account/totp/begin", cookie, login.Me.CSRFToken, "")
+	var enr users.TOTPEnrollment
+	_ = json.Unmarshal(b, &enr)
+	secret, err := base32.StdEncoding.WithPadding(base32.NoPadding).DecodeString(enr.Secret)
+	if err != nil {
+		t.Fatal(err)
+	}
+	resp, _ = call(http.MethodPost, "/account/totp/confirm", cookie, login.Me.CSRFToken,
+		`{"code":"`+users.TOTPCode(secret, users.TOTPStep(time.Now()))+`"}`)
+	cookie = session(resp, cookie)
+	_, b = call(http.MethodGet, "/auth/me", cookie, "", "")
+	var me Me
+	_ = json.Unmarshal(b, &me)
+	if me.MFAPending || me.MustEnroll || !me.User.MFAEnrolled {
+		t.Fatalf("test session is not complete: %s", b)
+	}
+	h.totpSecret = secret
+	prev := http.DefaultClient.Transport
+	http.DefaultClient.Transport = &sessionTransport{cookie: cookie, csrf: me.CSRFToken}
+	t.Cleanup(func() { http.DefaultClient.Transport = prev })
+}
+
+type sessionTransport struct{ cookie, csrf string }
+
+// RoundTrip adds the session to admin API requests of any test server built from the harness's Deps.
+func (s *sessionTransport) RoundTrip(r *http.Request) (*http.Response, error) {
+	if strings.HasPrefix(r.URL.Path, AdminPrefix+"/") && r.Header.Get("X-Test-Anonymous") == "" {
+		r = r.Clone(r.Context())
+		r.AddCookie(&http.Cookie{Name: "pulse_session", Value: s.cookie})
+		if r.Header.Get(CSRFHeader) == "" {
+			r.Header.Set(CSRFHeader, s.csrf)
+		}
+		if r.Header.Get("Origin") == "" {
+			r.Header.Set("Origin", "http://"+r.URL.Host)
+		}
+	}
+	return http.DefaultTransport.RoundTrip(r)
 }
 
 func (h *harness) publish(t *testing.T, n int) {
@@ -143,13 +256,14 @@ func do(t *testing.T, method, url string, body string, hdr map[string]string) (*
 	return resp, string(b)
 }
 
-var csrfH = map[string]string{CSRFHeader: "1"}
+// csrfH is kept for readability at call sites: the session transport adds the real CSRF token.
+var csrfH = map[string]string{}
 
 func TestAdminGuards(t *testing.T) {
 	h := newHarness(t)
 	base := h.admin.URL + AdminPrefix
 	resp, body := do(t, "GET", base+"/system/info", "", nil)
-	if resp.StatusCode != 200 || !strings.Contains(body, `"auth_mode":"none"`) || !strings.Contains(body, `"connected":true`) {
+	if resp.StatusCode != 200 || !strings.Contains(body, `"connected":true`) {
 		t.Fatalf("info %d %s", resp.StatusCode, body)
 	}
 	for _, hk := range []string{"Content-Security-Policy", "X-Content-Type-Options", "Referrer-Policy", "X-Frame-Options"} {
@@ -161,10 +275,17 @@ func TestAdminGuards(t *testing.T) {
 	if resp, _ := do(t, "GET", base+"/system/info", "", map[string]string{"Host": "evil.example:8080"}); resp.StatusCode != http.StatusMisdirectedRequest {
 		t.Fatalf("foreign host: %d", resp.StatusCode)
 	}
-	// CSRF header required for writes.
+	// Without a session nothing but sign-in is reachable.
+	if resp, _ := do(t, "GET", base+"/system/info", "", map[string]string{"X-Test-Anonymous": "1"}); resp.StatusCode != http.StatusUnauthorized {
+		t.Fatalf("anonymous: %d", resp.StatusCode)
+	}
+	// The session's CSRF token is required for writes, and the Origin must be the dashboard's.
 	in := `{"name":"ORDERS","subjects":["orders.>"]}`
-	if resp, _ := do(t, "POST", base+"/streams", in, nil); resp.StatusCode != http.StatusForbidden {
-		t.Fatalf("no csrf: %d", resp.StatusCode)
+	if resp, _ := do(t, "POST", base+"/streams", in, map[string]string{CSRFHeader: "wrong"}); resp.StatusCode != http.StatusForbidden {
+		t.Fatalf("bad csrf: %d", resp.StatusCode)
+	}
+	if resp, _ := do(t, "POST", base+"/streams", in, map[string]string{"Origin": "https://evil.example"}); resp.StatusCode != http.StatusForbidden {
+		t.Fatalf("cross-site: %d", resp.StatusCode)
 	}
 	if resp, body := do(t, "POST", base+"/streams", in, csrfH); resp.StatusCode != http.StatusCreated {
 		t.Fatalf("create: %d %s", resp.StatusCode, body)
@@ -450,8 +571,8 @@ func TestAdminPublish(t *testing.T) {
 	if resp, _ := do(t, "POST", base+"/events", `{"subject":"evt.bad"}`, csrfH); resp.StatusCode != http.StatusUnprocessableEntity {
 		t.Fatalf("bad subject: %d", resp.StatusCode)
 	}
-	if resp, _ := do(t, "POST", base+"/events", body, nil); resp.StatusCode != http.StatusForbidden {
-		t.Fatalf("no csrf: %d", resp.StatusCode)
+	if resp, _ := do(t, "POST", base+"/events", body, map[string]string{CSRFHeader: "wrong"}); resp.StatusCode != http.StatusForbidden {
+		t.Fatalf("bad csrf: %d", resp.StatusCode)
 	}
 	_, out = do(t, "GET", base+"/events/EVENTS/1", "", nil)
 	if !strings.Contains(out, `"source":"dashboard"`) || !strings.Contains(out, `"x-test":["1"]`) {

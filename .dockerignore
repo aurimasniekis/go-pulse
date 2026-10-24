@@ -11,6 +11,7 @@
 web/node_modules/
 web/tools/
 web/e2e/
+web/playwright.config.ts
 web/test-results/
 web/playwright-report/
 internal/ui/dist/assets/

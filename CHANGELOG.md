@@ -45,9 +45,28 @@ versioning: [docs/VERSIONING.md](docs/VERSIONING.md).
 
 - Apache-2.0 license (ADR-0037), a README, `SECURITY.md` and `CONTRIBUTING.md`, and a documentation website built from
   `site/` (VitePress) and deployed to GitHub Pages, with screenshots from a throwaway stack (`make screenshots`).
+- M16, dashboard users and single sign-on (ADR-0038, ported from hallpass): local accounts with Argon2id passwords,
+  mandatory TOTP for administrators and operators, recovery codes, invitations and password links; administrator,
+  operator, auditor and viewer roles with a permission on every admin operation; server-side sessions with CSRF tokens
+  and re-authentication for sensitive actions; OpenID Connect providers (PKCE, group → role mappings, just-in-time
+  users, linking, test logins, SSO-only, step-up); personal access tokens for the CLI; `pulsed admin bootstrap|recover|token`;
+  the dashboard optionally on the public listener on its own or the API hostname (`PULSE_ADMIN_PUBLIC`,
+  `PULSE_ADMIN_PUBLIC_HOST`, `PULSE_ADMIN_URL`); `PULSE_SESSION_IDLE`, `PULSE_SESSION_MAX`, `PULSE_REAUTH_WINDOW`,
+  `PULSE_MFA_REQUIRED_ROLES`; `pulse_dashboard_logins_total`; `make dev-admin`.
 
 ### Changed
 - Example hostnames are `events.example.com` and `r.events.example.com` everywhere in the repository.
+- **Breaking:** the dashboard and admin API require a signed-in user. `PULSE_AUTH_MODE` was removed and pulsed refuses
+  to start when it is set; run `pulsed admin bootstrap` after upgrading.
+- **Breaking:** `X-Pulse-CSRF` now carries the session's CSRF token (from `GET /auth/me`), and state-changing requests
+  need a same-origin `Origin`; the constant `1` is refused.
+- **Breaking:** `pulse clients|streams|backup` and `pulsed backup run` need a personal access token
+  (`--admin-token-file` / `pulse context add --admin-token-file`, `--token`, or `PULSE_ADMIN_TOKEN`).
+- Metric route labels come from a fixed list of API segments; unknown segments are `…/other`.
+
+### Security
+- Strengthening (ADR-0038): no anonymous dashboard access; every admin operation is authorized by role; failed
+  dashboard sign-ins are throttled, audited and, on the public listener, count toward bans (`dashboard` source).
 
 ### Fixed
 - The image build failed since the browser SDK e2e test imports `sdk/ts`, which is outside the Docker build context;

@@ -32,10 +32,20 @@ Both files are gitignored.
 
 If a port is taken, override it, for example `PULSE_DEV_ADMIN_PORT=18080 make dev-up`, and use that port below.
 
-## 2. Open the dashboard
+## 2. Sign in
 
-Open <http://127.0.0.1:8080>. There is no login: on a server the dashboard is only reachable through an SSH tunnel,
-and on your laptop it is bound to loopback.
+The dashboard needs a signed-in user, and there are no default credentials. Print a one-time setup link for the first
+administrator:
+
+```sh
+make dev-admin
+# One-time setup link (single use, expires …); it is shown only once:
+#   http://127.0.0.1:8080/setup?token=…
+```
+
+Open the link, choose an email and a password (at least 12 characters), and sign in. Administrators must enroll TOTP:
+scan the QR code with an authenticator app, enter a code, save the recovery codes, then enter the next code. See
+[Users and single sign-on](/operators/users) for the details.
 
 <Shot name="overview" themed alt="The Overview page of a fresh dev instance" caption="Overview" />
 
@@ -47,15 +57,22 @@ go install github.com/aurimasniekis/go-pulse/cmd/pulse@latest   # or: make build
 
 ## 4. Create a client
 
+The admin commands of the CLI and scripts use a **personal access token**: in the dashboard, open **Account →
+Personal access tokens** and create one with the role `administrator` (or `operator`). It is shown once.
+
+```sh
+export PULSE_ADMIN_TOKEN=pulse_pat_…     # shown once when you create it
+```
+
 The dev NATS listener serves a certificate from Pulse's **internal CA** (on a server, Let's Encrypt takes over once
 ACME succeeds). Save the CA first; the System page has the same PEM under **Connect → Internal CA**.
 
 ```sh
-curl -fsS http://127.0.0.1:8080/api/admin/v1/system/info | jq -r .connect.ca_cert > pulse-dev-ca.pem
+curl -fsS -H "Authorization: Bearer $PULSE_ADMIN_TOKEN" http://127.0.0.1:8080/api/admin/v1/system/info \
+  | jq -r .connect.ca_cert > pulse-dev-ca.pem
 ```
 
-Create a client that may publish and replay `evt.test.>`. `pulse clients create` talks to the admin API and writes the
-`.creds` file once:
+Create a client that may publish and replay `evt.test.>`. `pulse clients create` writes the `.creds` file once:
 
 ```sh
 pulse clients create demo --grant 'publish:evt.test.>' --grant 'subscribe:evt.test.>'

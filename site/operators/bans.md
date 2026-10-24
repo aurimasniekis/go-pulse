@@ -7,11 +7,12 @@ pulsed's HTTP layer, the host's nftables, and optionally a Cloudflare IP list.
 
 ## Detection
 
-Three kinds of failure count against the source address:
+Four kinds of failure count against the source address:
 
 - NATS authentication errors on 4222 (pulsed reads NATS's `CLIENT.AUTH.ERR` advisories, which carry the client host);
 - missing or invalid HTTP tokens on the public API;
-- bad or missing webhook signatures on `/hooks/*`.
+- bad or missing webhook signatures on `/hooks/*`;
+- failed password sign-ins on the public dashboard (source `dashboard`; see [Users and single sign-on](/operators/users)).
 
 Failures are counted per address: an IPv4 address as itself, an IPv6 address as its /64.
 
@@ -120,11 +121,11 @@ The **Security** page shows active bans, ban history, recent failures, the worst
 status (Cloudflare ranges, AOP). From there you can ban a network by hand (for a number of hours, or with no expiry),
 lift a ban, and add or remove allowlist entries. Every change is audited.
 
-Through the tunnel, the same with the admin API:
+Through the tunnel, the same with the admin API and a personal access token (operator or administrator role):
 
 ```sh
-curl -X POST http://127.0.0.1:8080/api/admin/v1/security/bans/lift \
-  -H 'X-Pulse-CSRF: 1' -H 'Content-Type: application/json' -d '{"network":"203.0.113.7"}'
+curl -X POST http://127.0.0.1:8080/api/admin/v1/security/bans/lift -H "Authorization: Bearer $PULSE_ADMIN_TOKEN" \
+  -H 'Content-Type: application/json' -d '{"network":"203.0.113.7"}'
 ```
 
 The `ban_storm` alert fires at 10 bans within 10 minutes.

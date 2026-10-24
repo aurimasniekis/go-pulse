@@ -11,6 +11,7 @@ The tool-facing `pulse` CLI is documented separately ([pulse CLI](/clients/cli))
 | `pulsed banagent` | Mirror bans into nftables. |
 | `pulsed healthcheck` | Probe the readiness endpoint (container health check). |
 | `pulsed backup keygen\|list\|run\|restore` | Backups. |
+| `pulsed admin bootstrap\|recover` | The first dashboard administrator; break-glass recovery. |
 | `pulsed keys export` | Print the decrypted key set. |
 | `pulsed openapi` | Print or write the OpenAPI specs. |
 | `pulsed version` | Build information. |
@@ -84,11 +85,13 @@ decrypts each manifest and lists the streams with their message counts.
 ### `run`
 
 ```sh
-pulsed backup run [--admin-url URL]
+pulsed backup run [--admin-url URL] [--token TOKEN]
 ```
 
 Asks the running pulsed to start a backup now (`POST /api/admin/v1/backups/run`). The default admin URL is
-`http://127.0.0.1:<port of PULSE_ADMIN_ADDR>`. Follow progress on the Backups page or in the logs.
+`http://127.0.0.1:<port of PULSE_ADMIN_ADDR>`. It needs a personal access token with the operator or administrator
+role (`--token`, or `PULSE_ADMIN_TOKEN`); create one under **Account → Personal access tokens**. Follow progress on the
+Backups page or in the logs.
 
 ### `restore`
 
@@ -109,6 +112,28 @@ pulsed backup restore --id ID --identity FILE (--files | --all | --streams A,B) 
 
 `--files` and `--all`/`--streams` are mutually exclusive. The disaster-recovery order is: `--files` before the first
 start, then start the stack, then `--all` ([backup and restore](/operators/backups#new-server)).
+
+## `pulsed admin`
+
+Dashboard bootstrap, break-glass recovery and automation tokens ([Users and single sign-on](/operators/users)). They need the master key
+(run them inside the pulsed container: `docker compose exec pulsed pulsed admin …`) and work while pulsed is running;
+they then refuse a database whose schema differs from the binary's. Links are printed for `PULSE_ADMIN_URL` and shown
+once; both commands write audit records.
+
+```sh
+pulsed admin bootstrap
+pulsed admin recover --email you@example.com [--new-admin]
+pulsed admin token --email automation@example.com [--create] [--role operator] [--days 1] [--name automation]
+```
+
+- **`bootstrap`** prints a one-time setup link (30 minutes) for creating the first administrator. It fails once an
+  administrator exists.
+- **`recover`** prints a single-use recovery login (30 minutes) for an existing user. Redeeming it signs out the user's
+  sessions, removes their TOTP factor and recovery codes and offers a password reset. With `--new-admin` it creates a
+  new administrator with that email instead.
+- **`token`** prints a personal access token (stdout, once) for scripts and deployment checks; it works only on the
+  loopback admin listener. `--create` creates a missing user without a password (it can only use tokens); the role is
+  added to the user's roles when missing. Anyone who can run it can already use `recover`, so it adds no new trust.
 
 ## `pulsed keys export`
 

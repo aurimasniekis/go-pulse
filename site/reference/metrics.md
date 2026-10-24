@@ -25,7 +25,8 @@ The public listener has its own liveness route, `GET /api/v1/health`.
 | `pulse_ingest_events_total` | counter | `via`: `http`, `hook`, `admin` |
 | `pulse_rollup_events_total`, `pulse_rollup_bytes_total` | counter | `stream` (every publisher, including raw NATS) |
 | `pulse_auth_failures_total` | counter | `source` |
-| `pulse_bans_total` | counter | `source`: `nats`, `http_token`, `webhook`, `manual` |
+| `pulse_bans_total` | counter | `source`: `nats`, `http_token`, `webhook`, `dashboard`, `manual` |
+| `pulse_dashboard_logins_total` | counter | `method`: `password`, `oidc`, `breakglass`, `token`; `result`: `ok`, `failed`, `throttled`, `error` |
 | `pulse_bans_active` | gauge | — |
 | `pulse_inbound_hooks_total` | counter | `result`: `accepted`, `rejected`, `error` |
 | `pulse_outbound_deliveries_total` | counter | `outcome`: `delivered`, `retry`, `dead`, `manual`, `test` |
@@ -41,7 +42,9 @@ The public listener has its own liveness route, `GET /api/v1/health`.
 | `pulse_stream_first_timestamp_seconds` | gauge | `stream` (the oldest stored message: the real retention horizon) |
 
 `route` is the first path segment only (`/api/admin/v1/clients`, `/api/v1/publish`, `/hooks`, `/ws`, `ui`), never an ID,
-name or subject.
+name or subject. Only the API's known segments become labels; anything else is `/api/admin/v1/other` or
+`/api/v1/other`, so requests without a session cannot create new label values. Dashboard requests on the public
+listener are counted under `listener="public"`.
 
 ## NATS
 
@@ -72,6 +75,9 @@ sum(rate(pulse_rollup_events_total{stream="EVENTS"}[5m])) * 60
 
 # Fill level of EVENTS
 pulse_stream_bytes{stream="EVENTS"} / pulse_stream_max_bytes{stream="EVENTS"}
+
+# Failed dashboard sign-ins
+sum by (method) (rate(pulse_dashboard_logins_total{result=~"failed|throttled"}[15m]))
 
 # Public API error rate
 sum(rate(pulse_http_requests_total{listener="public",code=~"5.."}[5m]))

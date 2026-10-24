@@ -19,7 +19,7 @@ on macOS). Set `PULSE_CONFIG` to use another file. The file holds paths only, ne
 ```sh
 pulse context add home --url tls://r.events.example.com:4222 --creds ~/.config/pulse/door-bot.creds
 pulse context add lab --url tls://localhost:4222 --creds ./demo.creds --ca ./pulse-dev-ca.pem \
-  --admin-url http://127.0.0.1:8080
+  --admin-url http://127.0.0.1:8080 --admin-token-file ~/.config/pulse/lab-admin.token
 pulse context ls          # * marks the current one
 pulse context use lab
 pulse context rm lab      # the creds file is left alone
@@ -31,6 +31,7 @@ pulse context rm lab      # the creds file is left alone
 | `--creds` | Path to the `.creds` file (required; stored as an absolute path) |
 | `--ca` | Extra CA PEM, while NATS still serves the internal bootstrap certificate |
 | `--admin-url` | Admin API base URL through the SSH tunnel, for the admin commands |
+| `--admin-token-file` | File holding a personal access token for the admin commands (stored as an absolute path) |
 
 The first context you add becomes the current one. Commands pick the context from `--context`, then `$PULSE_CONTEXT`,
 then the current one.
@@ -102,7 +103,12 @@ These call the admin API, which listens only on the server's loopback. Open the 
 ssh -L 8080:127.0.0.1:8080 <vps>
 ```
 
-They take `--context` and `--admin-url` (default: the context's admin URL, else `http://127.0.0.1:8080`).
+They authenticate with a **personal access token**: create one in the dashboard under **Account → Personal access
+tokens**, with the role the commands need (`operator` or `administrator` to create clients, `viewer` to list). Tokens
+work only through the tunnel, never on the public dashboard. Save it to a file with mode 0600.
+
+They take `--context`, `--admin-url` (default: the context's admin URL, else `http://127.0.0.1:8080`) and
+`--admin-token-file` (default: the context's token file, else the token in `$PULSE_ADMIN_TOKEN`).
 
 ### streams
 

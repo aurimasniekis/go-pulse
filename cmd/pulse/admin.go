@@ -17,37 +17,60 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// The admin commands talk to pulsed's admin API, which listens on the server's loopback only: open a tunnel first,
-// e.g. `ssh -L 8080:127.0.0.1:8080 <server>` (ADR-0008).
+// The admin commands talk to pulsed's admin API on the server's loopback listener: open a tunnel first, e.g.
+// `ssh -L 8080:127.0.0.1:8080 <server>` (ADR-0008). They authenticate with a personal access token, which pulsed accepts
+// only on that listener (ADR-0038).
 
 type adminFlags struct {
-	context string
-	url     string
+	context   string
+	url       string
+	tokenFile string
 }
 
 func (f *adminFlags) register(cmd *cobra.Command) {
 	cmd.PersistentFlags().StringVar(&f.context, "context", "", "context name (default: current)")
 	cmd.PersistentFlags().StringVar(&f.url, "admin-url", "", "admin API base URL (default: the context's, else http://127.0.0.1:8080)")
+	cmd.PersistentFlags().StringVar(&f.tokenFile, "admin-token-file", "",
+		"file with a personal access token (default: the context's, else $PULSE_ADMIN_TOKEN)")
 }
 
 type admin struct {
-	base string
-	hc   *http.Client
+	base  string
+	token string
+	hc    *http.Client
 }
 
 func (f *adminFlags) client() (*admin, error) {
-	base := f.url
-	if base == "" {
+	base, tokenFile := f.url, f.tokenFile
+	if base == "" || tokenFile == "" {
 		cc, err := activeContext(f.context)
-		if err != nil {
+		if err == nil {
+			if base == "" {
+				base = cc.AdminURL
+			}
+			if tokenFile == "" {
+				tokenFile = cc.AdminTokenFile
+			}
+		} else if base == "" {
 			return nil, err
 		}
-		base = cc.AdminURL
 	}
 	if base == "" {
 		base = "http://127.0.0.1:8080"
 	}
-	return &admin{base: strings.TrimRight(base, "/") + "/api/admin/v1", hc: &http.Client{Timeout: 60 * time.Second}}, nil
+	token := os.Getenv("PULSE_ADMIN_TOKEN")
+	if tokenFile != "" {
+		b, err := os.ReadFile(tokenFile) //nolint:gosec // the user's own token file
+		if err != nil {
+			return nil, fmt.Errorf("admin token: %w", err)
+		}
+		token = strings.TrimSpace(string(b))
+	}
+	if token == "" {
+		return nil, errors.New("the admin commands need a personal access token: create one in the dashboard (Account → Personal access tokens), " +
+			"save it to a file and pass --admin-token-file (or `pulse context add … --admin-token-file`), or set PULSE_ADMIN_TOKEN")
+	}
+	return &admin{base: strings.TrimRight(base, "/") + "/api/admin/v1", token: token, hc: &http.Client{Timeout: 60 * time.Second}}, nil
 }
 
 type problem struct {
@@ -75,9 +98,7 @@ func (a *admin) do(ctx context.Context, method, path string, body, out any) erro
 	if body != nil {
 		req.Header.Set("Content-Type", "application/json")
 	}
-	if method != http.MethodGet {
-		req.Header.Set("X-Pulse-CSRF", "1")
-	}
+	req.Header.Set("Authorization", "Bearer "+a.token)
 	resp, err := a.hc.Do(req)
 	if err != nil {
 		return fmt.Errorf("admin API at %s: %w (is the ssh tunnel open?)", a.base, err)

@@ -14,7 +14,7 @@ import (
 func TestKVAndObjects(t *testing.T) {
 	h := newHarness(t)
 	base := h.admin.URL + AdminPrefix
-	csrf := map[string]string{CSRFHeader: "1"}
+	csrf := csrfH
 	if resp, body := do(t, http.MethodPost, base+"/kv", `{"name":"settings","history":5}`, csrf); resp.StatusCode != http.StatusCreated {
 		t.Fatalf("%d %s", resp.StatusCode, body)
 	}
@@ -59,7 +59,6 @@ func TestKVAndObjects(t *testing.T) {
 		t.Fatalf("%d %s", resp.StatusCode, body)
 	}
 	req, _ := http.NewRequest(http.MethodPut, base+"/objects/files/upload?name=docs/readme.txt", strings.NewReader("hello object"))
-	req.Header.Set(CSRFHeader, "1")
 	req.Header.Set("Content-Type", "application/octet-stream")
 	up, err := http.DefaultClient.Do(req)
 	if err != nil {
@@ -101,7 +100,7 @@ func TestKVAndObjects(t *testing.T) {
 func TestBlobsAreReadOnly(t *testing.T) {
 	h := newHarness(t)
 	base := h.admin.URL + AdminPrefix
-	csrf := map[string]string{CSRFHeader: "1"}
+	csrf := csrfH
 	if err := ensureBlobs(h); err != nil {
 		t.Fatal(err)
 	}
@@ -114,7 +113,6 @@ func TestBlobsAreReadOnly(t *testing.T) {
 		}
 	}
 	req, _ := http.NewRequest(http.MethodPut, base+"/objects/blobs/upload?name=x", strings.NewReader("data"))
-	req.Header.Set(CSRFHeader, "1")
 	req.Header.Set("Content-Type", "application/octet-stream")
 	up, err := http.DefaultClient.Do(req)
 	if err != nil {

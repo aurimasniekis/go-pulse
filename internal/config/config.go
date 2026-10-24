@@ -6,7 +6,9 @@ import (
 	"errors"
 	"fmt"
 	"net"
+	"net/url"
 	"os"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -47,24 +49,31 @@ type Config struct {
 	PublicAddr             string
 	AdminAddr              string
 	MetricsAddr            string
-	AdminPublishedLoopback bool // compose publishes the admin port only on host loopback (ADR-0008)
-	AdminPublic            bool
-	AuthMode               string   // none | oidc
+	AdminPublishedLoopback bool     // compose publishes the admin port only on host loopback (ADR-0008)
 	AdminHosts             []string // extra Host names accepted by the admin listener (DNS-rebinding guard)
-	OutboundAllow          []string // networks outbound webhooks may reach despite the SSRF guard
-	AOPCAFile              string   // client CA for Authenticated Origin Pulls on the public listener
-	BanThreshold           int
-	BanWindow              time.Duration
-	BanDuration            time.Duration
-	BanMax                 time.Duration
-	BanAllow               []string // never-ban networks (operator allowlist from config)
-	HostIPs                []string // the host's own addresses, never banned
-	CFRefresh              bool     // refresh Cloudflare ranges daily from the API
-	CFAccountID            string   // Cloudflare IP list sync (optional)
-	CFBanListID            string
-	CFBanListToken         string
-	OriginCertFile         string // public listener TLS certificate (Cloudflare Origin CA), PEM
-	OriginKeyFile          string
+	// Dashboard sign-in (ADR-0038)
+	AdminPublic      bool          // also serve the dashboard on the public listener
+	AdminPublicHost  string        // its hostname there (default PULSE_PUBLIC_HOST: same host, path routing)
+	AdminURL         string        // the dashboard origin SSO redirects to and links point at
+	SessionIdle      time.Duration // sign-out after inactivity
+	SessionMax       time.Duration // absolute session lifetime
+	ReauthWindow     time.Duration // sensitive actions need authentication this recent
+	MFARequiredRoles []string      // password accounts with these roles must enroll TOTP
+	removedAuthMode  string        // PULSE_AUTH_MODE is refused (ADR-0038)
+	OutboundAllow    []string      // networks outbound webhooks may reach despite the SSRF guard
+	AOPCAFile        string        // client CA for Authenticated Origin Pulls on the public listener
+	BanThreshold     int
+	BanWindow        time.Duration
+	BanDuration      time.Duration
+	BanMax           time.Duration
+	BanAllow         []string // never-ban networks (operator allowlist from config)
+	HostIPs          []string // the host's own addresses, never banned
+	CFRefresh        bool     // refresh Cloudflare ranges daily from the API
+	CFAccountID      string   // Cloudflare IP list sync (optional)
+	CFBanListID      string
+	CFBanListToken   string
+	OriginCertFile   string // public listener TLS certificate (Cloudflare Origin CA), PEM
+	OriginKeyFile    string
 
 	// ACME for the raw NATS hostname (PL-EDGE-006)
 	ACMEEnabled      bool
@@ -141,7 +150,12 @@ func Load(getenv Getenv) (*Config, error) {
 		MetricsAddr:            e.str("PULSE_METRICS_ADDR", "127.0.0.1:9464"),
 		AdminPublishedLoopback: e.bool("PULSE_ADMIN_PUBLISHED_LOOPBACK", false),
 		AdminPublic:            e.bool("PULSE_ADMIN_PUBLIC", false),
-		AuthMode:               e.str("PULSE_AUTH_MODE", "none"),
+		AdminPublicHost:        strings.ToLower(e.str("PULSE_ADMIN_PUBLIC_HOST", "")),
+		AdminURL:               strings.TrimRight(e.str("PULSE_ADMIN_URL", ""), "/"),
+		SessionIdle:            e.dur("PULSE_SESSION_IDLE", 30*time.Minute),
+		SessionMax:             e.dur("PULSE_SESSION_MAX", 12*time.Hour),
+		ReauthWindow:           e.dur("PULSE_REAUTH_WINDOW", 5*time.Minute),
+		MFARequiredRoles:       e.listDefault("PULSE_MFA_REQUIRED_ROLES", []string{"administrator", "operator"}),
 		AdminHosts:             e.list("PULSE_ADMIN_HOSTS"),
 		OutboundAllow:          e.list("PULSE_OUTBOUND_ALLOW"),
 		AOPCAFile:              e.str("PULSE_AOP_CA_FILE", ""),
@@ -230,6 +244,19 @@ func Load(getenv Getenv) (*Config, error) {
 	if c.PublicURL == "" && c.PublicHost != "" {
 		c.PublicURL = "https://" + c.PublicHost
 	}
+	c.removedAuthMode = e.get("PULSE_AUTH_MODE")
+	if c.AdminPublicHost == "" {
+		c.AdminPublicHost = strings.ToLower(c.PublicHost)
+	}
+	if c.AdminURL == "" {
+		switch {
+		case c.AdminPublic && c.AdminPublicHost != "":
+			c.AdminURL = "https://" + c.AdminPublicHost
+		default:
+			// The SSH tunnel: ssh -L 8080:127.0.0.1:8080 <host>.
+			c.AdminURL = "http://127.0.0.1:8080"
+		}
+	}
 	mk, err := e.secret("PULSE_MASTER_KEY", c.Profile == ProfileProd)
 	if err != nil {
 		e.errs = append(e.errs, err)
@@ -253,24 +280,40 @@ func (c *Config) Validate() error {
 	default:
 		errs = append(errs, fmt.Errorf("PULSE_PROFILE must be dev or prod, got %q", c.Profile))
 	}
-	switch c.AuthMode {
-	case "none":
-	case "oidc":
-		errs = append(errs, errors.New("PULSE_AUTH_MODE=oidc is not implemented yet (DECISIONS.md R-02)"))
-	default:
-		errs = append(errs, fmt.Errorf("PULSE_AUTH_MODE must be none or oidc, got %q", c.AuthMode))
+	if c.removedAuthMode != "" {
+		errs = append(errs, errors.New("PULSE_AUTH_MODE was removed: the dashboard always requires sign-in (users, TOTP and SSO, ADR-0038); "+
+			"run `pulsed admin bootstrap` for the first administrator"))
 	}
 	if len(c.MasterKey) == 0 {
 		errs = append(errs, errors.New("a master key is required: set PULSE_MASTER_KEY_FILE"))
 	}
-	if c.Profile == ProfileProd && c.AuthMode == "none" {
-		if c.AdminPublic {
-			errs = append(errs, errors.New("refusing PULSE_ADMIN_PUBLIC=true with PULSE_AUTH_MODE=none in the prod profile (ADR-0008)"))
+	if c.Profile == ProfileProd && !isLoopback(c.AdminAddr) && !c.AdminPublishedLoopback {
+		errs = append(errs, fmt.Errorf("refusing admin listener %q in the prod profile: bind a loopback address, or bind inside a container and "+
+			"publish only on host loopback with PULSE_ADMIN_PUBLISHED_LOOPBACK=true (ADR-0008); use PULSE_ADMIN_PUBLIC for remote access", c.AdminAddr))
+	}
+	if c.AdminPublic {
+		if c.PublicAddr == "" {
+			errs = append(errs, errors.New("PULSE_ADMIN_PUBLIC needs the public listener (PULSE_PUBLIC_ADDR)"))
 		}
-		if !isLoopback(c.AdminAddr) && !c.AdminPublishedLoopback {
-			errs = append(errs, fmt.Errorf("refusing admin listener %q with PULSE_AUTH_MODE=none in the prod profile: bind a loopback "+
-				"address, or bind inside a container and publish only on host loopback with PULSE_ADMIN_PUBLISHED_LOOPBACK=true (ADR-0008)", c.AdminAddr))
+		if c.AdminPublicHost == "" {
+			errs = append(errs, errors.New("PULSE_ADMIN_PUBLIC needs PULSE_ADMIN_PUBLIC_HOST or PULSE_PUBLIC_HOST"))
 		}
+	}
+	if c.SessionIdle < time.Minute || c.SessionMax < c.SessionIdle || c.SessionMax > 7*24*time.Hour {
+		errs = append(errs, errors.New("PULSE_SESSION_IDLE must be at least 1m and PULSE_SESSION_MAX between it and 168h"))
+	}
+	if c.ReauthWindow < time.Minute || (c.Profile == ProfileProd && c.ReauthWindow > 15*time.Minute) {
+		errs = append(errs, errors.New("PULSE_REAUTH_WINDOW must be at least 1m (at most 15m in the prod profile)"))
+	}
+	for _, r := range c.MFARequiredRoles {
+		if !slices.Contains([]string{"administrator", "operator", "auditor", "viewer"}, r) {
+			errs = append(errs, fmt.Errorf("PULSE_MFA_REQUIRED_ROLES: unknown role %q", r))
+		}
+	}
+	if u, err := url.Parse(c.AdminURL); err != nil || (u.Scheme != "https" && u.Scheme != "http") || u.Host == "" || u.Path != "" {
+		errs = append(errs, fmt.Errorf("PULSE_ADMIN_URL must be an origin like https://admin.events.example.com, got %q", c.AdminURL))
+	} else if c.Profile == ProfileProd && u.Scheme != "https" && !isLoopbackHost(u.Hostname()) {
+		errs = append(errs, errors.New("the prod profile requires an https PULSE_ADMIN_URL unless it is the loopback tunnel"))
 	}
 	if (c.OriginCertFile == "") != (c.OriginKeyFile == "") {
 		errs = append(errs, errors.New("PULSE_ORIGIN_CERT_FILE and PULSE_ORIGIN_KEY_FILE go together"))
@@ -352,6 +395,14 @@ func (c *Config) Validate() error {
 	return errors.Join(errs...)
 }
 
+func isLoopbackHost(h string) bool {
+	if h == "localhost" {
+		return true
+	}
+	ip := net.ParseIP(h)
+	return ip != nil && ip.IsLoopback()
+}
+
 func isLoopback(addr string) bool {
 	host, _, err := net.SplitHostPort(addr)
 	if err != nil {
@@ -392,6 +443,17 @@ func (e *envReader) list(k string) []string {
 		}
 	}
 	return out
+}
+
+// listDefault is list with a default when the variable is unset or empty; "none" is an empty list.
+func (e *envReader) listDefault(k string, def []string) []string {
+	switch strings.TrimSpace(strings.ToLower(e.get(k))) {
+	case "":
+		return def
+	case "none":
+		return []string{}
+	}
+	return e.list(k)
 }
 
 func (e *envReader) str(k, def string) string {

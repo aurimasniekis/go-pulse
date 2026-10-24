@@ -68,6 +68,10 @@ flowchart LR
   request/reply, replay and an SSE live tail. Browsers can use NATS over WebSocket at `/ws`.
 - **Webhooks in and out.** Inbound GitHub, Stripe, HMAC and shared-secret verifiers publish to a subject. Outbound
   hooks deliver events in order, signed and retried, with a delivery log and an SSRF guard.
+- **Users, roles and single sign-on.** Dashboard users sign in with a password and TOTP or through any OpenID Connect
+  provider (PKCE, group → role mappings, just-in-time users, step-up), with administrator, operator, auditor and
+  viewer roles, recovery codes, invitations, break-glass recovery and personal access tokens for the CLI. The dashboard
+  stays behind an SSH tunnel or, if you choose, is served behind Cloudflare on its own hostname.
 - **A dashboard to see it all.** Event explorer with filters, live tail, subject tree, throughput and a disk forecast,
   streams and consumers, KV and object browser, clients, tokens, webhooks, security, alerts, backups and audit.
 - **Edge security.** pulsed terminates TLS itself behind Cloudflare with Authenticated Origin Pulls. Raw NATS gets a
@@ -79,8 +83,8 @@ flowchart LR
   plus the official NATS image, Prometheus metrics, alert rules with Telegram and Discord notifications, and an audit
   log of every change.
 
-Pulse is **single-owner and single-node**: there is no clustering or high availability, and the dashboard has no
-login yet. It binds to the host's loopback interface and you reach it through an SSH tunnel.
+Pulse is **single-node**: there is no clustering or high availability. It is built for one owner and the people they
+invite; there is no multi-tenant isolation between users or tools beyond roles and grants.
 
 ## Screenshots
 
@@ -89,6 +93,7 @@ login yet. It binds to the host's loopback interface and you reach it through an
 | <img src="site/public/screenshots/explorer-light.png" alt="Event explorer with filters and a list of events"><br>**Event explorer** | <img src="site/public/screenshots/event-detail.png" alt="One event with its envelope headers and JSON payload"><br>**One event, headers and payload** |
 | <img src="site/public/screenshots/clients-light.png" alt="Clients with their grants and live connections"><br>**Clients and their grants** | <img src="site/public/screenshots/client-creds.png" alt="A new client's credentials shown once, with connection snippets"><br>**Credentials shown once, with snippets** |
 | <img src="site/public/screenshots/security-light.png" alt="Security page with active bans and recent authentication failures"><br>**Bans and authentication failures** | <img src="site/public/screenshots/backups.png" alt="Backups page with verified nightly backups"><br>**Verified, encrypted backups** |
+| <img src="site/public/screenshots/login-light.png" alt="Sign-in page with password and single sign-on"><br>**Sign in with a password and TOTP, or SSO** | <img src="site/public/screenshots/users.png" alt="Users page with roles and sign-in methods"><br>**Users and roles** |
 
 All screenshots come from a throwaway instance with fictional data (`make screenshots`).
 
@@ -101,10 +106,14 @@ Needs Docker, Go (the version in `go.mod`), Node 24 and pnpm.
 ```sh
 git clone https://github.com/aurimasniekis/go-pulse.git && cd go-pulse
 make dev-up                     # init, NATS, pulsed, Alloy, SeaweedFS; dashboard on http://127.0.0.1:8080
+make dev-admin                  # one-time setup link: open it, choose a password, sign in, enroll TOTP
 go install github.com/aurimasniekis/go-pulse/cmd/pulse@latest
 
+# In the dashboard: Account → Personal access tokens → create one (role administrator); it is shown once.
+export PULSE_ADMIN_TOKEN=pulse_pat_…
 # The dev NATS listener serves a certificate from Pulse's internal CA.
-curl -fsS http://127.0.0.1:8080/api/admin/v1/system/info | jq -r .connect.ca_cert > pulse-ca.pem
+curl -fsS -H "Authorization: Bearer $PULSE_ADMIN_TOKEN" http://127.0.0.1:8080/api/admin/v1/system/info \
+  | jq -r .connect.ca_cert > pulse-ca.pem
 pulse clients create demo --grant 'publish:evt.demo.>' --grant 'subscribe:evt.demo.>'   # writes demo.creds once
 pulse context add dev --url tls://127.0.0.1:4222 --creds ./demo.creds --ca ./pulse-ca.pem
 

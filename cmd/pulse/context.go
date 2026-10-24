@@ -24,6 +24,8 @@ type cliContext struct {
 	Creds    string `json:"creds"`
 	CA       string `json:"ca,omitempty"`
 	AdminURL string `json:"admin_url,omitempty"`
+	// AdminTokenFile holds a personal access token for the admin commands (a path, like Creds).
+	AdminTokenFile string `json:"admin_token_file,omitempty"`
 }
 
 func configPath() (string, error) {
@@ -114,6 +116,11 @@ func newContextCmd() *cobra.Command {
 					return err
 				}
 			}
+			if add.AdminTokenFile != "" {
+				if add.AdminTokenFile, err = filepath.Abs(add.AdminTokenFile); err != nil {
+					return err
+				}
+			}
 			c, p, err := loadConfig()
 			if err != nil {
 				return err
@@ -134,6 +141,7 @@ func newContextCmd() *cobra.Command {
 	addCmd.Flags().StringVar(&add.Creds, "creds", "", "path to the .creds file")
 	addCmd.Flags().StringVar(&add.CA, "ca", "", "extra CA PEM (internal CA during bootstrap)")
 	addCmd.Flags().StringVar(&add.AdminURL, "admin-url", "", "admin API base URL (via ssh -L), e.g. http://127.0.0.1:8080")
+	addCmd.Flags().StringVar(&add.AdminTokenFile, "admin-token-file", "", "file with a personal access token (dashboard → Account) for the admin commands")
 
 	useCmd := &cobra.Command{
 		Use:   "use <name>",

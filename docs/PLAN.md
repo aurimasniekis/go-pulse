@@ -153,6 +153,7 @@ Ordered `HeadersOnly` consumer from checkpoint+1 → in-memory minute buckets �
 | M13 | Python and TS SDKs | Conformance vectors, interop e2e (Go → Python, TS node, browser via /ws). | Tests green. |
 | M14 | Ansible (events-wan-lt) | base, firewall, fail2ban, docker, pulse, alloy roles; vm-verify.sh. | Needs test VM (externally verified). |
 | M15 | Terraform + deploy (events-wan-lt) | Module, `terraform test` with mocks, examples, `make deploy`, GO-LIVE.md. | validate + test green. |
+| M16 | Dashboard users and SSO (ADR-0038) | Users, roles, TOTP, sessions, invitations, break-glass, OIDC (PKCE, mappings, JIT, step-up, SSO-only), personal access tokens, public dashboard host, UI. | Tests + e2e green. |
 
 ### 5.2 Status table
 
@@ -176,6 +177,7 @@ Status values: `planned`, `in-progress`, `implemented`, `tested`, `externally-ve
 | M13 | Python and TS SDKs | tested | e0ee09d |
 | M14 | Ansible (events-wan-lt) | tested locally in a Debian 13 container; VM pending | n/a (no commits in that repo) |
 | M15 | Terraform + deploy (events-wan-lt) | module tested with mocks; deploy prepared, waits for a release and the VPS | n/a |
+| M16 | Dashboard users and SSO | tested (live IdP and Cloudflare-fronted dashboard pending) | see git log |
 
 ### 5.3 Progress log
 
@@ -199,6 +201,7 @@ Status values: `planned`, `in-progress`, `implemented`, `tested`, `externally-ve
 | 2026-10-24 | M14 | events-wan-lt (uncommitted, per the user's rule): roles base, firewall, fail2ban, docker, alloy, pulse; `make test-ansible` converges them in a privileged Debian 13 container with pulsed:dev and passes all assertions and a changed=0 second run. Findings fed back here: banagent needs root with only NET_ADMIN/DAC_READ_SEARCH (be3fc7a), Debian's nftables unit flushes everything on stop (firewall contract updated). VM verification (`scripts/vm-verify.sh`) waits for the test VM. |
 | 2026-10-24 | M15 | events-wan-lt: `make pin-image` (attestation check + digest), `make deploy`, docs/GO-LIVE.md. Waiting for a tagged release (no remote yet) and the VPS. |
 | 2026-10-24 | — | Repository prepared for publication (ADR-0037): Apache-2.0, README, SECURITY/CONTRIBUTING/RELEASING, VitePress website in `site/` with Pages workflow, `make screenshots`. Writing the docs found R-05 (consumer scoping) and R-06 (no EVENTS shrink path) and an image build break (`.dockerignore`), fixed. |
+| 2026-10-24 | M16 | Dashboard users, TOTP and OIDC SSO ported from hallpass (ADR-0038): internal/users, internal/oidc, internal/rbac, per-operation permissions, public dashboard host, personal access tokens, `pulsed admin bootstrap|recover|token`, sign-in/account/users/SSO UI. Go tests (users, oidc with an in-process IdP, api roles and routing), e2e 42 passed twice with real sign-in (global setup: bootstrap + TOTP), make check green. |
 
 ## 6. Acceptance checklist (mapped to requirement IDs)
 
@@ -254,11 +257,26 @@ E browser E2E · C CI/static check · S spike/perf · R restore drill · X exter
 
 #### PL-ADM — Dashboard access
 
-- [x] `PL-ADM-001` Loopback admin listener — M3 — ✅ tested: internal/app (admin listener), dev stack on loopback; internal/api TestUIAndPublic (admin paths 404 on public)
-- [x] `PL-ADM-002` Authenticator seam — M3 — ✅ tested: internal/auth seam; oidc refused (internal/config TestProdRefusals)
-- [x] `PL-ADM-003` Refuse unsafe exposure — M3 — ✅ tested: internal/config TestProdRefusals (admin public / non-loopback with auth none)
-- [x] `PL-ADM-004` Browser hardening — M3 — ✅ tested: internal/api TestAdminGuards (CSP and headers, CSRF header, Host allowlist)
-- [x] `PL-ADM-005` Future OIDC contract — M3 — ✅ documented: docs/operator/sso.md
+- [x] `PL-ADM-001` Admin listeners — M3/M16 — ✅ tested: internal/api TestUIAndPublic, TestPublicDashboardRouting (own and shared dashboard host)
+- [x] `PL-ADM-002` ~~Authenticator seam~~ — withdrawn by ADR-0038 (replaced by PL-USR)
+- [x] `PL-ADM-003` Refuse unsafe exposure — M16 — ✅ tested: internal/config TestProdRefusals (non-loopback admin listener, removed PULSE_AUTH_MODE, reauth window, http dashboard URL), TestDashboardSignInSettings
+- [x] `PL-ADM-004` Browser hardening — M16 — ✅ tested: internal/api TestAdminGuards (headers, Host allowlist, session CSRF token, cross-site Origin refused), TestPersonalAccessTokens (cross-site login refused)
+- [x] `PL-ADM-005` ~~Future OIDC contract~~ — withdrawn by ADR-0038 (implemented as PL-USR-008..010)
+
+#### PL-USR — Dashboard users and sign-in (ADR-0038)
+
+- [x] `PL-USR-001` Bootstrap — M16 — ✅ tested: internal/users TestBootstrapAndMandatoryMFA; cmd/pulsed TestAdminBootstrap (while pulsed holds the lock, refused once an admin exists)
+- [x] `PL-USR-002` Local passwords — M16 — ✅ tested: internal/users TestPasswordHashing, TestInvitationsAndResets (minimum length)
+- [x] `PL-USR-003` Roles — M16 — ✅ tested: internal/api TestEveryOperationHasARule, TestRolesThroughTheAPI; internal/users TestRolesAndLastAdmin
+- [x] `PL-USR-004` Sessions — M16 — ✅ tested: internal/users TestSessions (idle, absolute, listener binding, CSRF, rotation)
+- [x] `PL-USR-005` Sign-in hardening — M16 — ✅ tested: internal/users TestLoginFailuresAndThrottle; internal/api TestPublicDashboardRouting (failed public sign-in feeds bans)
+- [x] `PL-USR-006` TOTP — M16 — ✅ tested: internal/users TestTOTPVectors (RFC 6238), TestBootstrapAndMandatoryMFA (enrollment, no reuse, recovery codes single use)
+- [x] `PL-USR-007` Recovery — M16 — ✅ tested: internal/users TestInvitationsAndResets, TestBreakGlass
+- [ ] `PL-USR-008` OIDC — M16 — ◐ tested against an in-process IdP (internal/oidc TestLoginPreprovisioned, TestStateSafety, TestIDTokenValidation, TestJWKSRotation, TestProviderSafety); no live provider yet
+- [x] `PL-USR-009` Provisioning and mapping — M16 — ✅ tested: internal/oidc TestJITAndRoleSync, TestNoEmailMerge, TestSyncKeepsLastAdmin, TestLinkInvite
+- [x] `PL-USR-010` Step-up and SSO-only — M16 — ✅ tested: internal/oidc TestStepUp, TestSSOOnly; internal/users TestSessions (reauth window)
+- [ ] `PL-USR-011` Public dashboard — M16 — ◐ tested: internal/api TestPublicDashboardRouting; Cloudflare and AOP in front not externally verified (events-wan-lt D-014)
+- [x] `PL-USR-012` Personal access tokens — M16 — ✅ tested: internal/users TestPersonalAccessTokens; internal/api TestPersonalAccessTokens (loopback only, no CSRF needed)
 
 #### PL-EDGE — Public listener and TLS
 

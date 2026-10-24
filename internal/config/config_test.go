@@ -36,20 +36,53 @@ func TestProdDefaults(t *testing.T) {
 func TestProdRefusals(t *testing.T) {
 	kf := keyFile(t)
 	cases := map[string]map[string]string{
-		"plain http public listener":        {"PULSE_MASTER_KEY_FILE": kf},
-		"cert without key":                  {"PULSE_MASTER_KEY_FILE": kf, "PULSE_ORIGIN_CERT_FILE": "/x"},
-		"admin public with auth none":       {"PULSE_MASTER_KEY_FILE": kf, "PULSE_ADMIN_PUBLIC": "true"},
-		"non-loopback admin with auth none": {"PULSE_MASTER_KEY_FILE": kf, "PULSE_ADMIN_ADDR": "0.0.0.0:8080"},
-		"plain master key in prod":          {"PULSE_MASTER_KEY": secretbox.GenerateMasterKey()},
-		"missing master key":                {},
-		"oidc not implemented":              {"PULSE_MASTER_KEY_FILE": kf, "PULSE_AUTH_MODE": "oidc"},
-		"bad profile":                       {"PULSE_MASTER_KEY_FILE": kf, "PULSE_PROFILE": "staging"},
-		"bad size":                          {"PULSE_MASTER_KEY_FILE": kf, "PULSE_EVENTS_MAX_BYTES": "lots"},
+		"plain http public listener":      {"PULSE_MASTER_KEY_FILE": kf},
+		"cert without key":                {"PULSE_MASTER_KEY_FILE": kf, "PULSE_ORIGIN_CERT_FILE": "/x"},
+		"non-loopback admin listener":     {"PULSE_MASTER_KEY_FILE": kf, "PULSE_ADMIN_ADDR": "0.0.0.0:8080"},
+		"plain master key in prod":        {"PULSE_MASTER_KEY": secretbox.GenerateMasterKey()},
+		"missing master key":              {},
+		"removed auth mode":               tlsProd(kf, map[string]string{"PULSE_AUTH_MODE": "none"}),
+		"public dashboard without a host": tlsProd(kf, map[string]string{"PULSE_ADMIN_PUBLIC": "true"}),
+		"long reauth window in prod":      tlsProd(kf, map[string]string{"PULSE_REAUTH_WINDOW": "1h"}),
+		"http dashboard URL in prod":      tlsProd(kf, map[string]string{"PULSE_ADMIN_URL": "http://admin.events.example.com"}),
+		"dashboard URL with a path":       tlsProd(kf, map[string]string{"PULSE_ADMIN_URL": "https://admin.events.example.com/x"}),
+		"unknown MFA role":                tlsProd(kf, map[string]string{"PULSE_MFA_REQUIRED_ROLES": "root"}),
+		"session longer than a week":      tlsProd(kf, map[string]string{"PULSE_SESSION_MAX": "200h"}),
+		"bad profile":                     {"PULSE_MASTER_KEY_FILE": kf, "PULSE_PROFILE": "staging"},
+		"bad size":                        {"PULSE_MASTER_KEY_FILE": kf, "PULSE_EVENTS_MAX_BYTES": "lots"},
 	}
 	for name, m := range cases {
 		if _, err := Load(env(m)); err == nil {
 			t.Errorf("%s: accepted", name)
 		}
+	}
+}
+
+// tlsProd is a valid prod environment (TLS public listener with AOP) plus extra.
+func tlsProd(kf string, extra map[string]string) map[string]string {
+	m := map[string]string{"PULSE_MASTER_KEY_FILE": kf, "PULSE_ORIGIN_CERT_FILE": "/c", "PULSE_ORIGIN_KEY_FILE": "/k", "PULSE_AOP_CA_FILE": "/aop"}
+	for k, v := range extra {
+		m[k] = v
+	}
+	return m
+}
+
+// The dashboard's public exposure and sign-in settings (ADR-0038).
+func TestDashboardSignInSettings(t *testing.T) {
+	kf := keyFile(t)
+	c, err := Load(env(tlsProd(kf, map[string]string{"PULSE_PUBLIC_HOST": "events.example.com", "PULSE_ADMIN_PUBLIC": "true"})))
+	if err != nil || c.AdminPublicHost != "events.example.com" || c.AdminURL != "https://events.example.com" ||
+		c.ReauthWindow != 5*time.Minute || len(c.MFARequiredRoles) != 2 {
+		t.Fatalf("%+v %v", c, err)
+	}
+	c, err = Load(env(tlsProd(kf, map[string]string{"PULSE_PUBLIC_HOST": "events.example.com", "PULSE_ADMIN_PUBLIC": "true",
+		"PULSE_ADMIN_PUBLIC_HOST": "Admin.Events.Example.com", "PULSE_MFA_REQUIRED_ROLES": "none"})))
+	if err != nil || c.AdminPublicHost != "admin.events.example.com" || c.AdminURL != "https://admin.events.example.com" || len(c.MFARequiredRoles) != 0 {
+		t.Fatalf("%+v %v", c, err)
+	}
+	c, err = Load(env(tlsProd(kf, nil)))
+	if err != nil || c.AdminURL != "http://127.0.0.1:8080" {
+		t.Fatalf("tunnel default: %+v %v", c.AdminURL, err)
 	}
 }
 

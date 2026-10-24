@@ -85,7 +85,8 @@ When a stream, KV bucket or object store was deleted or damaged, on the same ser
 
 <Shot name="backup-restore" alt="Restore dialog with the dry-run plan and stream selection" caption="Restoring selected streams" />
 
-From a terminal, through the tunnel:
+From a terminal, through the tunnel, with a [personal access token](/operators/users#personal-access-tokens) (restores
+need the administrator role):
 
 ```sh
 pulse backup ls

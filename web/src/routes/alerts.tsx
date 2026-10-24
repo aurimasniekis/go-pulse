@@ -9,6 +9,8 @@ import { useAlertHistory, useAlerts } from '@/api/queries'
 import { ConfirmModal } from '@/components/ConfirmModal'
 import { ErrorAlert } from '@/components/ErrorAlert'
 import { PageHeader } from '@/components/PageHeader'
+import { Can } from '@/components/Can'
+import { useCan } from '@/api/auth'
 import { kindFields, paramSummary, severityColor, type AlertParams, type AlertRule } from '@/lib/alerts'
 import { formatTime, timeAgo } from '@/lib/format'
 import { notifyErr, notifyOk } from '@/lib/notify'
@@ -171,6 +173,7 @@ function RuleModal({ rule, opened, onClose }: { rule: AlertRule | null; opened: 
 }
 
 function Alerts() {
+  const canWrite = useCan('alerts.write')
   const alerts = useAlerts()
   const history = useAlertHistory()
   const qc = useQueryClient()
@@ -232,14 +235,14 @@ function Alerts() {
         title="Alerts"
         description="Built-in and custom rules, evaluated every minute. Transitions are stored, published as _sys.alert.<rule> events and sent to the notifiers."
         actions={
-          <>
+          <Can perm="alerts.write">
             <Button variant="default" leftSection={<IconPlayerPlay size={14} />} loading={evaluate.isPending} onClick={() => evaluate.mutate()}>
               Evaluate now
             </Button>
             <Button leftSection={<IconPlus size={14} />} onClick={() => setCreating(true)}>
               New rule
             </Button>
-          </>
+          </Can>
         }
       />
       <ErrorAlert error={alerts.error} />
@@ -326,9 +329,11 @@ function Alerts() {
                     )}
                   </Table.Td>
                   <Table.Td ta="right">
-                    <Button size="compact-sm" variant="default" leftSection={<IconSend size={12} />} loading={test.isPending && test.variables === n.name} onClick={() => test.mutate(n.name)}>
-                      Test
-                    </Button>
+                    <Can perm="alerts.write">
+                      <Button size="compact-sm" variant="default" leftSection={<IconSend size={12} />} loading={test.isPending && test.variables === n.name} onClick={() => test.mutate(n.name)}>
+                        Test
+                      </Button>
+                    </Can>
                   </Table.Td>
                 </Table.Tr>
               ))}
@@ -416,10 +421,11 @@ function Alerts() {
                       )}
                     </Table.Td>
                     <Table.Td>
-                      <Switch aria-label={`Enable ${r.name}`} checked={r.enabled} onChange={() => toggle.mutate(r)} disabled={toggle.isPending} />
+                      <Switch aria-label={`Enable ${r.name}`} checked={r.enabled} onChange={() => toggle.mutate(r)} disabled={toggle.isPending || !canWrite} />
                     </Table.Td>
                     <Table.Td ta="right">
                       <Group gap={4} justify="flex-end" wrap="nowrap">
+                        <Can perm="alerts.write">
                         <ActionIcon variant="subtle" color="gray" aria-label={`Edit ${r.name}`} onClick={() => setEditing(r)}>
                           <IconPencil size={16} />
                         </ActionIcon>
@@ -428,6 +434,7 @@ function Alerts() {
                             <IconTrash size={16} />
                           </ActionIcon>
                         )}
+                        </Can>
                       </Group>
                     </Table.Td>
                   </Table.Tr>

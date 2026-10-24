@@ -18,11 +18,11 @@ import (
 	"github.com/aurimasniekis/go-pulse/internal/acme"
 	"github.com/aurimasniekis/go-pulse/internal/alerts"
 	"github.com/aurimasniekis/go-pulse/internal/audit"
-	"github.com/aurimasniekis/go-pulse/internal/auth"
 	"github.com/aurimasniekis/go-pulse/internal/backup"
 	"github.com/aurimasniekis/go-pulse/internal/ban"
 	"github.com/aurimasniekis/go-pulse/internal/clients"
 	"github.com/aurimasniekis/go-pulse/internal/hooks"
+	"github.com/aurimasniekis/go-pulse/internal/oidc"
 	"github.com/aurimasniekis/go-pulse/internal/outbound"
 	"github.com/aurimasniekis/go-pulse/internal/query"
 	"github.com/aurimasniekis/go-pulse/internal/rollup"
@@ -30,6 +30,7 @@ import (
 	"github.com/aurimasniekis/go-pulse/internal/sysapi"
 	"github.com/aurimasniekis/go-pulse/internal/tail"
 	"github.com/aurimasniekis/go-pulse/internal/tokens"
+	"github.com/aurimasniekis/go-pulse/internal/users"
 )
 
 func init() {
@@ -68,9 +69,20 @@ type Deps struct {
 	CACertPEM     string
 	// OnAuthFailure is told about failed token authentication (the ban detector, M8). May be nil.
 	OnAuthFailure func(ip, source string)
-	Auth          auth.Authenticator
-	AdminHosts    []string
-	Ready         func() bool
+	// Users and OIDC are dashboard sign-in (ADR-0038). ReauthWindow is shown to the dashboard.
+	Users        *users.Service
+	OIDC         *oidc.Service
+	ReauthWindow time.Duration
+	// AdminHosts are extra Host names the loopback admin listener accepts.
+	AdminHosts []string
+	// AdminPublicHost serves the dashboard on the public listener under this Host ("" = not exposed). It may equal the
+	// public API host (path routing) or be its own hostname.
+	AdminPublicHost string
+	// PublicAPIHost is the public API hostname; with a separate AdminPublicHost each host gets only its own routes.
+	PublicAPIHost string
+	// PublicTLS: the public listener serves TLS (__Host- cookies with Secure).
+	PublicTLS bool
+	Ready     func() bool
 	// CertSources are the certificates shown on the System page; ACME returns the renewal status (nil when disabled).
 	CertSources []CertSource
 	ACME        func() acme.Status
@@ -81,6 +93,8 @@ type Deps struct {
 	Backups      *backup.Service
 	BackupStore  BackupStore
 	Config       []ConfigSection // the Settings page (built from the configuration at start)
+
+	ssoTests ssoTests
 }
 
 func (d *Deps) accountNames() map[string]string {
@@ -98,14 +112,15 @@ func (d *Deps) log() *slog.Logger {
 }
 
 func (d *Deps) actor(ctx context.Context) audit.Actor {
-	a := audit.Actor{Name: "admin"}
-	if p := auth.From(ctx); p != nil {
-		a.Name = p.Subject
+	ip, _ := ctx.Value(clientIPKey{}).(string)
+	if p := principalFrom(ctx); p != nil {
+		a := users.Actor(p.User, ip)
+		if p.Method == users.MethodToken {
+			a.Name += " (token " + p.TokenID + ")"
+		}
+		return a
 	}
-	if ip, ok := ctx.Value(clientIPKey{}).(string); ok {
-		a.IP = ip
-	}
-	return a
+	return audit.Actor{Name: "anonymous", IP: ip}
 }
 
 type clientIPKey struct{}
@@ -131,13 +146,19 @@ func adminConfig(version string) huma.Config {
 	c.Servers = []*huma.Server{{URL: AdminPrefix}}
 	c.DocsPath = "" // the docs UI loads third-party scripts, which the admin CSP forbids
 	c.OpenAPIPath = "/openapi"
-	c.Info.Description = "Loopback-only admin API for the Pulse dashboard. State-changing requests need the X-Pulse-CSRF header."
+	c.Info.Description = "Admin API for the Pulse dashboard. Sign in for a session cookie (state-changing requests then need the session's " +
+		"CSRF token in X-Pulse-CSRF), or, on the loopback listener only, send a personal access token as Authorization: Bearer pulse_pat_…."
 	return c
 }
 
 // NewAdminAPI registers every admin operation on mux and returns the Huma API.
 func NewAdminAPI(mux *http.ServeMux, d *Deps) huma.API {
 	api := humago.NewWithPrefix(mux, AdminPrefix, adminConfig(d.Version))
+	api.UseMiddleware(d.authorizeOps(api))
+	registerAuth(api, d)
+	registerAccount(api, d)
+	registerUsers(api, d)
+	registerSSO(api, d)
 	registerSystem(api, d)
 	registerCertificates(api, d)
 	registerStreams(api, d)
@@ -156,28 +177,32 @@ func NewAdminAPI(mux *http.ServeMux, d *Deps) huma.API {
 	return api
 }
 
-// NewAdmin builds the admin listener handler: API, UI and middleware (PL-ADM-001/004).
+// NewAdmin builds the loopback admin listener handler: API, SSO endpoints, UI and middleware (PL-ADM-001/004).
 func NewAdmin(d *Deps) http.Handler {
+	h := d.adminHandler(listener{kind: ListenerLoopback})
+	h = withClientIP(h)
+	h = hostCheck(slices.Concat(DefaultAdminHosts, d.AdminHosts), h)
+	return accessLog(d.log(), "admin", h)
+}
+
+// adminHandler is the dashboard for one listener; the caller adds the Host check and the client IP.
+func (d *Deps) adminHandler(l listener) http.Handler {
 	mux := http.NewServeMux()
 	NewAdminAPI(mux, d)
+	d.oidcHandlers(mux)
 	mux.Handle("/", uiHandler())
 	var h http.Handler = mux
-	h = csrf(h)
-	h = auth.Middleware(d.Auth, h)
-	h = withClientIP(h)
-	h = securityHeaders(h)
-	hosts := slices.Concat(DefaultAdminHosts, d.AdminHosts)
-	h = hostCheck(hosts, h)
-	return accessLog(d.log(), "admin", h)
+	h = withRequest(h)
+	h = d.authenticate(l, h)
+	return securityHeaders(l, h)
 }
 
 // SystemInfo is the dashboard header/status payload.
 type SystemInfo struct {
-	Version  string `json:"version"`
-	Profile  string `json:"profile"`
-	AuthMode string `json:"auth_mode"`
-	Ready    bool   `json:"ready"`
-	NATS     struct {
+	Version string `json:"version"`
+	Profile string `json:"profile"`
+	Ready   bool   `json:"ready"`
+	NATS    struct {
 		Connected  bool    `json:"connected"`
 		ServerName string  `json:"server_name"`
 		Version    string  `json:"version"`
@@ -232,9 +257,6 @@ func registerSystem(api huma.API, d *Deps) {
 		b := &out.Body
 		b.Version, b.Profile = d.Version, d.Profile
 		b.Connect.NATSURL, b.Connect.PublicURL, b.Connect.CACert = d.PublicNATSURL, d.PublicURL, d.CACertPEM
-		if d.Auth != nil {
-			b.AuthMode = d.Auth.Mode()
-		}
 		if d.Ready != nil {
 			b.Ready = d.Ready()
 		}

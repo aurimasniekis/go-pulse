@@ -33,6 +33,8 @@ var (
 		Help: "Events counted by the rollup engine, by stream (all publishers, including raw NATS)."}, []string{"stream"})
 	RollupBytes = f.NewCounterVec(prometheus.CounterOpts{Name: "pulse_rollup_bytes_total",
 		Help: "Payload bytes counted by the rollup engine, by stream."}, []string{"stream"})
+	Logins = f.NewCounterVec(prometheus.CounterOpts{Name: "pulse_dashboard_logins_total",
+		Help: "Dashboard sign-in attempts by method (password, oidc, breakglass, token) and result (ok, failed, throttled, error)."}, []string{"method", "result"})
 	AuthFailures = f.NewCounterVec(prometheus.CounterOpts{Name: "pulse_auth_failures_total",
 		Help: "Authentication failures seen by the ban detector, by source."}, []string{"source"})
 	Bans = f.NewCounterVec(prometheus.CounterOpts{Name: "pulse_bans_total",
@@ -81,15 +83,12 @@ func Route(path string) string {
 	}
 }
 
-// routeSegment accepts the API's static first path segments (lowercase words), which keeps the label set bounded.
-func routeSegment(s string) bool {
-	if len(s) > 32 {
-		return false
-	}
-	for _, r := range s {
-		if (r < 'a' || r > 'z') && r != '-' && r != '_' {
-			return false
-		}
-	}
-	return true
+// routeSegments are the API's static first path segments. Anything else is "other", which keeps the label set bounded
+// even for unauthenticated requests on the public listener (ADR-0034, ADR-0038).
+var routeSegments = map[string]bool{
+	"system": true, "streams": true, "events": true, "tail": true, "overview": true, "throughput": true, "subjects": true, "clients": true,
+	"tokens": true, "audit": true, "hooks": true, "security": true, "alerts": true, "backups": true, "kv": true, "objects": true, "auth": true,
+	"account": true, "users": true, "invitations": true, "sso": true, "openapi": true, "publish": true, "request": true, "health": true,
 }
+
+func routeSegment(s string) bool { return routeSegments[s] }

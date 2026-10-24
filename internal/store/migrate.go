@@ -93,3 +93,15 @@ func migrate(ctx context.Context, w *sql.DB) error {
 	}
 	return nil
 }
+
+// requireCurrentSchema refuses a database whose schema differs from this binary's (shared opens never migrate).
+func requireCurrentSchema(ctx context.Context, w *sql.DB) error {
+	var cur int
+	if err := w.QueryRowContext(ctx, "SELECT COALESCE(MAX(version), 0) FROM schema_migrations").Scan(&cur); err != nil {
+		return err
+	}
+	if want := SchemaVersion(); cur != want {
+		return fmt.Errorf("store: the running pulsed uses schema %d and this binary %d; use the same version", cur, want)
+	}
+	return nil
+}

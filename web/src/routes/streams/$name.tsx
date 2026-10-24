@@ -7,6 +7,7 @@ import { useConsumers, useStream, useStreamMutations } from '@/api/queries'
 import { ConfirmModal } from '@/components/ConfirmModal'
 import { ErrorAlert } from '@/components/ErrorAlert'
 import { PageHeader } from '@/components/PageHeader'
+import { Can } from '@/components/Can'
 import { StreamForm } from '@/components/StreamForm'
 import { formatBytes, formatDuration, formatNumber, formatTime, timeAgo } from '@/lib/format'
 import { notifyErr, notifyOk } from '@/lib/notify'
@@ -66,12 +67,14 @@ function StreamDetail() {
             >
               Explore
             </Button>
+            <Can perm="streams.write">
             <Button variant="default" leftSection={<IconEdit size={14} />} disabled={!s || s.managed || s.kind !== 'stream'} onClick={() => setEditing(true)}>
               Edit
             </Button>
             <Button color="red" variant="light" leftSection={<IconTrash size={14} />} disabled={!s || s.managed} onClick={() => setDeleting(true)}>
               Delete
             </Button>
+            </Can>
           </>
         }
       />
@@ -184,11 +187,13 @@ function StreamDetail() {
                       <Table.Td ta="right">{formatNumber(c.num_redelivered)}</Table.Td>
                       <Table.Td>{c.last_active ? timeAgo(c.last_active) : '—'}</Table.Td>
                       <Table.Td>
+                        <Can perm="streams.write">
                         <Tooltip label="Delete consumer">
                           <ActionIcon color="red" onClick={() => setDelConsumer(c)} aria-label={`Delete consumer ${c.name}`}>
                             <IconTrash size={14} />
                           </ActionIcon>
                         </Tooltip>
+                        </Can>
                       </Table.Td>
                     </Table.Tr>
                   ))}

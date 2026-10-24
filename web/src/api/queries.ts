@@ -28,9 +28,10 @@ export const qk = {
   subject: (stream: string, subject: string) => ['subject', stream, subject] as const,
 }
 
-export function useSystemInfo() {
+export function useSystemInfo(enabled = true) {
   return useQuery({
     queryKey: qk.system,
+    enabled,
     queryFn: async () => unwrap(await admin.GET('/system/info')),
     refetchInterval: 10_000,
     retry: false,

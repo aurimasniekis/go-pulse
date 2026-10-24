@@ -19,6 +19,10 @@ const pages: [string, string][] = [
   ['/alerts', 'Alerts'],
   ['/backups', 'Backups'],
   ['/settings', 'Settings'],
+  ['/settings?tab=sso', 'Settings'],
+  ['/users', 'Users'],
+  ['/users?tab=invitations', 'Users'],
+  ['/account', 'Account'],
 ]
 
 for (const [path, title] of pages) {

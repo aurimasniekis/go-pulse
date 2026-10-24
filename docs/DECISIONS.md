@@ -79,7 +79,7 @@
 - **Consequences:** Durable consumer names cannot be namespaced by token wildcards; see THREAT_MODEL.md T-12.
 
 ### ADR-0008 — Dashboard auth `none` behind an Authenticator seam, loopback only — **security-relevant**
-- **Status:** accepted; **operator review: accepted by the operator in planning**
+- **Status:** superseded by ADR-0038 (the loopback-only bind and the published-loopback check remain); **operator review: accepted by the operator in planning**
 - **Context:** Central SSO does not exist yet. The dashboard can mint credentials and must not be reachable.
 - **Decision:** `auth.mode=none` now, with an `Authenticator` interface; an `oidc` stub refuses to start. Admin UI and
   `/api/admin/v1` bind only to host loopback (`127.0.0.1:8080` published on the host loopback) and are reached through
@@ -432,12 +432,45 @@
 - **Consequences:** Security reports go through GitHub private vulnerability reporting (`SECURITY.md`). Pushes to
   `main` run CI on GitHub, so PL-OPS-006..008 can be verified there.
 
+### ADR-0038 — Dashboard users, TOTP and OIDC single sign-on, ported from hallpass — supersedes ADR-0008 — **security-relevant change (strengthening)**
+- **Status:** accepted (2026-10-24, operator request: "implement same user/oidc … how hallpass is now doing")
+- **Context:** The dashboard had no sign-in (`auth none`) and was reachable only through an SSH tunnel. The operator wants it on
+  Cloudflare as well, with simple local users and OIDC, the way hallpass does it. Resolves R-02.
+- **Decision:**
+  - `internal/users` ports hallpass's operator auth: local accounts (Argon2id), TOTP with recovery codes, invitations, password
+    links, server-side sessions with per-session CSRF tokens, recent-authentication checks, login throttling, `pulsed admin
+    bootstrap|recover`. `internal/oidc` ports its SSO: PKCE, ID-token validation, (iss, sub) identities, JIT provisioning,
+    group → role mappings, step-up, test logins and SSO-only enforcement. `internal/rbac` is the permission matrix. Rules in
+    GOAL PL-USR-001..012. State lives in SQLite (migration 0008); secrets are sealed or MACed with keys derived from the master key.
+  - **Roles** (operator choice: "four roles like hallpass"): administrator (everything), operator (runs the bus: clients, tokens,
+    webhooks, streams, KV, bans, alerts, backups run; no users, SSO or restores), auditor (read everything including the audit
+    log and users), viewer (dashboards and events). TOTP is mandatory for password accounts with the administrator or operator role.
+  - **Every** admin operation is mapped to one permission in `internal/api/permissions.go`; a Huma middleware enforces it, plus
+    the session's CSRF token on mutations and recent authentication where marked (credentials shown once, deletes, restores,
+    user and SSO administration). `TestEveryOperationHasARule` fails on an unmapped or stale operation. There is no anonymous mode:
+    `PULSE_AUTH_MODE` is refused at start.
+  - **Exposure** (operator choice: configurable): the loopback admin listener stays. With `PULSE_ADMIN_PUBLIC=true` the dashboard is
+    also served on the public listener (Cloudflare, AOP mTLS) on `PULSE_ADMIN_PUBLIC_HOST`: a separate hostname serves only the
+    dashboard (and the API hostname then only the API), or the API hostname serves the dashboard for every non-API path. Sessions
+    are bound to the listener that created them; cookies are `__Host-` and `Secure` on https. Failed public sign-ins feed the ban
+    detector. SSO runs on one origin, `PULSE_ADMIN_URL` (the redirect URI is `<PULSE_ADMIN_URL>/auth/oidc/callback`).
+  - **CLI** access uses personal access tokens (`pulse_pat_…`), accepted only on the loopback listener (a leaked token is
+    useless without SSH), capped at request time by the user's current manual roles, and treated as recently authenticated
+    because creating one needs a fresh sign-in with MFA.
+  - Admin routes now have a fixed list of metric route labels: the admin API is reachable without a session on the public
+    listener, so arbitrary path segments must not create label values.
+- **Alternatives:** keep auth none behind Cloudflare Access (a second identity system, no roles or audit identities);
+  OIDC only (no way in without an IdP, no break-glass).
+- **Consequences:** The first administrator needs `pulsed admin bootstrap` after deploying. Dashboard sessions expire (idle
+  30 min); sensitive actions ask for re-authentication every 5 minutes. The e2e suite signs in through the API in a global
+  setup. `pulse` admin commands and `pulsed backup run` need a personal access token.
+
 ## 2. Open review items
 
 | ID | Item | Default until decided |
 |---|---|---|
 | R-01 | ~~License for the repository.~~ Resolved by ADR-0037: Apache-2.0. | — |
-| R-02 | Central SSO provider and claims mapping for `auth.mode=oidc`. | `oidc` refuses to start. |
+| R-02 | ~~Central SSO provider and claims mapping.~~ Resolved by ADR-0038: any OIDC provider, configured in the dashboard. | — |
 | R-03 | Cloudflare plan upgrade (more WAF rules, rate-limit periods, IP lists). | Free plan limits (see events-wan-lt). |
 | R-04 | Off-site copy of age identities. | Operator keeps identities offline. |
 | R-05 | Scope `subscribe` grants' `CONSUMER.INFO`/`MSG.NEXT`/`$JS.ACK` to consumers the client created (today `.<stream>.*`), e.g. client-prefixed ephemeral names in their own token. Found while writing the security page (THREAT_MODEL T-12). | Guessing another client's durable needs its 80-bit random client ID. |

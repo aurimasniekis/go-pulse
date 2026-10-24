@@ -1,10 +1,10 @@
 import { existsSync, readFileSync } from 'node:fs'
 import { expect, test } from '@playwright/test'
+import { csrf } from './admin'
 
 // PL-SDK-005: the TS SDK in a real browser over /ws (the public listener's NATS WebSocket proxy). Go (pulsed's admin
 // publish) writes the events; the browser replays them with `since`, sees identical envelopes, and publishes back.
 const bundle = '../sdk/ts/dist/pulse.browser.js'
-const csrf = { 'X-Pulse-CSRF': '1' }
 
 test('browser SDK replays over /ws and publishes', async ({ page, request }) => {
   test.skip(!existsSync(bundle), 'build the SDK first: make sdk-build')

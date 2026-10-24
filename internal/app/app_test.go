@@ -35,7 +35,6 @@ func testConfig(t *testing.T, env *natstest.Env) *config.Config {
 		MetricsAddr:     fmt.Sprintf("127.0.0.1:%d", natstest.FreePort(t)),
 		AdminAddr:       fmt.Sprintf("127.0.0.1:%d", natstest.FreePort(t)),
 		PublicAddr:      fmt.Sprintf("127.0.0.1:%d", natstest.FreePort(t)),
-		AuthMode:        "none",
 		EventsMaxBytes:  1 << 30,
 		BanThreshold:    5,
 		BanWindow:       10 * time.Minute,
@@ -84,10 +83,13 @@ func TestStartReadyShutdown(t *testing.T) {
 		t.Fatalf("healthz %d", code)
 	}
 	// /metrics: pulsed counters, scrape-time NATS and stream gauges, Go runtime (PL-OBS-002).
-	get(t, "http://"+cfg.AdminAddr+"/api/admin/v1/system/info")
+	if code := get(t, "http://"+cfg.AdminAddr+"/api/admin/v1/system/info"); code != http.StatusUnauthorized {
+		t.Fatalf("admin API without a session: %d", code)
+	}
+	get(t, "http://"+cfg.AdminAddr+"/api/admin/v1/auth/config")
 	body := getBody(t, "http://"+cfg.MetricsAddr+"/metrics")
 	for _, want := range []string{`pulse_build_info{version=`, "nats_up 1", `pulse_stream_bytes{stream="EVENTS"}`, "nats_jetstream_streams",
-		`pulse_http_requests_total{code="200",listener="admin",method="GET",route="/api/admin/v1/system"}`, "pulse_bans_active 0",
+		`pulse_http_requests_total{code="200",listener="admin",method="GET",route="/api/admin/v1/auth"}`, "pulse_bans_active 0",
 		`pulse_alerts_firing{severity="critical"}`, `pulse_certificate_not_after_timestamp_seconds{certificate="Internal CA"}`, "go_goroutines"} {
 		if !strings.Contains(body, want) {
 			t.Errorf("/metrics lacks %s", want)

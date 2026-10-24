@@ -33,11 +33,13 @@ Start order: `init` (completed) → `nats` (healthy) → `pulsed` (healthy) → 
    (`age1…`) goes on the server ([backups.md](backups.md)).
 3. Render the compose file and secrets, then `docker compose up -d`. `init` creates everything under `/data`.
 4. Check: `docker compose ps` (all healthy); `curl -fsS 127.0.0.1:9464/readyz`.
-5. Open the dashboard through a tunnel: `ssh -L 8080:127.0.0.1:8080 <vps>` → http://127.0.0.1:8080. The System page
-   shows the certificates, NATS and JetStream; Alerts shows the built-in rules.
+5. Create the first administrator: `docker compose exec pulsed pulsed admin bootstrap` prints a one-time setup link
+   ([users.md](users.md)). Open it through a tunnel (`ssh -L 8080:127.0.0.1:8080 <vps>`) or on the public dashboard host,
+   set a password and enroll TOTP. The System page shows the certificates, NATS and JetStream; Alerts shows the built-in rules.
 
 ## Day-to-day access
 
-- The dashboard and admin API are reachable only through the SSH tunnel (ADR-0008). `pulse clients`, `pulse streams`
-  and `pulse backup` use the same tunnel (`--admin-url`, default http://127.0.0.1:8080).
+- The dashboard needs a signed-in user ([users.md](users.md)). It is always reachable through the SSH tunnel and, with
+  `PULSE_ADMIN_PUBLIC=true`, on its hostname behind Cloudflare. `pulse clients`, `pulse streams` and `pulse backup` use
+  the tunnel with a personal access token (`--admin-url`, `--admin-token-file`).
 - Tools connect to `tls://<raw host>:4222` with their `.creds`, or call the public HTTP API with a token.

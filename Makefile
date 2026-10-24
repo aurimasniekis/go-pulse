@@ -10,7 +10,7 @@ GOVULNCHECK  ?= $(GO) run golang.org/x/vuln/cmd/govulncheck@v1.9.0
 DEV          := docker compose -f deploy/compose.dev.yaml -p pulse-dev
 
 .DEFAULT_GOAL := help
-.PHONY: help api test-nft test-acme test-s3 drill sdk-test sdk-build test-sdk-interop web web-dev build build-go test race vet lint vuln secrets web-test check image dev-up dev-down dev-logs dev-reset spike e2e screenshots site site-dev clean
+.PHONY: help api test-nft test-acme test-s3 drill sdk-test sdk-build test-sdk-interop web web-dev build build-go test race vet lint vuln secrets web-test check image dev-up dev-down dev-logs dev-reset dev-admin spike e2e screenshots site site-dev clean
 
 help: ## List targets
 	@awk 'BEGIN {FS = ":.*## "} /^[a-zA-Z_-]+:.*## / {printf "  \033[36m%-14s\033[0m %s\n", $$1, $$2}' $(MAKEFILE_LIST)
@@ -76,6 +76,9 @@ deploy/.dev/age.key:
 
 dev-up: deploy/.dev/master.key deploy/.dev/age.key ## Start the dev stack (init, nats, pulsed, alloy, seaweedfs)
 	$(DEV) up -d --build --wait
+
+dev-admin: ## Print a one-time setup link for the dev stack's first dashboard administrator
+	$(DEV) exec -T pulsed pulsed admin bootstrap
 
 dev-down: ## Stop the dev stack
 	$(DEV) down

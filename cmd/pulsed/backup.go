@@ -121,10 +121,10 @@ func newBackupListCmd() *cobra.Command {
 }
 
 func newBackupRunCmd() *cobra.Command {
-	var adminURL string
+	var adminURL, token string
 	cmd := &cobra.Command{
 		Use:   "run",
-		Short: "Ask the running pulsed to back up now",
+		Short: "Ask the running pulsed to back up now (needs a personal access token with the operator or administrator role)",
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			if adminURL == "" {
@@ -142,7 +142,13 @@ func newBackupRunCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			req.Header.Set("X-Pulse-CSRF", "1")
+			if token == "" {
+				token = os.Getenv("PULSE_ADMIN_TOKEN")
+			}
+			if token == "" {
+				return fmt.Errorf("a personal access token is required: create one under Account → Personal access tokens, then pass --token or set PULSE_ADMIN_TOKEN")
+			}
+			req.Header.Set("Authorization", "Bearer "+token)
 			resp, err := http.DefaultClient.Do(req)
 			if err != nil {
 				return err
@@ -157,6 +163,7 @@ func newBackupRunCmd() *cobra.Command {
 		},
 	}
 	cmd.Flags().StringVar(&adminURL, "admin-url", "", "admin listener base URL (default http://127.0.0.1:<PULSE_ADMIN_ADDR port>)")
+	cmd.Flags().StringVar(&token, "token", "", "personal access token (default $PULSE_ADMIN_TOKEN)")
 	return cmd
 }
 

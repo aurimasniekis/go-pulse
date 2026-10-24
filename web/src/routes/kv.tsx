@@ -4,11 +4,13 @@ import { IconDownload, IconKey, IconPlus, IconTrash, IconUpload } from '@tabler/
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useState } from 'react'
-import { admin, CSRF_HEADER, unwrap, type Schemas } from '@/api/client'
+import { admin, apiError, unwrap, type Schemas } from '@/api/client'
+import { sessionFetch } from '@/api/session'
 import { useBuckets, useKVEntry, useKVKeys, useObjects } from '@/api/queries'
 import { ConfirmModal } from '@/components/ConfirmModal'
 import { ErrorAlert } from '@/components/ErrorAlert'
 import { PageHeader } from '@/components/PageHeader'
+import { Can } from '@/components/Can'
 import { PayloadView } from '@/components/PayloadView'
 import { VirtualTable, type Column } from '@/components/VirtualTable'
 import { formatBytes, formatNumber, formatTime, timeAgo } from '@/lib/format'
@@ -143,9 +145,11 @@ function KVTab({ bucket }: { bucket: string }) {
         >
           <TextInput label="Key filter" placeholder="ui.* or devices.>" value={filter} onChange={(e) => setFilter(e.currentTarget.value)} />
         </form>
-        <Button leftSection={<IconPlus size={14} />} onClick={() => setPutting({})}>
-          New key
-        </Button>
+        <Can perm="streams.write">
+          <Button leftSection={<IconPlus size={14} />} onClick={() => setPutting({})}>
+            New key
+          </Button>
+        </Can>
       </Group>
       <ErrorAlert error={keys.error} />
       <VirtualTable
@@ -174,6 +178,7 @@ function KVTab({ bucket }: { bucket: string }) {
               <Text size="sm" c="dimmed">
                 revision {entry.data.revision} · {timeAgo(entry.data.created)}
               </Text>
+              <Can perm="streams.write">
               <Group gap="xs">
                 <Button size="xs" variant="default" leftSection={<IconKey size={12} />} onClick={() => setPutting({ key: open! })}>
                   Set value
@@ -182,6 +187,7 @@ function KVTab({ bucket }: { bucket: string }) {
                   Delete
                 </Button>
               </Group>
+              </Can>
             </Group>
             <PayloadView data={entry.data.value} encoding={entry.data.encoding} />
             <Text size="sm" fw={500}>
@@ -227,15 +233,12 @@ function ObjectsTab({ bucket, managed }: { bucket: string; managed: boolean }) {
   const [deleting, setDeleting] = useState<ObjectEntry | null>(null)
   const upload = useMutation({
     mutationFn: async (file: File) => {
-      const r = await fetch(`/api/admin/v1/objects/${encodeURIComponent(bucket)}/upload?name=${encodeURIComponent(file.name)}`, {
+      const r = await sessionFetch(`/api/admin/v1/objects/${encodeURIComponent(bucket)}/upload?name=${encodeURIComponent(file.name)}`, {
         method: 'PUT',
-        headers: { [CSRF_HEADER]: '1', 'Content-Type': 'application/octet-stream' },
+        headers: { 'Content-Type': 'application/octet-stream' },
         body: file,
       })
-      if (!r.ok) {
-        const p = (await r.json().catch(() => ({}))) as { detail?: string; title?: string }
-        throw new Error(p.detail ?? p.title ?? r.statusText)
-      }
+      if (!r.ok) throw apiError(await r.json().catch(() => ({})), r.status)
     },
     onSuccess: () => {
       notifyOk('Uploaded')
@@ -264,6 +267,7 @@ function ObjectsTab({ bucket, managed }: { bucket: string; managed: boolean }) {
           {managed ? 'Managed by pulsed (event payloads too large for NATS); read-only here.' : 'Objects up to 64 MiB can be uploaded here.'}
         </Text>
         {!managed && (
+          <Can perm="streams.write">
           <FileButton onChange={(f) => f && upload.mutate(f)}>
             {(props) => (
               <Button {...props} leftSection={<IconUpload size={14} />} loading={upload.isPending}>
@@ -271,6 +275,7 @@ function ObjectsTab({ bucket, managed }: { bucket: string; managed: boolean }) {
               </Button>
             )}
           </FileButton>
+          </Can>
         )}
       </Group>
       <ErrorAlert error={objs.error} />
@@ -327,9 +332,11 @@ function ObjectsTab({ bucket, managed }: { bucket: string; managed: boolean }) {
                       <IconDownload size={16} />
                     </ActionIcon>
                     {!managed && (
-                      <ActionIcon variant="subtle" color="red" aria-label={`Delete ${o.name}`} onClick={() => setDeleting(o)}>
-                        <IconTrash size={16} />
-                      </ActionIcon>
+                      <Can perm="streams.write">
+                        <ActionIcon variant="subtle" color="red" aria-label={`Delete ${o.name}`} onClick={() => setDeleting(o)}>
+                          <IconTrash size={16} />
+                        </ActionIcon>
+                      </Can>
                     )}
                   </Group>
                 </Table.Td>
@@ -389,9 +396,11 @@ function KVPage() {
         title="KV & Objects"
         description="Key-value buckets and object stores in the APP account. Values and objects are what tools stored; changes are audited."
         actions={
-          <Button variant="default" leftSection={<IconPlus size={14} />} onClick={() => setCreating(true)}>
-            {tab === 'kv' ? 'New KV bucket' : 'New object store'}
-          </Button>
+          <Can perm="streams.write">
+            <Button variant="default" leftSection={<IconPlus size={14} />} onClick={() => setCreating(true)}>
+              {tab === 'kv' ? 'New KV bucket' : 'New object store'}
+            </Button>
+          </Can>
         }
       />
       <ErrorAlert error={buckets.error} />
@@ -435,9 +444,11 @@ function KVPage() {
               </Text>
             )}
             {!managed && bucket && (
-              <Button variant="subtle" color="red" ml="auto" leftSection={<IconTrash size={14} />} onClick={() => setDropping(true)}>
-                Delete bucket
-              </Button>
+              <Can perm="streams.write">
+                <Button variant="subtle" color="red" ml="auto" leftSection={<IconTrash size={14} />} onClick={() => setDropping(true)}>
+                  Delete bucket
+                </Button>
+              </Can>
             )}
           </Group>
           {bucket && (tab === 'kv' ? <KVTab key={bucket} bucket={bucket} /> : <ObjectsTab key={bucket} bucket={bucket} managed={managed} />)}

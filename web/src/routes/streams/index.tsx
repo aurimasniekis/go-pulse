@@ -5,6 +5,7 @@ import { useState } from 'react'
 import { useStreams } from '@/api/queries'
 import { ErrorAlert } from '@/components/ErrorAlert'
 import { PageHeader } from '@/components/PageHeader'
+import { Can } from '@/components/Can'
 import { StreamForm } from '@/components/StreamForm'
 import { formatBytes, formatNumber, timeAgo } from '@/lib/format'
 
@@ -19,9 +20,11 @@ function Streams() {
         title="Streams"
         description="JetStream streams in the APP account. EVENTS and the blobs store are managed by pulsed."
         actions={
-          <Button leftSection={<IconPlus size={14} />} onClick={() => setCreating(true)}>
-            Create stream
-          </Button>
+          <Can perm="streams.write">
+            <Button leftSection={<IconPlus size={14} />} onClick={() => setCreating(true)}>
+              Create stream
+            </Button>
+          </Can>
         }
       />
       <ErrorAlert error={streams.error} />

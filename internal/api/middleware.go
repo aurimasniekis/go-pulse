@@ -13,16 +13,22 @@ import (
 	"github.com/aurimasniekis/go-pulse/internal/metrics"
 )
 
-// CSRFHeader must be present on state-changing admin requests (PL-ADM-004). Browsers cannot add custom headers to
-// cross-site form posts or simple requests, and CORS is never enabled on the admin listener.
+// CSRFHeader carries the session's CSRF token on state-changing admin requests (PL-ADM-004, ADR-0038). Browsers cannot
+// add custom headers to cross-site requests, and CORS is never enabled.
 const CSRFHeader = "X-Pulse-CSRF"
 
 const adminCSP = "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; " +
 	"font-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'; object-src 'none'"
 
-func securityHeaders(next http.Handler) http.Handler {
+func securityHeaders(l listener, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		h := w.Header()
+		if l.secure {
+			h.Set("Strict-Transport-Security", "max-age=63072000")
+		}
+		if strings.HasPrefix(r.URL.Path, "/api/") || strings.HasPrefix(r.URL.Path, "/auth/") {
+			h.Set("Cache-Control", "no-store")
+		}
 		h.Set("Content-Security-Policy", adminCSP)
 		h.Set("X-Content-Type-Options", "nosniff")
 		h.Set("Referrer-Policy", "no-referrer")
@@ -33,30 +39,18 @@ func securityHeaders(next http.Handler) http.Handler {
 	})
 }
 
-func csrf(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		switch r.Method {
-		case http.MethodGet, http.MethodHead, http.MethodOptions:
-		default:
-			if r.Header.Get(CSRFHeader) == "" {
-				http.Error(w, "missing "+CSRFHeader+" header", http.StatusForbidden)
-				return
-			}
-		}
-		next.ServeHTTP(w, r)
-	})
+func normalizeHost(host string) string {
+	if h, _, err := net.SplitHostPort(host); err == nil {
+		host = h
+	}
+	return strings.Trim(strings.ToLower(host), "[]")
 }
 
 // hostCheck rejects requests whose Host header is not an allowed admin host. With auth none on a loopback listener,
 // this is what stops DNS-rebinding pages from talking to the admin API (THREAT_MODEL T-21).
 func hostCheck(allowed []string, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		host := r.Host
-		if h, _, err := net.SplitHostPort(host); err == nil {
-			host = h
-		}
-		host = strings.Trim(strings.ToLower(host), "[]")
-		if !slices.Contains(allowed, host) {
+		if !slices.Contains(allowed, normalizeHost(r.Host)) {
 			http.Error(w, "host not allowed", http.StatusMisdirectedRequest)
 			return
 		}

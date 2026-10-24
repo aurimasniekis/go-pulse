@@ -8,6 +8,7 @@ import (
 	"log/slog"
 	"net"
 	"net/http"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -19,7 +20,6 @@ import (
 	"github.com/aurimasniekis/go-pulse/internal/alerts"
 	"github.com/aurimasniekis/go-pulse/internal/api"
 	"github.com/aurimasniekis/go-pulse/internal/audit"
-	"github.com/aurimasniekis/go-pulse/internal/auth"
 	"github.com/aurimasniekis/go-pulse/internal/backup"
 	"github.com/aurimasniekis/go-pulse/internal/ban"
 	"github.com/aurimasniekis/go-pulse/internal/bootstrap"
@@ -171,14 +171,18 @@ func Start(ctx context.Context, cfg *config.Config, log *slog.Logger) (*App, err
 		return nil, fmt.Errorf("start outbound webhooks: %w", err)
 	}
 	hookSvc := hooks.New(a.DB, a.JS, cfg.MasterKey, log)
-	authn, err := auth.New(cfg.AuthMode)
+	userSvc, oidcSvc, err := newUserAuth(a.DB, cfg, log)
 	if err != nil {
 		return nil, err
 	}
 	deps := &api.Deps{Log: log, Version: Version, Profile: cfg.Profile, DB: a.DB, NC: a.AppConn, JS: a.JS, Sys: a.Sys,
-		Query: a.Query, Tail: a.Tail, Rollup: a.Rollup, Auth: authn, Tokens: tokens.New(a.DB), Clients: a.Clients,
-		Hooks: hookSvc, Outbound: a.Outbound,
-		PublicNATSURL: cfg.PublicNATSURL, PublicURL: cfg.PublicURL, CACertPEM: a.Keys.CACert, AdminHosts: cfg.AdminHosts, Ready: a.Ready}
+		Query: a.Query, Tail: a.Tail, Rollup: a.Rollup, Tokens: tokens.New(a.DB), Clients: a.Clients,
+		Hooks: hookSvc, Outbound: a.Outbound, Users: userSvc, OIDC: oidcSvc, ReauthWindow: cfg.ReauthWindow,
+		PublicNATSURL: cfg.PublicNATSURL, PublicURL: cfg.PublicURL, CACertPEM: a.Keys.CACert, AdminHosts: cfg.AdminHosts, Ready: a.Ready,
+		PublicAPIHost: strings.ToLower(cfg.PublicHost), PublicTLS: cfg.OriginCertFile != ""}
+	if cfg.AdminPublic {
+		deps.AdminPublicHost = cfg.AdminPublicHost
+	}
 	ep, err := a.setupEdge(ctx, cfg, deps, hookSvc)
 	if err != nil {
 		return nil, err
@@ -196,7 +200,7 @@ func Start(ctx context.Context, cfg *config.Config, log *slog.Logger) (*App, err
 	if err := a.setupObservability(ctx, cfg, deps, backupStatus); err != nil {
 		return nil, fmt.Errorf("observability: %w", err)
 	}
-	if err := a.serve(ctx, "admin", cfg.AdminAddr, api.NewAdmin(deps)); err != nil {
+	if err := a.serve(ctx, "admin", cfg.AdminAddr, api.NewAdmin(deps)); err != nil { //nolint:contextcheck // handlers use the per-request context from Huma
 		return nil, err
 	}
 	if cfg.PublicAddr != "" {
@@ -209,6 +213,14 @@ func Start(ctx context.Context, cfg *config.Config, log *slog.Logger) (*App, err
 			log.Warn("prune audit", "err", err)
 		}
 	})
+	a.goLoop(a.loopCtx, "auth-purge", 10*time.Minute, func(ctx context.Context) { //nolint:contextcheck // loops outlive startup
+		if err := userSvc.PurgeExpired(ctx); err != nil {
+			log.Warn("purge expired sessions and tokens", "err", err)
+		}
+	})
+	if n, err := userSvc.Count(ctx); err == nil && n == 0 {
+		log.Warn("no dashboard user exists yet: run `pulsed admin bootstrap` for a one-time setup link")
+	}
 	a.goLoop(a.loopCtx, "account-sync", time.Minute, func(ctx context.Context) { //nolint:contextcheck // loops outlive startup
 		if _, err := a.Clients.Sync(ctx, false); err != nil {
 			log.Warn("account sync", "err", err)

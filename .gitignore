@@ -24,6 +24,7 @@ master.key
 # Frontend
 node_modules/
 /web/test-results/
+/web/e2e/.auth/
 /web/playwright-report/
 /web/blob-report/
 

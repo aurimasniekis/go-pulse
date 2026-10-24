@@ -61,11 +61,23 @@
 | `PULSE_CF_ACCOUNT_ID`, `PULSE_CF_BANLIST_ID`, `PULSE_CF_BANLIST_TOKEN_FILE` | — | Optional: mirror bans ≥ 1 h into a Cloudflare IP list (Terraform outputs `ban_list_id`, `ban_sync_api_token`). |
 | `PULSE_OUTBOUND_ALLOW` | — | Comma-separated IPs/CIDRs outbound webhooks may reach although they are internal (e.g. a LAN service). |
 | `PULSE_ADMIN_HOSTS` | — | Extra comma-separated Host names the admin listener accepts (besides 127.0.0.1, localhost, ::1). |
-| `PULSE_ADMIN_PUBLISHED_LOOPBACK` | `false` | Set `true` when the admin port binds inside a container and compose publishes it only on host loopback. Required in prod for a non-loopback `PULSE_ADMIN_ADDR` with auth none (ADR-0008). |
-| `PULSE_ADMIN_PUBLIC` | `false` | Mount the admin API on the public listener. Refused with auth none in prod. |
-| `PULSE_AUTH_MODE` | `none` | `none`; `oidc` refuses to start until implemented (R-02). |
+| `PULSE_ADMIN_PUBLISHED_LOOPBACK` | `false` | Set `true` when the admin port binds inside a container and compose publishes it only on host loopback. Required in prod for a non-loopback `PULSE_ADMIN_ADDR` (ADR-0008). |
 | `PULSE_METRICS_ADDR` | `127.0.0.1:9464` | `/metrics` (Prometheus), `/healthz`, `/readyz`, `/internal/v1/bans` (banagent). |
 | `PULSE_HEALTHCHECK_URL` | `http://127.0.0.1:9464/readyz` | Probed by `pulsed healthcheck`. |
+
+## Dashboard sign-in (ADR-0038)
+
+Every dashboard and admin API request needs a signed-in user. `pulsed admin bootstrap` prints the first administrator's
+setup link ([users.md](users.md)). `PULSE_AUTH_MODE` was removed; pulsed refuses to start when it is set.
+
+| Variable | Default | Meaning |
+|---|---|---|
+| `PULSE_ADMIN_PUBLIC` | `false` | Also serve the dashboard on the public listener (Cloudflare, AOP). Needs the public listener. |
+| `PULSE_ADMIN_PUBLIC_HOST` | `PULSE_PUBLIC_HOST` | Hostname of the public dashboard. Its own hostname serves only the dashboard and the API hostname only the API; the API hostname serves the dashboard on every non-API path. |
+| `PULSE_ADMIN_URL` | `https://<PULSE_ADMIN_PUBLIC_HOST>` with `PULSE_ADMIN_PUBLIC`, else `http://127.0.0.1:8080` | The dashboard origin: SSO redirects there (`<PULSE_ADMIN_URL>/auth/oidc/callback` is the redirect URI to register) and `pulsed admin` prints links for it. Must be https in prod unless it is the loopback tunnel. |
+| `PULSE_SESSION_IDLE` / `PULSE_SESSION_MAX` | `30m` / `12h` | Sign-out after inactivity / absolute session lifetime (at most 168h). |
+| `PULSE_REAUTH_WINDOW` | `5m` | Sensitive actions (credentials shown once, deletes, restores, user and SSO administration) need authentication this recent. At most 15m in prod. |
+| `PULSE_MFA_REQUIRED_ROLES` | `administrator,operator` | Password accounts holding one of these roles must enroll TOTP. `none` requires it for nobody (not recommended). |
 
 ## ACME (Let's Encrypt for raw NATS, PL-EDGE-006, ADR-0032)
 

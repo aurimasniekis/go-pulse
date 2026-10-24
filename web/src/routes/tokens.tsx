@@ -10,6 +10,7 @@ import { ConfirmModal } from '@/components/ConfirmModal'
 import { ErrorAlert } from '@/components/ErrorAlert'
 import { cleanGrants, GrantsEditor } from '@/components/GrantsEditor'
 import { PageHeader } from '@/components/PageHeader'
+import { Can } from '@/components/Can'
 import { SecretModal } from '@/components/SecretModal'
 import { Snippets } from '@/components/Snippets'
 import { timeAgo } from '@/lib/format'
@@ -63,9 +64,11 @@ function Tokens() {
         title="HTTP tokens"
         description="Bearer tokens for tools that use the public HTTP API instead of NATS. Stored only as hashes."
         actions={
-          <Button leftSection={<IconPlus size={14} />} onClick={() => setCreating(true)}>
-            Create token
-          </Button>
+          <Can perm="clients.write">
+            <Button leftSection={<IconPlus size={14} />} onClick={() => setCreating(true)}>
+              Create token
+            </Button>
+          </Can>
         }
       />
       <ErrorAlert error={tokens.error} />
@@ -112,11 +115,13 @@ function Tokens() {
                 <Table.Td>{new Date(t.expires_at).toLocaleDateString()}</Table.Td>
                 <Table.Td>
                   {t.status === 'active' && (
+                    <Can perm="clients.write">
                     <Tooltip label="Revoke">
                       <ActionIcon color="red" aria-label={`Revoke ${t.name}`} onClick={() => setRevoking(t)}>
                         <IconBan size={14} />
                       </ActionIcon>
                     </Tooltip>
+                    </Can>
                   )}
                 </Table.Td>
               </Table.Tr>

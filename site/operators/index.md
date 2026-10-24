@@ -8,25 +8,26 @@ Task-oriented guides for the person who runs Pulse. Pulse is a single-owner syst
 
 ## Reaching the dashboard
 
-The dashboard and the admin API have **no login** (`PULSE_AUTH_MODE=none`). They listen on host loopback only, so you
-reach them through an SSH tunnel:
+The dashboard and the admin API need a **signed-in user** with a role: administrator, operator, auditor or viewer.
+People sign in with a password and TOTP, or with single sign-on. The first administrator comes from
+`pulsed admin bootstrap`. See [Users and single sign-on](/operators/users).
+
+The admin listener is on host loopback, so you can always reach it through an SSH tunnel:
 
 ```sh
 ssh -L 8080:127.0.0.1:8080 you@vps.example.com
 # then open http://127.0.0.1:8080
 ```
 
-The same tunnel serves the admin commands of the `pulse` CLI (`pulse clients`, `pulse streams`, `pulse backup`), which
-default to `--admin-url http://127.0.0.1:8080`. Single sign-on (OIDC) is planned but not implemented: pulsed refuses to
-start with `PULSE_AUTH_MODE=oidc`, and the prod profile refuses to expose the admin listener while auth is `none`.
-
-Everyone with a shell on the VPS can reach the loopback port. That is accepted: on a single-user VPS, a local user is
-already the operator ([security model](/security/)).
+With `PULSE_ADMIN_PUBLIC=true` the dashboard is also served behind Cloudflare, on its own hostname or on the API
+hostname. The admin commands of the `pulse` CLI (`pulse clients`, `pulse streams`, `pulse backup`) always use the tunnel
+(`--admin-url http://127.0.0.1:8080`) with a personal access token.
 
 ## Everyday work
 
 | Task | Guide |
 |---|---|
+| Invite people, assign roles, set up single sign-on | [Users and single sign-on](/operators/users) |
 | Give a tool its own credentials and exactly the subjects it needs | [Clients and grants](/operators/clients) |
 | HTTP tokens for scripts and services that cannot speak NATS | [Clients and grants](/operators/clients#http-tokens) |
 | Look at events, streams, consumers, KV buckets and objects | [Streams, KV and objects](/operators/streams) |
@@ -51,7 +52,7 @@ First time? Start with [Deploy on a VPS](/guide/deploy), then [Connect your firs
 | What | Where | Backed up |
 |---|---|---|
 | Events, user streams, KV buckets, object stores | NATS JetStream (`nats-data` volume) | Yes, as JetStream snapshots |
-| Clients, grants, tokens, webhooks, bans, audit, alerts, rollups, settings | SQLite `pulse.db` (`pulsed-data` volume) | Yes |
+| Clients, grants, tokens, webhooks, bans, audit, alerts, rollups, settings, dashboard users and SSO providers | SQLite `pulse.db` (`pulsed-data` volume) | Yes |
 | Signing keys, internal CA, ACME account | `keys.enc`, sealed with the master key | Yes (still sealed) |
 | Master key | A compose secret from your vault, never on a volume | **No**: keep it in your vault |
 | age backup identity | Offline only | **No**: keep two offline copies |

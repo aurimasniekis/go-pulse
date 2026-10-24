@@ -7,6 +7,7 @@ import { admin, unwrap, type Schemas } from '@/api/client'
 import { useBackups } from '@/api/queries'
 import { ErrorAlert } from '@/components/ErrorAlert'
 import { PageHeader } from '@/components/PageHeader'
+import { Can } from '@/components/Can'
 import { formatBytes, formatDuration, formatNumber, formatTime, timeAgo } from '@/lib/format'
 import { notifyErr, notifyOk } from '@/lib/notify'
 
@@ -210,14 +211,14 @@ function Backups() {
         description="Nightly, age-encrypted backups to S3: the SQLite state, keys.enc and every stream (NATSARC1 records, deduplicated). Every backup restores on its own."
         actions={
           d?.enabled && (
-            <>
+            <Can perm="backups.run">
               <Button variant="default" leftSection={<IconScissors size={14} />} loading={prune.isPending} disabled={!!st?.running} onClick={() => prune.mutate()}>
                 Apply retention
               </Button>
               <Button leftSection={<IconDatabaseExport size={14} />} loading={run.isPending} disabled={!!st?.running} onClick={() => run.mutate()}>
                 Back up now
               </Button>
-            </>
+            </Can>
           )
         }
       />
@@ -366,6 +367,7 @@ function Backups() {
                     </Table.Td>
                     <Table.Td ta="right">
                       {r.status === 'ok' && !r.pruned && (
+                        <Can perm="backups.restore">
                         <Button
                           size="compact-sm"
                           variant="default"
@@ -379,6 +381,7 @@ function Backups() {
                         >
                           Restore…
                         </Button>
+                        </Can>
                       )}
                     </Table.Td>
                   </Table.Tr>

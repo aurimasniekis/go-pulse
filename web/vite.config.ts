@@ -18,7 +18,8 @@ export default defineConfig({
     chunkSizeWarningLimit: 1500,
   },
   server: {
-    proxy: { '/api': api },
+    // /auth/oidc/* are the single sign-on redirects (outside the JSON API).
+    proxy: { '/api': api, '/auth': api },
   },
   test: {
     globals: true,

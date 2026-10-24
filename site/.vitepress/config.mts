@@ -57,6 +57,7 @@ export default defineConfig({
         text: 'Operator guides',
         items: [
           { text: 'Overview', link: '/operators/' },
+          { text: 'Users and single sign-on', link: '/operators/users' },
           { text: 'Clients and grants', link: '/operators/clients' },
           { text: 'Streams, KV and objects', link: '/operators/streams' },
           { text: 'Cloudflare and TLS', link: '/operators/tls' },

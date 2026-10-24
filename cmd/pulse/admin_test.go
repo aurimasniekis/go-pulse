@@ -29,8 +29,8 @@ func TestClientsCreateAndAdminErrors(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch {
 		case r.Method == http.MethodPost && r.URL.Path == "/api/admin/v1/clients":
-			if r.Header.Get("X-Pulse-CSRF") != "1" {
-				http.Error(w, "csrf", http.StatusForbidden)
+			if r.Header.Get("Authorization") != "Bearer pulse_pat_test" {
+				http.Error(w, "token", http.StatusUnauthorized)
 				return
 			}
 			_ = json.NewDecoder(r.Body).Decode(&gotBody)
@@ -46,6 +46,7 @@ func TestClientsCreateAndAdminErrors(t *testing.T) {
 	}))
 	defer srv.Close()
 	t.Setenv("PULSE_CONFIG", filepath.Join(t.TempDir(), "cfg.json"))
+	t.Setenv("PULSE_ADMIN_TOKEN", "pulse_pat_test")
 	out := filepath.Join(t.TempDir(), "bot.creds")
 	run := func(args ...string) (string, error) {
 		cmd := newRootCmd()

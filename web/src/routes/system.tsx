@@ -48,7 +48,6 @@ function System() {
               <Code>{s?.version ?? '…'}</Code>
             </Row>
             <Row label="Profile">{s?.profile}</Row>
-            <Row label="Admin auth">{s?.auth_mode}</Row>
             <Row label="Ready">
               <Badge variant="dot" color={s?.ready ? 'teal' : 'red'}>
                 {s?.ready ? 'ready' : 'not ready'}

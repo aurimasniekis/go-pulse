@@ -104,3 +104,48 @@ func TestBackupKeygen(t *testing.T) {
 		t.Fatalf("recipient %q: %v", rcpt, err)
 	}
 }
+
+// pulsed admin bootstrap issues a setup link while pulsed holds the database lock, and only until an administrator
+// exists (ADR-0038).
+func TestAdminBootstrap(t *testing.T) {
+	dir := t.TempDir()
+	t.Setenv("PULSE_PROFILE", "dev")
+	t.Setenv("PULSE_MASTER_KEY", secretbox.GenerateMasterKey())
+	t.Setenv("PULSE_DATA_DIR", dir+"/pulsed")
+	t.Setenv("PULSE_NATS_DIR", dir+"/nats")
+	t.Setenv("PULSE_ADMIN_URL", "http://127.0.0.1:18080")
+	db, err := store.Open(context.Background(), store.Options{Path: dir + "/pulsed/pulse.db"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close() // holds the lock, as pulsed serve does
+	run := func(args ...string) (string, error) {
+		cmd := newRootCmd()
+		var out bytes.Buffer
+		cmd.SetOut(&out)
+		cmd.SetErr(&out)
+		cmd.SetArgs(args)
+		err := cmd.Execute()
+		return out.String(), err
+	}
+	out, err := run("admin", "bootstrap")
+	if err != nil || !strings.Contains(out, "http://127.0.0.1:18080/setup?token=") {
+		t.Fatalf("%v\n%s", err, out)
+	}
+	if _, err := run("admin", "recover", "--email", "nobody@example.com"); err == nil {
+		t.Fatal("recovered a user that does not exist")
+	}
+	if out, err := run("admin", "recover", "--email", "root@example.com", "--new-admin"); err != nil || !strings.Contains(out, "/recover?token=") {
+		t.Fatalf("%v\n%s", err, out)
+	}
+	if _, err := run("admin", "bootstrap"); err == nil {
+		t.Fatal("setup link issued although an administrator exists")
+	}
+	if _, err := run("admin", "token", "--email", "ci@example.com", "--role", "operator"); err == nil {
+		t.Fatal("token for a missing user without --create")
+	}
+	out, err = run("admin", "token", "--email", "ci@example.com", "--create", "--role", "operator")
+	if err != nil || !strings.HasPrefix(out, "pulse_pat_") {
+		t.Fatalf("%v\n%s", err, out)
+	}
+}

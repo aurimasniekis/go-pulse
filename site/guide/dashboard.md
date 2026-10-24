@@ -1,9 +1,29 @@
 # The dashboard
 
-The dashboard is a React app embedded in `pulsed`. It is served with the admin API on `127.0.0.1:8080` and reached
-through `ssh -L 8080:127.0.0.1:8080 <vps>`. It has no login of its own: whoever can open the tunnel is the
-administrator, which is why it is never exposed publicly (single sign-on is planned, not implemented). Every change
-is recorded in the audit log.
+The dashboard is a React app embedded in `pulsed`. It is served with the admin API on `127.0.0.1:8080`, reached
+through `ssh -L 8080:127.0.0.1:8080 <vps>`, and, when you enable it, on its own hostname behind Cloudflare. Every page
+needs a signed-in user; every change is recorded in the audit log under that user.
+
+## Signing in
+
+<Shot name="login" themed alt="Pulse sign-in page" caption="Sign in with a password and TOTP, or with single sign-on" />
+
+
+Sign in with your email, password and a TOTP code, or with a single sign-on button when a provider is configured. The
+first administrator comes from a one-time setup link (`pulsed admin bootstrap`); everyone else gets an invitation or a
+password link from an administrator. Sessions end after 30 minutes of inactivity and 12 hours at most.
+
+Your **role** decides what you see: pages and buttons you have no permission for are hidden. Viewers read the
+dashboards and events; auditors also read the audit log and users; operators run the bus (clients, tokens, webhooks,
+streams, bans, alerts, backups); administrators also manage users, single sign-on and restores.
+
+Some actions (showing a new secret, deleting a stream, managing users, restoring) ask you to confirm it is you when you
+last signed in more than 5 minutes ago: your password and code, or a fresh login at your identity provider. The action
+then continues.
+
+The user menu (top right) has your **Account** page: change your password, enroll or replace TOTP, new recovery codes,
+your sessions, linked SSO identities, and personal access tokens for the CLI. See
+[Users and single sign-on](/operators/users).
 
 The sidebar has three groups: **Events**, **Access** and **Operations**. Press <kbd>⌘K</kbd> / <kbd>Ctrl K</kbd> (or
 <kbd>/</kbd>) to jump to any page. The theme follows your system, or switch it in the header; the header also shows
@@ -106,6 +126,14 @@ result. Filter by action (exact or prefix such as `client.`), actor, target, res
 
 <Shot name="audit" alt="The audit log with filters" caption="Audit" />
 
+### Users
+
+For administrators (auditors can look): every user with their roles, how they signed in last, whether TOTP is enrolled,
+and their status. Create users, change roles, disable or delete them, issue a single-use password link, sign a user out
+everywhere, clear sign-in throttling, and manage their SSO identities and personal access tokens. The **Invitations**
+tab invites people by email with preset roles and lists pending invitations. See
+[Users and single sign-on](/operators/users).
+
 ## Operations
 
 ### System
@@ -142,6 +170,9 @@ exists now. Existing streams are skipped unless you choose **Replace** and type 
 Display preferences for this browser (time zone for timestamps) and the server's effective configuration. Secrets
 appear only as set or not set. `pulsed` is configured with `PULSE_*` environment variables; change them in the
 deployment and restart.
+
+The **Single sign-on** tab (administrators) adds OpenID Connect providers, maps provider groups to roles, runs a test
+login, and turns password sign-in off once SSO works.
 
 <Shot name="settings" alt="Settings with the display time zone and effective configuration" caption="Settings" />
 

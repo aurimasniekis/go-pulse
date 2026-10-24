@@ -8,6 +8,7 @@ import { ErrorAlert } from '@/components/ErrorAlert'
 import { EventDrawer } from '@/components/EventDrawer'
 import { eventColumns } from '@/components/eventColumns'
 import { PageHeader } from '@/components/PageHeader'
+import { Can } from '@/components/Can'
 import { PublishModal } from '@/components/PublishModal'
 import { VirtualTable } from '@/components/VirtualTable'
 import { formatNumber } from '@/lib/format'
@@ -78,9 +79,11 @@ function Explorer() {
         description="Browse stored events. Filters on type, headers and payload run in pulsed within a scan budget."
         actions={
           <>
-          <Button variant="default" leftSection={<IconSend size={14} />} onClick={() => setPublishing(true)}>
-            Publish event
-          </Button>
+          <Can perm="events.publish">
+            <Button variant="default" leftSection={<IconSend size={14} />} onClick={() => setPublishing(true)}>
+              Publish event
+            </Button>
+          </Can>
           <Button
             leftSection={<IconRefresh size={14} />}
             variant="default"

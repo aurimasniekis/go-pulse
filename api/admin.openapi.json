@@ -43,6 +43,32 @@
         ],
         "type": "object"
       },
+      "Accept-invitationRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "$schema": {
+            "description": "A URL to the JSON Schema for this object.",
+            "examples": [
+              "/api/admin/v1/schemas/Accept-invitationRequest.json"
+            ],
+            "format": "uri",
+            "readOnly": true,
+            "type": "string"
+          },
+          "display_name": {
+            "maxLength": 128,
+            "type": "string"
+          },
+          "password": {
+            "maxLength": 4096,
+            "type": "string"
+          }
+        },
+        "required": [
+          "password"
+        ],
+        "type": "object"
+      },
       "Add-allowRequest": {
         "additionalProperties": false,
         "properties": {
@@ -66,6 +92,38 @@
         },
         "required": [
           "network"
+        ],
+        "type": "object"
+      },
+      "Add-sso-mappingRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "$schema": {
+            "description": "A URL to the JSON Schema for this object.",
+            "examples": [
+              "/api/admin/v1/schemas/Add-sso-mappingRequest.json"
+            ],
+            "format": "uri",
+            "readOnly": true,
+            "type": "string"
+          },
+          "group_value": {
+            "maxLength": 256,
+            "type": "string"
+          },
+          "role": {
+            "enum": [
+              "administrator",
+              "operator",
+              "auditor",
+              "viewer"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "group_value",
+          "role"
         ],
         "type": "object"
       },
@@ -327,6 +385,70 @@
         },
         "required": [
           "entries"
+        ],
+        "type": "object"
+      },
+      "AuthConfig": {
+        "additionalProperties": false,
+        "properties": {
+          "$schema": {
+            "description": "A URL to the JSON Schema for this object.",
+            "examples": [
+              "/api/admin/v1/schemas/AuthConfig.json"
+            ],
+            "format": "uri",
+            "readOnly": true,
+            "type": "string"
+          },
+          "bootstrap_required": {
+            "description": "No user exists yet: run pulsed admin bootstrap",
+            "type": "boolean"
+          },
+          "local_login": {
+            "type": "boolean"
+          },
+          "providers": {
+            "items": {
+              "$ref": "#/components/schemas/PublicProvider"
+            },
+            "type": "array"
+          },
+          "sso_here": {
+            "description": "SSO runs on this origin; otherwise use sso_url",
+            "type": "boolean"
+          },
+          "sso_url": {
+            "description": "The dashboard origin SSO redirects to",
+            "type": "string"
+          }
+        },
+        "required": [
+          "local_login",
+          "providers",
+          "sso_here",
+          "bootstrap_required"
+        ],
+        "type": "object"
+      },
+      "AuthSettings": {
+        "additionalProperties": false,
+        "properties": {
+          "$schema": {
+            "description": "A URL to the JSON Schema for this object.",
+            "examples": [
+              "/api/admin/v1/schemas/AuthSettings.json"
+            ],
+            "format": "uri",
+            "readOnly": true,
+            "type": "string"
+          },
+          "local_login_disabled": {
+            "description": "SSO-only: password sign-in is refused (break-glass recovery still works)",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "local_login_disabled"
         ],
         "type": "object"
       },
@@ -676,6 +798,38 @@
         ],
         "type": "object"
       },
+      "BootstrapInput": {
+        "additionalProperties": false,
+        "properties": {
+          "$schema": {
+            "description": "A URL to the JSON Schema for this object.",
+            "examples": [
+              "/api/admin/v1/schemas/BootstrapInput.json"
+            ],
+            "format": "uri",
+            "readOnly": true,
+            "type": "string"
+          },
+          "display_name": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          },
+          "password": {
+            "type": "string"
+          },
+          "token": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "token",
+          "email",
+          "password"
+        ],
+        "type": "object"
+      },
       "Buckets": {
         "additionalProperties": false,
         "properties": {
@@ -784,6 +938,78 @@
         },
         "required": [
           "certificates"
+        ],
+        "type": "object"
+      },
+      "Change-my-passwordRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "$schema": {
+            "description": "A URL to the JSON Schema for this object.",
+            "examples": [
+              "/api/admin/v1/schemas/Change-my-passwordRequest.json"
+            ],
+            "format": "uri",
+            "readOnly": true,
+            "type": "string"
+          },
+          "current_password": {
+            "maxLength": 4096,
+            "type": "string"
+          },
+          "new_password": {
+            "maxLength": 4096,
+            "type": "string"
+          }
+        },
+        "required": [
+          "current_password",
+          "new_password"
+        ],
+        "type": "object"
+      },
+      "Claims": {
+        "additionalProperties": false,
+        "properties": {
+          "acr": {
+            "type": "string"
+          },
+          "auth_time": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "email": {
+            "type": "string"
+          },
+          "email_verified": {
+            "type": "boolean"
+          },
+          "groups": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "hd": {
+            "type": "string"
+          },
+          "iss": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "sub": {
+            "type": "string"
+          },
+          "tid": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "iss",
+          "sub",
+          "email_verified"
         ],
         "type": "object"
       },
@@ -923,6 +1149,28 @@
         ],
         "type": "object"
       },
+      "CodeInBody": {
+        "additionalProperties": false,
+        "properties": {
+          "$schema": {
+            "description": "A URL to the JSON Schema for this object.",
+            "examples": [
+              "/api/admin/v1/schemas/CodeInBody.json"
+            ],
+            "format": "uri",
+            "readOnly": true,
+            "type": "string"
+          },
+          "code": {
+            "maxLength": 64,
+            "type": "string"
+          }
+        },
+        "required": [
+          "code"
+        ],
+        "type": "object"
+      },
       "Config": {
         "additionalProperties": false,
         "properties": {
@@ -995,6 +1243,53 @@
         "required": [
           "title",
           "items"
+        ],
+        "type": "object"
+      },
+      "Confirm-totpRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "$schema": {
+            "description": "A URL to the JSON Schema for this object.",
+            "examples": [
+              "/api/admin/v1/schemas/Confirm-totpRequest.json"
+            ],
+            "format": "uri",
+            "readOnly": true,
+            "type": "string"
+          },
+          "code": {
+            "maxLength": 16,
+            "type": "string"
+          }
+        },
+        "required": [
+          "code"
+        ],
+        "type": "object"
+      },
+      "ConfirmOut": {
+        "additionalProperties": false,
+        "properties": {
+          "$schema": {
+            "description": "A URL to the JSON Schema for this object.",
+            "examples": [
+              "/api/admin/v1/schemas/ConfirmOut.json"
+            ],
+            "format": "uri",
+            "readOnly": true,
+            "type": "string"
+          },
+          "recovery_codes": {
+            "description": "Single-use recovery codes, shown once",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "recovery_codes"
         ],
         "type": "object"
       },
@@ -1242,6 +1537,35 @@
         ],
         "type": "object"
       },
+      "Create-invitationRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "$schema": {
+            "description": "A URL to the JSON Schema for this object.",
+            "examples": [
+              "/api/admin/v1/schemas/Create-invitationRequest.json"
+            ],
+            "format": "uri",
+            "readOnly": true,
+            "type": "string"
+          },
+          "email": {
+            "maxLength": 254,
+            "type": "string"
+          },
+          "roles": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "email",
+          "roles"
+        ],
+        "type": "object"
+      },
       "Create-kv-bucketRequest": {
         "additionalProperties": false,
         "properties": {
@@ -1283,6 +1607,45 @@
         },
         "required": [
           "name"
+        ],
+        "type": "object"
+      },
+      "Create-my-tokenRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "$schema": {
+            "description": "A URL to the JSON Schema for this object.",
+            "examples": [
+              "/api/admin/v1/schemas/Create-my-tokenRequest.json"
+            ],
+            "format": "uri",
+            "readOnly": true,
+            "type": "string"
+          },
+          "days": {
+            "description": "Lifetime (default 90)",
+            "format": "int64",
+            "maximum": 366,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "name": {
+            "maxLength": 64,
+            "type": "string"
+          },
+          "role": {
+            "enum": [
+              "administrator",
+              "operator",
+              "auditor",
+              "viewer"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "role"
         ],
         "type": "object"
       },
@@ -1344,6 +1707,42 @@
         "required": [
           "token",
           "secret"
+        ],
+        "type": "object"
+      },
+      "CreateInput": {
+        "additionalProperties": false,
+        "properties": {
+          "$schema": {
+            "description": "A URL to the JSON Schema for this object.",
+            "examples": [
+              "/api/admin/v1/schemas/CreateInput.json"
+            ],
+            "format": "uri",
+            "readOnly": true,
+            "type": "string"
+          },
+          "display_name": {
+            "type": "string"
+          },
+          "email": {
+            "description": "Optional for SSO-only users",
+            "type": "string"
+          },
+          "mfa_required": {
+            "description": "Require TOTP even for roles that do not need it",
+            "type": "boolean"
+          },
+          "roles": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "display_name",
+          "roles"
         ],
         "type": "object"
       },
@@ -1950,6 +2349,43 @@
         ],
         "type": "object"
       },
+      "Identity": {
+        "additionalProperties": false,
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "issuer": {
+            "type": "string"
+          },
+          "last_login_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "linked_via": {
+            "type": "string"
+          },
+          "provider_id": {
+            "type": "string"
+          },
+          "subject": {
+            "type": "string"
+          },
+          "user_id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "issuer",
+          "subject",
+          "provider_id",
+          "user_id",
+          "linked_via",
+          "created_at"
+        ],
+        "type": "object"
+      },
       "InboundHook": {
         "additionalProperties": false,
         "properties": {
@@ -2094,6 +2530,65 @@
         ],
         "type": "object"
       },
+      "Invitation": {
+        "additionalProperties": false,
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "created_by": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          },
+          "expires_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "roles": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "id",
+          "email",
+          "roles",
+          "expires_at",
+          "created_at",
+          "created_by"
+        ],
+        "type": "object"
+      },
+      "Issue-link-inviteRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "$schema": {
+            "description": "A URL to the JSON Schema for this object.",
+            "examples": [
+              "/api/admin/v1/schemas/Issue-link-inviteRequest.json"
+            ],
+            "format": "uri",
+            "readOnly": true,
+            "type": "string"
+          },
+          "provider_id": {
+            "maxLength": 64,
+            "type": "string"
+          }
+        },
+        "required": [
+          "provider_id"
+        ],
+        "type": "object"
+      },
       "Issued": {
         "additionalProperties": false,
         "properties": {
@@ -2117,6 +2612,46 @@
         "required": [
           "client",
           "creds"
+        ],
+        "type": "object"
+      },
+      "JITRules": {
+        "additionalProperties": false,
+        "properties": {
+          "email_domains": {
+            "description": "Require email_verified=true and an email in one of these domains",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "groups": {
+            "description": "Require one of these values in the groups claim",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "hosted_domains": {
+            "description": "Match the hd claim (Google Workspace)",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "tenants": {
+            "description": "Match the tid claim (Microsoft Entra ID)",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "email_domains",
+          "tenants",
+          "hosted_domains",
+          "groups"
         ],
         "type": "object"
       },
@@ -2481,6 +3016,229 @@
         ],
         "type": "object"
       },
+      "Link-user-identityRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "$schema": {
+            "description": "A URL to the JSON Schema for this object.",
+            "examples": [
+              "/api/admin/v1/schemas/Link-user-identityRequest.json"
+            ],
+            "format": "uri",
+            "readOnly": true,
+            "type": "string"
+          },
+          "provider_id": {
+            "maxLength": 64,
+            "type": "string"
+          },
+          "subject": {
+            "maxLength": 255,
+            "type": "string"
+          }
+        },
+        "required": [
+          "provider_id",
+          "subject"
+        ],
+        "type": "object"
+      },
+      "LoginOut": {
+        "additionalProperties": false,
+        "properties": {
+          "$schema": {
+            "description": "A URL to the JSON Schema for this object.",
+            "examples": [
+              "/api/admin/v1/schemas/LoginOut.json"
+            ],
+            "format": "uri",
+            "readOnly": true,
+            "type": "string"
+          },
+          "me": {
+            "$ref": "#/components/schemas/Me"
+          },
+          "mfa_pending": {
+            "type": "boolean"
+          },
+          "must_enroll": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "mfa_pending",
+          "must_enroll",
+          "me"
+        ],
+        "type": "object"
+      },
+      "LoginRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "$schema": {
+            "description": "A URL to the JSON Schema for this object.",
+            "examples": [
+              "/api/admin/v1/schemas/LoginRequest.json"
+            ],
+            "format": "uri",
+            "readOnly": true,
+            "type": "string"
+          },
+          "email": {
+            "maxLength": 254,
+            "type": "string"
+          },
+          "password": {
+            "maxLength": 4096,
+            "type": "string"
+          }
+        },
+        "required": [
+          "email",
+          "password"
+        ],
+        "type": "object"
+      },
+      "LogoutOut": {
+        "additionalProperties": false,
+        "properties": {
+          "$schema": {
+            "description": "A URL to the JSON Schema for this object.",
+            "examples": [
+              "/api/admin/v1/schemas/LogoutOut.json"
+            ],
+            "format": "uri",
+            "readOnly": true,
+            "type": "string"
+          },
+          "provider_logout_url": {
+            "description": "Optional RP-initiated logout at the identity provider",
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "Mapping": {
+        "additionalProperties": false,
+        "properties": {
+          "$schema": {
+            "description": "A URL to the JSON Schema for this object.",
+            "examples": [
+              "/api/admin/v1/schemas/Mapping.json"
+            ],
+            "format": "uri",
+            "readOnly": true,
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "group_value": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "provider_id": {
+            "type": "string"
+          },
+          "role": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "provider_id",
+          "group_value",
+          "role",
+          "created_at"
+        ],
+        "type": "object"
+      },
+      "Me": {
+        "additionalProperties": false,
+        "properties": {
+          "$schema": {
+            "description": "A URL to the JSON Schema for this object.",
+            "examples": [
+              "/api/admin/v1/schemas/Me.json"
+            ],
+            "format": "uri",
+            "readOnly": true,
+            "type": "string"
+          },
+          "auth_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "auth_method": {
+            "enum": [
+              "password",
+              "oidc",
+              "breakglass",
+              "token"
+            ],
+            "type": "string"
+          },
+          "auth_provider": {
+            "type": "string"
+          },
+          "csrf_token": {
+            "description": "Send as X-Pulse-CSRF on state-changing requests",
+            "type": "string"
+          },
+          "expires_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "listener": {
+            "type": "string"
+          },
+          "mfa_pending": {
+            "description": "Enter a TOTP or recovery code (POST /auth/mfa) to finish signing in",
+            "type": "boolean"
+          },
+          "must_enroll": {
+            "description": "Enroll TOTP (POST /account/totp/begin + confirm) to finish signing in",
+            "type": "boolean"
+          },
+          "permissions": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "reauth_window_seconds": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "recovery_codes_left": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "session_id": {
+            "type": "string"
+          },
+          "user": {
+            "$ref": "#/components/schemas/User"
+          }
+        },
+        "required": [
+          "user",
+          "permissions",
+          "session_id",
+          "auth_method",
+          "listener",
+          "mfa_pending",
+          "must_enroll",
+          "auth_at",
+          "expires_at",
+          "reauth_window_seconds",
+          "recovery_codes_left"
+        ],
+        "type": "object"
+      },
       "Node": {
         "additionalProperties": false,
         "properties": {
@@ -2722,6 +3480,37 @@
         ],
         "type": "object"
       },
+      "OneTimeLink": {
+        "additionalProperties": false,
+        "properties": {
+          "$schema": {
+            "description": "A URL to the JSON Schema for this object.",
+            "examples": [
+              "/api/admin/v1/schemas/OneTimeLink.json"
+            ],
+            "format": "uri",
+            "readOnly": true,
+            "type": "string"
+          },
+          "expires_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "token": {
+            "type": "string"
+          },
+          "url": {
+            "description": "Path on the dashboard origin",
+            "type": "string"
+          }
+        },
+        "required": [
+          "token",
+          "url",
+          "expires_at"
+        ],
+        "type": "object"
+      },
       "OutboundInput": {
         "additionalProperties": false,
         "properties": {
@@ -2857,6 +3646,81 @@
         ],
         "type": "object"
       },
+      "PAT": {
+        "additionalProperties": false,
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "expires_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "last_used_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "last_used_ip": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "prefix": {
+            "type": "string"
+          },
+          "revoked": {
+            "type": "boolean"
+          },
+          "role": {
+            "type": "string"
+          },
+          "user_id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "user_id",
+          "name",
+          "prefix",
+          "role",
+          "expires_at",
+          "created_at",
+          "revoked"
+        ],
+        "type": "object"
+      },
+      "PatOut": {
+        "additionalProperties": false,
+        "properties": {
+          "$schema": {
+            "description": "A URL to the JSON Schema for this object.",
+            "examples": [
+              "/api/admin/v1/schemas/PatOut.json"
+            ],
+            "format": "uri",
+            "readOnly": true,
+            "type": "string"
+          },
+          "secret": {
+            "description": "Shown once",
+            "type": "string"
+          },
+          "token": {
+            "$ref": "#/components/schemas/PAT"
+          }
+        },
+        "required": [
+          "token",
+          "secret"
+        ],
+        "type": "object"
+      },
       "Point": {
         "additionalProperties": false,
         "properties": {
@@ -2877,6 +3741,104 @@
           "t",
           "msgs",
           "bytes"
+        ],
+        "type": "object"
+      },
+      "ProviderInput": {
+        "additionalProperties": false,
+        "properties": {
+          "$schema": {
+            "description": "A URL to the JSON Schema for this object.",
+            "examples": [
+              "/api/admin/v1/schemas/ProviderInput.json"
+            ],
+            "format": "uri",
+            "readOnly": true,
+            "type": "string"
+          },
+          "acr_values": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "allow_cross_origin_endpoints": {
+            "type": "boolean"
+          },
+          "allow_private_network": {
+            "type": "boolean"
+          },
+          "ca_bundle_pem": {
+            "type": "string"
+          },
+          "client_id": {
+            "type": "string"
+          },
+          "client_secret": {
+            "type": "string"
+          },
+          "display_name": {
+            "type": "string"
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "end_session_enabled": {
+            "type": "boolean"
+          },
+          "groups_claim": {
+            "type": "string"
+          },
+          "issuer": {
+            "type": "string"
+          },
+          "jit": {
+            "$ref": "#/components/schemas/JITRules"
+          },
+          "provisioning": {
+            "enum": [
+              "preprovisioned",
+              "jit"
+            ],
+            "type": "string"
+          },
+          "scopes": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "slug": {
+            "type": "string"
+          },
+          "stepup_fallback": {
+            "enum": [
+              "none",
+              "local_totp"
+            ],
+            "type": "string"
+          },
+          "version": {
+            "description": "Required on update (optimistic concurrency)",
+            "format": "int64",
+            "type": "integer"
+          }
+        },
+        "type": "object"
+      },
+      "PublicProvider": {
+        "additionalProperties": false,
+        "properties": {
+          "display_name": {
+            "type": "string"
+          },
+          "slug": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "slug",
+          "display_name"
         ],
         "type": "object"
       },
@@ -2997,6 +3959,100 @@
         ],
         "type": "object"
       },
+      "ReauthRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "$schema": {
+            "description": "A URL to the JSON Schema for this object.",
+            "examples": [
+              "/api/admin/v1/schemas/ReauthRequest.json"
+            ],
+            "format": "uri",
+            "readOnly": true,
+            "type": "string"
+          },
+          "code": {
+            "maxLength": 64,
+            "type": "string"
+          },
+          "password": {
+            "maxLength": 4096,
+            "type": "string"
+          }
+        },
+        "required": [
+          "password"
+        ],
+        "type": "object"
+      },
+      "Recover-loginRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "$schema": {
+            "description": "A URL to the JSON Schema for this object.",
+            "examples": [
+              "/api/admin/v1/schemas/Recover-loginRequest.json"
+            ],
+            "format": "uri",
+            "readOnly": true,
+            "type": "string"
+          },
+          "token": {
+            "maxLength": 128,
+            "type": "string"
+          }
+        },
+        "required": [
+          "token"
+        ],
+        "type": "object"
+      },
+      "RecoverOut": {
+        "additionalProperties": false,
+        "properties": {
+          "$schema": {
+            "description": "A URL to the JSON Schema for this object.",
+            "examples": [
+              "/api/admin/v1/schemas/RecoverOut.json"
+            ],
+            "format": "uri",
+            "readOnly": true,
+            "type": "string"
+          },
+          "me": {
+            "$ref": "#/components/schemas/Me"
+          },
+          "must_enroll": {
+            "type": "boolean"
+          },
+          "password_reset": {
+            "$ref": "#/components/schemas/RecoverOutPasswordResetStruct",
+            "description": "Set a password you know with this single-use token"
+          }
+        },
+        "required": [
+          "must_enroll",
+          "me"
+        ],
+        "type": "object"
+      },
+      "RecoverOutPasswordResetStruct": {
+        "additionalProperties": false,
+        "properties": {
+          "expires_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "token": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "token",
+          "expires_at"
+        ],
+        "type": "object"
+      },
       "RemoteBackup": {
         "additionalProperties": false,
         "properties": {
@@ -3043,6 +4099,28 @@
         },
         "required": [
           "network"
+        ],
+        "type": "object"
+      },
+      "Reset-passwordRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "$schema": {
+            "description": "A URL to the JSON Schema for this object.",
+            "examples": [
+              "/api/admin/v1/schemas/Reset-passwordRequest.json"
+            ],
+            "format": "uri",
+            "readOnly": true,
+            "type": "string"
+          },
+          "password": {
+            "maxLength": 4096,
+            "type": "string"
+          }
+        },
+        "required": [
+          "password"
         ],
         "type": "object"
       },
@@ -3131,6 +4209,25 @@
           "started_at",
           "replace",
           "streams"
+        ],
+        "type": "object"
+      },
+      "RoleAssignment": {
+        "additionalProperties": false,
+        "properties": {
+          "role": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "source_ref": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "role",
+          "source"
         ],
         "type": "object"
       },
@@ -3307,6 +4404,123 @@
           "sys_bytes",
           "gc_cycles",
           "cpus"
+        ],
+        "type": "object"
+      },
+      "SSOProvider": {
+        "additionalProperties": false,
+        "properties": {
+          "$schema": {
+            "description": "A URL to the JSON Schema for this object.",
+            "examples": [
+              "/api/admin/v1/schemas/SSOProvider.json"
+            ],
+            "format": "uri",
+            "readOnly": true,
+            "type": "string"
+          },
+          "acr_values": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "allow_cross_origin_endpoints": {
+            "type": "boolean"
+          },
+          "allow_private_network": {
+            "type": "boolean"
+          },
+          "ca_bundle_pem": {
+            "type": "string"
+          },
+          "client_id": {
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "display_name": {
+            "type": "string"
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "end_session_enabled": {
+            "type": "boolean"
+          },
+          "groups_claim": {
+            "type": "string"
+          },
+          "has_client_secret": {
+            "type": "boolean"
+          },
+          "id": {
+            "type": "string"
+          },
+          "issuer": {
+            "type": "string"
+          },
+          "jit": {
+            "$ref": "#/components/schemas/JITRules"
+          },
+          "provisioning": {
+            "type": "string"
+          },
+          "redirect_uri": {
+            "type": "string"
+          },
+          "scopes": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "slug": {
+            "type": "string"
+          },
+          "stepup_fallback": {
+            "type": "string"
+          },
+          "test_login_by": {
+            "type": "string"
+          },
+          "test_login_ok_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "version": {
+            "format": "int64",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "redirect_uri",
+          "id",
+          "slug",
+          "display_name",
+          "issuer",
+          "client_id",
+          "has_client_secret",
+          "scopes",
+          "groups_claim",
+          "provisioning",
+          "jit",
+          "allow_private_network",
+          "allow_cross_origin_endpoints",
+          "ca_bundle_pem",
+          "stepup_fallback",
+          "acr_values",
+          "end_session_enabled",
+          "enabled",
+          "version",
+          "created_at",
+          "updated_at"
         ],
         "type": "object"
       },
@@ -3570,6 +4784,56 @@
           "slow_consumers",
           "max_payload",
           "config_load_time"
+        ],
+        "type": "object"
+      },
+      "SessionInfo": {
+        "additionalProperties": false,
+        "properties": {
+          "auth_method": {
+            "type": "string"
+          },
+          "auth_provider": {
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "current": {
+            "type": "boolean"
+          },
+          "expires_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "ip": {
+            "type": "string"
+          },
+          "last_seen_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "listener": {
+            "type": "string"
+          },
+          "user_agent": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "auth_method",
+          "listener",
+          "created_at",
+          "last_seen_at",
+          "expires_at",
+          "ip",
+          "user_agent",
+          "current"
         ],
         "type": "object"
       },
@@ -3981,9 +5245,6 @@
             "readOnly": true,
             "type": "string"
           },
-          "auth_mode": {
-            "type": "string"
-          },
           "connect": {
             "$ref": "#/components/schemas/SystemInfoConnectStruct"
           },
@@ -4013,7 +5274,6 @@
         "required": [
           "version",
           "profile",
-          "auth_mode",
           "ready",
           "nats",
           "runtime",
@@ -4066,6 +5326,76 @@
           "server_name",
           "version",
           "rtt_ms"
+        ],
+        "type": "object"
+      },
+      "TOTPEnrollment": {
+        "additionalProperties": false,
+        "properties": {
+          "$schema": {
+            "description": "A URL to the JSON Schema for this object.",
+            "examples": [
+              "/api/admin/v1/schemas/TOTPEnrollment.json"
+            ],
+            "format": "uri",
+            "readOnly": true,
+            "type": "string"
+          },
+          "otpauth_uri": {
+            "type": "string"
+          },
+          "secret": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "secret",
+          "otpauth_uri"
+        ],
+        "type": "object"
+      },
+      "TestResult": {
+        "additionalProperties": false,
+        "properties": {
+          "$schema": {
+            "description": "A URL to the JSON Schema for this object.",
+            "examples": [
+              "/api/admin/v1/schemas/TestResult.json"
+            ],
+            "format": "uri",
+            "readOnly": true,
+            "type": "string"
+          },
+          "claims": {
+            "$ref": "#/components/schemas/Claims"
+          },
+          "effective_roles": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "linked_user_id": {
+            "type": "string"
+          },
+          "mapped_roles": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "provision_reason": {
+            "type": "string"
+          },
+          "would_provision": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "claims",
+          "would_provision",
+          "mapped_roles",
+          "effective_roles"
         ],
         "type": "object"
       },
@@ -4253,16 +5583,502 @@
           "version"
         ],
         "type": "object"
+      },
+      "UpdateInput": {
+        "additionalProperties": false,
+        "properties": {
+          "$schema": {
+            "description": "A URL to the JSON Schema for this object.",
+            "examples": [
+              "/api/admin/v1/schemas/UpdateInput.json"
+            ],
+            "format": "uri",
+            "readOnly": true,
+            "type": "string"
+          },
+          "display_name": {
+            "type": "string"
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "mfa_required": {
+            "type": "boolean"
+          },
+          "roles": {
+            "description": "Replaces the manually assigned roles; SSO-mapped roles are kept",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          }
+        },
+        "type": "object"
+      },
+      "User": {
+        "additionalProperties": false,
+        "properties": {
+          "$schema": {
+            "description": "A URL to the JSON Schema for this object.",
+            "examples": [
+              "/api/admin/v1/schemas/User.json"
+            ],
+            "format": "uri",
+            "readOnly": true,
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "display_name": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "has_password": {
+            "type": "boolean"
+          },
+          "id": {
+            "type": "string"
+          },
+          "last_login_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "mfa_enrolled": {
+            "type": "boolean"
+          },
+          "mfa_required": {
+            "type": "boolean"
+          },
+          "provisioned_via": {
+            "type": "string"
+          },
+          "role_assignments": {
+            "items": {
+              "$ref": "#/components/schemas/RoleAssignment"
+            },
+            "type": "array"
+          },
+          "roles": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "version": {
+            "format": "int64",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "display_name",
+          "enabled",
+          "provisioned_via",
+          "roles",
+          "role_assignments",
+          "has_password",
+          "mfa_enrolled",
+          "mfa_required",
+          "version",
+          "created_at"
+        ],
+        "type": "object"
       }
     }
   },
   "info": {
-    "description": "Loopback-only admin API for the Pulse dashboard. State-changing requests need the X-Pulse-CSRF header.",
+    "description": "Admin API for the Pulse dashboard. Sign in for a session cookie (state-changing requests then need the session's CSRF token in X-Pulse-CSRF), or, on the loopback listener only, send a personal access token as Authorization: Bearer pulse_pat_….",
     "title": "Pulse admin API",
     "version": "v1"
   },
   "openapi": "3.1.0",
   "paths": {
+    "/account/identities": {
+      "get": {
+        "operationId": "list-my-identities",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/Identity"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "My linked SSO identities",
+        "tags": [
+          "account"
+        ]
+      }
+    },
+    "/account/password": {
+      "post": {
+        "operationId": "change-my-password",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Change-my-passwordRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Change my password",
+        "tags": [
+          "account"
+        ]
+      }
+    },
+    "/account/recovery-codes": {
+      "post": {
+        "operationId": "regenerate-recovery-codes",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConfirmOut"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Replace my recovery codes (shown once)",
+        "tags": [
+          "account"
+        ]
+      }
+    },
+    "/account/sessions": {
+      "get": {
+        "operationId": "list-my-sessions",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/SessionInfo"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "My active sessions",
+        "tags": [
+          "account"
+        ]
+      }
+    },
+    "/account/sessions/{id}": {
+      "delete": {
+        "operationId": "revoke-my-session",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "maxLength": 64,
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Sign out one of my sessions",
+        "tags": [
+          "account"
+        ]
+      }
+    },
+    "/account/tokens": {
+      "get": {
+        "operationId": "list-my-tokens",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/PAT"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "My personal access tokens",
+        "tags": [
+          "account"
+        ]
+      },
+      "post": {
+        "operationId": "create-my-token",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Create-my-tokenRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PatOut"
+                }
+              }
+            },
+            "description": "Created"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Create a personal access token for the pulse CLI (loopback listener only)",
+        "tags": [
+          "account"
+        ]
+      }
+    },
+    "/account/tokens/{id}": {
+      "delete": {
+        "operationId": "revoke-my-token",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "maxLength": 64,
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Revoke one of my tokens",
+        "tags": [
+          "account"
+        ]
+      }
+    },
+    "/account/totp": {
+      "delete": {
+        "operationId": "disable-totp",
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Remove my second factor",
+        "tags": [
+          "account"
+        ]
+      }
+    },
+    "/account/totp/begin": {
+      "post": {
+        "operationId": "begin-totp",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TOTPEnrollment"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Start TOTP enrollment (secret shown once)",
+        "tags": [
+          "account"
+        ]
+      }
+    },
+    "/account/totp/confirm": {
+      "post": {
+        "operationId": "confirm-totp",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Confirm-totpRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConfirmOut"
+                }
+              }
+            },
+            "description": "OK",
+            "headers": {
+              "Set-Cookie": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Finish TOTP enrollment",
+        "tags": [
+          "account"
+        ]
+      }
+    },
     "/alerts": {
       "get": {
         "operationId": "get-alerts",
@@ -4669,6 +6485,484 @@
         "summary": "Audit log",
         "tags": [
           "audit"
+        ]
+      }
+    },
+    "/auth/config": {
+      "get": {
+        "operationId": "get-auth-config",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthConfig"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Sign-in options",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/auth/invitations/{token}/accept": {
+      "post": {
+        "operationId": "accept-invitation",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "token",
+            "required": true,
+            "schema": {
+              "maxLength": 128,
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Accept-invitationRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/User"
+                }
+              }
+            },
+            "description": "Created"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Accept an invitation and set a password",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/auth/login": {
+      "post": {
+        "operationId": "login",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LoginOut"
+                }
+              }
+            },
+            "description": "OK",
+            "headers": {
+              "Set-Cookie": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Sign in with email and password",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/auth/logout": {
+      "post": {
+        "operationId": "logout",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LogoutOut"
+                }
+              }
+            },
+            "description": "OK",
+            "headers": {
+              "Set-Cookie": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Sign out",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/auth/me": {
+      "get": {
+        "operationId": "get-me",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Me"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "The signed-in user",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/auth/mfa": {
+      "post": {
+        "operationId": "verify-mfa",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CodeInBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Me"
+                }
+              }
+            },
+            "description": "OK",
+            "headers": {
+              "Set-Cookie": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Finish signing in with a second factor",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/auth/reauth": {
+      "post": {
+        "operationId": "reauth",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReauthRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Me"
+                }
+              }
+            },
+            "description": "OK",
+            "headers": {
+              "Set-Cookie": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Confirm it is you (password, and code when enrolled)",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/auth/reauth/totp": {
+      "post": {
+        "operationId": "reauth-totp",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CodeInBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Me"
+                }
+              }
+            },
+            "description": "OK",
+            "headers": {
+              "Set-Cookie": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Confirm it is you with TOTP (SSO sessions whose provider allows it)",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/auth/recover": {
+      "post": {
+        "operationId": "recover-login",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Recover-loginRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecoverOut"
+                }
+              }
+            },
+            "description": "OK",
+            "headers": {
+              "Set-Cookie": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Redeem a break-glass recovery token (pulsed admin recover)",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/auth/reset/{token}": {
+      "post": {
+        "operationId": "reset-password",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "token",
+            "required": true,
+            "schema": {
+              "maxLength": 128,
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Reset-passwordRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Set a password with a reset link",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/auth/setup": {
+      "post": {
+        "operationId": "setup",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BootstrapInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/User"
+                }
+              }
+            },
+            "description": "Created"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Create the first administrator with the setup token",
+        "tags": [
+          "auth"
         ]
       }
     },
@@ -6146,6 +8440,114 @@
         ]
       }
     },
+    "/invitations": {
+      "get": {
+        "operationId": "list-invitations",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/Invitation"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Pending invitations",
+        "tags": [
+          "users"
+        ]
+      },
+      "post": {
+        "operationId": "create-invitation",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Create-invitationRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OneTimeLink"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Invite someone by email with preset roles (link shown once)",
+        "tags": [
+          "users"
+        ]
+      }
+    },
+    "/invitations/{id}": {
+      "delete": {
+        "operationId": "revoke-invitation",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "maxLength": 128,
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Revoke an invitation",
+        "tags": [
+          "users"
+        ]
+      }
+    },
     "/kv": {
       "get": {
         "operationId": "list-buckets",
@@ -6977,6 +9379,455 @@
         "summary": "Lift a ban",
         "tags": [
           "security"
+        ]
+      }
+    },
+    "/sso/providers": {
+      "get": {
+        "operationId": "list-sso-providers",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/SSOProvider"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "SSO providers",
+        "tags": [
+          "sso"
+        ]
+      },
+      "post": {
+        "operationId": "create-sso-provider",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProviderInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SSOProvider"
+                }
+              }
+            },
+            "description": "Created"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Add an SSO provider",
+        "tags": [
+          "sso"
+        ]
+      }
+    },
+    "/sso/providers/{id}": {
+      "delete": {
+        "operationId": "delete-sso-provider",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "maxLength": 64,
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Remove an SSO provider",
+        "tags": [
+          "sso"
+        ]
+      },
+      "get": {
+        "operationId": "get-sso-provider",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "maxLength": 64,
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SSOProvider"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "An SSO provider",
+        "tags": [
+          "sso"
+        ]
+      },
+      "put": {
+        "operationId": "update-sso-provider",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "maxLength": 64,
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProviderInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SSOProvider"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Change an SSO provider",
+        "tags": [
+          "sso"
+        ]
+      }
+    },
+    "/sso/providers/{id}/mappings": {
+      "get": {
+        "operationId": "list-sso-mappings",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "maxLength": 64,
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/Mapping"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Group → role mappings",
+        "tags": [
+          "sso"
+        ]
+      },
+      "post": {
+        "operationId": "add-sso-mapping",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "maxLength": 64,
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Add-sso-mappingRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Mapping"
+                }
+              }
+            },
+            "description": "Created"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Map a group to a role",
+        "tags": [
+          "sso"
+        ]
+      }
+    },
+    "/sso/providers/{id}/mappings/{mapping}": {
+      "delete": {
+        "operationId": "delete-sso-mapping",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "maxLength": 64,
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "mapping",
+            "required": true,
+            "schema": {
+              "maxLength": 64,
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Remove a mapping",
+        "tags": [
+          "sso"
+        ]
+      }
+    },
+    "/sso/providers/{id}/test-result": {
+      "get": {
+        "operationId": "get-sso-test-result",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "maxLength": 64,
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TestResult"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "The result of my latest test login with this provider",
+        "tags": [
+          "sso"
+        ]
+      }
+    },
+    "/sso/settings": {
+      "get": {
+        "operationId": "get-auth-settings",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthSettings"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Sign-in settings",
+        "tags": [
+          "sso"
+        ]
+      },
+      "put": {
+        "operationId": "update-auth-settings",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AuthSettings"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthSettings"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Change sign-in settings",
+        "tags": [
+          "sso"
         ]
       }
     },
@@ -7883,6 +10734,639 @@
         "summary": "Revoke an HTTP token",
         "tags": [
           "tokens"
+        ]
+      }
+    },
+    "/users": {
+      "get": {
+        "operationId": "list-users",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/User"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "List users",
+        "tags": [
+          "users"
+        ]
+      },
+      "post": {
+        "operationId": "create-user",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/User"
+                }
+              }
+            },
+            "description": "Created"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Create a user (they set a password through a reset link, or sign in with SSO)",
+        "tags": [
+          "users"
+        ]
+      }
+    },
+    "/users/{id}": {
+      "delete": {
+        "operationId": "delete-user",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "maxLength": 64,
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Delete a user",
+        "tags": [
+          "users"
+        ]
+      },
+      "get": {
+        "operationId": "get-user",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "maxLength": 64,
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/User"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Get a user",
+        "tags": [
+          "users"
+        ]
+      },
+      "patch": {
+        "operationId": "update-user",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "maxLength": 64,
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/User"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Change a user's name, roles or status",
+        "tags": [
+          "users"
+        ]
+      }
+    },
+    "/users/{id}/clear-throttle": {
+      "post": {
+        "operationId": "clear-user-throttle",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "maxLength": 64,
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Clear a user's sign-in throttling",
+        "tags": [
+          "users"
+        ]
+      }
+    },
+    "/users/{id}/identities": {
+      "delete": {
+        "operationId": "unlink-user-identity",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "maxLength": 64,
+              "type": "string"
+            }
+          },
+          {
+            "explode": false,
+            "in": "query",
+            "name": "issuer",
+            "schema": {
+              "maxLength": 512,
+              "type": "string"
+            }
+          },
+          {
+            "explode": false,
+            "in": "query",
+            "name": "subject",
+            "schema": {
+              "maxLength": 255,
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Unlink an SSO identity (signs the user out)",
+        "tags": [
+          "users"
+        ]
+      },
+      "get": {
+        "operationId": "list-user-identities",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "maxLength": 64,
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/Identity"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "A user's linked SSO identities",
+        "tags": [
+          "users"
+        ]
+      },
+      "post": {
+        "operationId": "link-user-identity",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "maxLength": 64,
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Link-user-identityRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Link an expected SSO identity (provider + subject)",
+        "tags": [
+          "users"
+        ]
+      }
+    },
+    "/users/{id}/link-invite": {
+      "post": {
+        "operationId": "issue-link-invite",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "maxLength": 64,
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Issue-link-inviteRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OneTimeLink"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Issue a single-use link that binds the next SSO login to this user",
+        "tags": [
+          "users"
+        ]
+      }
+    },
+    "/users/{id}/reset-link": {
+      "post": {
+        "operationId": "issue-reset-link",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "maxLength": 64,
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OneTimeLink"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Issue a single-use password link (shown once)",
+        "tags": [
+          "users"
+        ]
+      }
+    },
+    "/users/{id}/sessions": {
+      "delete": {
+        "operationId": "revoke-user-sessions",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "maxLength": 64,
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Sign a user out everywhere",
+        "tags": [
+          "users"
+        ]
+      },
+      "get": {
+        "operationId": "list-user-sessions",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "maxLength": 64,
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/SessionInfo"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "A user's sessions",
+        "tags": [
+          "users"
+        ]
+      }
+    },
+    "/users/{id}/tokens": {
+      "get": {
+        "operationId": "list-user-tokens",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "maxLength": 64,
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/PAT"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "A user's personal access tokens",
+        "tags": [
+          "users"
+        ]
+      }
+    },
+    "/users/{id}/tokens/{token}": {
+      "delete": {
+        "operationId": "revoke-user-token",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "maxLength": 64,
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "token",
+            "required": true,
+            "schema": {
+              "maxLength": 64,
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Revoke a user's personal access token",
+        "tags": [
+          "users"
         ]
       }
     }

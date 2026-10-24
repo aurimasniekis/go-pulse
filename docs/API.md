@@ -7,18 +7,37 @@
 
 | Listener | Default bind | Base path | Who |
 |---|---|---|---|
-| admin | `127.0.0.1:8080` (published on host loopback only) | `/api/admin/v1` + the dashboard at `/` | Operator through `ssh -L 8080:127.0.0.1:8080 <vps>` |
+| admin | `127.0.0.1:8080` (published on host loopback only) | `/api/admin/v1` + the dashboard at `/` | Signed-in users through `ssh -L 8080:127.0.0.1:8080 <vps>`; the CLI with a personal access token |
+| public (dashboard host) | with `PULSE_ADMIN_PUBLIC=true` | `/api/admin/v1`, `/auth/*` + the dashboard | Signed-in users through Cloudflare |
 | public | `:8443` (443 via Cloudflare, AOP mTLS in prod) | `/api/v1`, `/hooks/*`, `/ws`, `/healthz` | Tools with HTTP tokens, webhook senders, browsers |
 | metrics | `127.0.0.1:9464` | `/metrics`, `/healthz`, `/readyz`, `/internal/v1/bans` | Alloy, container healthcheck, banagent |
 
 Every other path on the public listener returns 404 (PL-EDGE-001). The public listener applies a per-IP token bucket
 (20 req/s, burst 40) and body limits (1 MiB API, 5 MiB hooks).
 
+## Authentication (ADR-0038)
+
+Every admin operation needs a signed-in user and the permission `internal/api/permissions.go` names for it.
+
+- **Browser sessions:** `POST /auth/login` (then `/auth/mfa` or TOTP enrollment), SSO through `/auth/oidc/{provider}/start`.
+  The session cookie is `__Host-pulse_session` on https and `pulse_session` on the plain-http loopback listener.
+  `GET /auth/me` returns the user, permissions and the session's `csrf_token`.
+- **Personal access tokens** (loopback listener only): `Authorization: Bearer pulse_pat_…`; no CSRF token needed.
+- Errors carry a stable `code`: `unauthorized`, `reauth_required` and `mfa_required` (confirm with `POST /auth/reauth`
+  or an SSO step-up, then retry), `forbidden`, `invalid`, `conflict`, `precondition`, `rate_limited`, `unavailable`.
+
+Sign-in and account: `/auth/config`, `/auth/login`, `/auth/mfa`, `/auth/logout`, `/auth/reauth`, `/auth/reauth/totp`,
+`/auth/recover`, `/auth/setup`, `/auth/invitations/{token}/accept`, `/auth/reset/{token}`, `/auth/me`, `/account/sessions`,
+`/account/password`, `/account/totp/begin|confirm`, `/account/recovery-codes`, `/account/identities`, `/account/tokens`.
+Administration: `/users`, `/users/{id}` (+ `/reset-link`, `/sessions`, `/identities`, `/link-invite`, `/clear-throttle`,
+`/tokens`), `/invitations`, `/sso/providers` (+ `/mappings`, `/test-result`), `/sso/settings`.
+
 ## Conventions
 
 - JSON bodies; errors are RFC 9457 problem details (`title`, `status`, `detail`, `errors[]`). 5xx responses never
   include internal error text (it is logged).
-- Admin writes (`POST`, `PUT`, `PATCH`, `DELETE`) require `X-Pulse-CSRF: 1` (PL-ADM-004).
+- Admin writes (`POST`, `PUT`, `PATCH`, `DELETE`) with a session require the session's CSRF token in `X-Pulse-CSRF` and a
+  same-origin `Origin` (PL-ADM-004).
 - The admin listener only accepts `Host` values `127.0.0.1`, `localhost`, `::1` and `PULSE_ADMIN_HOSTS`; anything else
   gets 421 (DNS-rebinding guard, THREAT_MODEL T-21).
 - Destructive admin calls take `?confirm=<name>` repeating the target's name.
@@ -29,7 +48,7 @@ Every other path on the public listener returns 404 (PL-EDGE-001). The public li
 
 | Method | Path | Purpose |
 |---|---|---|
-| GET | `/system/info` | Version, profile, auth mode, NATS connection and server stats (VARZ), JetStream usage, pulsed runtime |
+| GET | `/system/info` | Version, profile, NATS connection and server stats (VARZ), JetStream usage, pulsed runtime |
 | GET | `/system/connections` | NATS connections across accounts (SYS, APP), busiest first (`sort`, `limit`) |
 | GET | `/system/certificates` | Internal CA, NATS leaf, Let's Encrypt, origin and AOP CA certificates (names, issuer, serial, expiry, days left) plus ACME status when enabled (ADR-0032) |
 | GET | `/streams` | Streams in the APP account (`kind`: stream, kv, object; `managed` for EVENTS and blobs) |

@@ -44,16 +44,30 @@ refused for every secret; the file variant is the only way. `*_FILE` wins when b
 
 | Variable | Default | Meaning |
 |---|---|---|
-| `PULSE_PUBLIC_ADDR` | `:8443` | Public listener: `/api/v1`, `/hooks/*`, `/ws`. `off` disables it. |
+| `PULSE_PUBLIC_ADDR` | `:8443` | Public listener: `/api/v1`, `/hooks/*`, `/ws` (and the dashboard with `PULSE_ADMIN_PUBLIC`). `off` disables it. |
 | `PULSE_ORIGIN_CERT_FILE` / `PULSE_ORIGIN_KEY_FILE` | — | Public listener TLS: the Cloudflare Origin CA certificate and key (PEM). Both or neither. Reloaded when the files change. |
 | `PULSE_AOP_CA_FILE` | — | Client CA for Authenticated Origin Pulls. Clients must present a certificate that chains to it. |
 | `PULSE_ADMIN_ADDR` | `127.0.0.1:8080` | Admin listener: the dashboard and `/api/admin/v1`. |
 | `PULSE_ADMIN_PUBLISHED_LOOPBACK` | `false` | Set `true` when the admin port binds inside a container and compose publishes it only on host loopback. Required in prod for a non-loopback `PULSE_ADMIN_ADDR`. |
 | `PULSE_ADMIN_HOSTS` | — | Extra `Host` names the admin listener accepts, besides `127.0.0.1`, `localhost` and `::1`. |
-| `PULSE_ADMIN_PUBLIC` | `false` | Mount the admin API on the public listener. Refused with auth `none` in prod. |
-| `PULSE_AUTH_MODE` | `none` | `none`. `oidc` is reserved: pulsed refuses to start with it until it is implemented. |
 | `PULSE_METRICS_ADDR` | `127.0.0.1:9464` | `/metrics`, `/healthz`, `/readyz`, `/internal/v1/bans`. |
 | `PULSE_HEALTHCHECK_URL` | `http://127.0.0.1:9464/readyz` | What `pulsed healthcheck` probes. |
+
+## Dashboard sign-in
+
+Every dashboard and admin API request needs a signed-in user ([Users and single sign-on](/operators/users)).
+`pulsed admin bootstrap` prints the first administrator's setup link. `PULSE_AUTH_MODE` was removed: pulsed refuses to
+start when it is set.
+
+| Variable | Default | Meaning |
+|---|---|---|
+| `PULSE_ADMIN_PUBLIC` | `false` | Also serve the dashboard on the public listener (Cloudflare, AOP). Needs the public listener. |
+| `PULSE_ADMIN_PUBLIC_HOST` | `PULSE_PUBLIC_HOST` | The public dashboard's hostname. Its own hostname serves only the dashboard (and the API hostname only the API); the API hostname serves the dashboard on every path except `/api/v1`, `/hooks`, `/ws` and `/healthz`. |
+| `PULSE_ADMIN_URL` | `https://<PULSE_ADMIN_PUBLIC_HOST>` with `PULSE_ADMIN_PUBLIC`, else `http://127.0.0.1:8080` | The dashboard origin: SSO redirects to `<PULSE_ADMIN_URL>/auth/oidc/callback` (register exactly this) and `pulsed admin` prints links for it. An origin without a path. |
+| `PULSE_SESSION_IDLE` | `30m` | Sign-out after inactivity (at least `1m`). |
+| `PULSE_SESSION_MAX` | `12h` | Absolute session lifetime (between the idle timeout and `168h`). |
+| `PULSE_REAUTH_WINDOW` | `5m` | Sensitive actions need a sign-in this recent (at least `1m`; at most `15m` in prod). |
+| `PULSE_MFA_REQUIRED_ROLES` | `administrator,operator` | Password accounts holding one of these roles must enroll TOTP. `none` requires it for nobody. |
 
 ## Bans and the edge
 
@@ -126,14 +140,17 @@ With `PULSE_PROFILE=prod` (the default), pulsed refuses to start when:
 
 - a secret is given as a plain variable instead of `*_FILE`;
 - the master key is missing;
-- the admin listener is not on loopback and `PULSE_ADMIN_PUBLISHED_LOOPBACK` is not `true`, or `PULSE_ADMIN_PUBLIC=true`,
-  while auth is `none`;
+- the admin listener is not on loopback and `PULSE_ADMIN_PUBLISHED_LOOPBACK` is not `true`;
+- `PULSE_REAUTH_WINDOW` is longer than 15 minutes;
+- `PULSE_ADMIN_URL` is plain `http://` and not the loopback tunnel;
 - the public listener is on without an origin certificate (plain HTTP), or without `PULSE_AOP_CA_FILE`;
 - ACME uses the `challtestsrv` test DNS provider;
 - the Discord webhook URL is not `https://`;
 - backups use `PULSE_BACKUP_S3_INSECURE` or `PULSE_BACKUP_S3_CREATE_BUCKET`.
 
-In every profile it refuses `PULSE_AUTH_MODE=oidc`, incomplete pairs (origin certificate and key, Telegram token and
+In every profile it refuses `PULSE_AUTH_MODE` (removed), `PULSE_ADMIN_PUBLIC` without the public listener or a
+hostname, an invalid `PULSE_ADMIN_URL`, unknown roles in `PULSE_MFA_REQUIRED_ROLES`, out-of-range session settings,
+incomplete pairs (origin certificate and key, Telegram token and
 chat ID, the three Cloudflare ban-list settings), ACME without a real raw host or its DNS token, backups without an
 endpoint, bucket, credentials or recipients, and out-of-range ban, alert and size settings. The error names the
 variable.

@@ -95,20 +95,44 @@ Every `PULSE_*` variable and secret file is listed in the [configuration referen
    curl -fsS 127.0.0.1:9464/readyz
    ```
 
-5. Open the dashboard through a tunnel from your machine:
+5. Create the first dashboard administrator. There are no default credentials:
+
+   ```sh
+   docker compose exec pulsed pulsed admin bootstrap   # prints a one-time setup link (30 minutes)
+   ```
+
+6. Open the dashboard through a tunnel from your machine:
 
    ```sh
    ssh -L 8080:127.0.0.1:8080 <vps>
    ```
 
-   Then browse to <http://127.0.0.1:8080>. The System page shows NATS, JetStream and every certificate. Until the
+   Then open the setup link (it points at `http://127.0.0.1:8080` unless you set `PULSE_ADMIN_URL`), choose an email
+   and password, sign in and enroll TOTP. See [Users and single sign-on](/operators/users). The System page shows
+   NATS, JetStream and every certificate. Until the
    Let's Encrypt certificate for `r.events.example.com` is issued (with `PULSE_ACME_ENABLED=true`; progress and errors
    are on the System page), tools must trust the internal CA (**System → Connect → Internal CA**).
 
+## Optional: the dashboard on the internet
+
+The dashboard can also be served on the public listener, behind Cloudflare and Authenticated Origin Pulls, so you do
+not need the tunnel. Set `PULSE_ADMIN_PUBLIC=true` and pick a hostname:
+
+- **its own hostname** (recommended): `PULSE_ADMIN_PUBLIC_HOST=admin.events.example.com`. Add a proxied (orange) DNS
+  record for it and include the name on the Cloudflare origin certificate. That host serves only the dashboard, and
+  `events.example.com` keeps serving only the API, webhooks and `/ws`;
+- **the API hostname**: leave `PULSE_ADMIN_PUBLIC_HOST` unset; `events.example.com` then serves the dashboard on every
+  path except `/api/v1`, `/hooks`, `/ws` and `/healthz`.
+
+`PULSE_ADMIN_URL` becomes `https://<that host>`: run `pulsed admin bootstrap` after setting it so the link points
+there. Failed sign-ins on the public dashboard count toward bans. Single sign-on providers redirect to
+`<PULSE_ADMIN_URL>/auth/oidc/callback`.
+
 ## Day to day
 
-- The dashboard, `pulse clients`, `pulse streams` and `pulse backup` all use the tunnel (`--admin-url`, default
-  `http://127.0.0.1:8080`).
+- The dashboard needs a signed-in user. `pulse clients`, `pulse streams` and `pulse backup` use the tunnel
+  (`--admin-url`, default `http://127.0.0.1:8080`) with a personal access token from your Account page
+  (`--admin-token-file` or `PULSE_ADMIN_TOKEN`).
 - Tools connect to `tls://r.events.example.com:4222` with their own `.creds`, or call
   `https://events.example.com/api/v1` with a token.
 - Upgrades: take a backup, pin the new digest, `docker compose up -d`. See [Upgrades](/operators/upgrades).

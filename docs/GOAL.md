@@ -14,7 +14,7 @@ consumes events through it. A new tool can **replay one to two years of history 
 tools / bots / agents ──NATS TLS (4222, .creds)──▶ ┌─────────────── VPS ───────────────┐
 browsers ──HTTPS via Cloudflare──▶ :443 pulsed ──▶ │ NATS 2.15 JetStream (EVENTS, blobs) │
 webhook senders ──HTTPS via Cloudflare──▶ /hooks ─▶ │ pulsed + SQLite: API, UI, rollups…  │
-operator ──ssh -L──▶ 127.0.0.1:8080 admin UI ─────▶ └───────────────────────────────────┘
+operator ──ssh -L / sign-in──▶ admin UI ──────────▶ └───────────────────────────────────┘
 ```
 
 The product is the `pulsed` server (NATS bootstrap, API, embedded dashboard, rollups, edge TLS, bans, webhooks,
@@ -45,7 +45,9 @@ In scope for v1.0:
 ## 3. Non-goals (v1.0)
 
 - **No high availability or clustering.** One NATS server and one pulsed on one VPS. Recovery is restore from backup.
-- **No public dashboard** until central SSO (OIDC) lands. The admin UI is reachable only through an SSH tunnel.
+- **No anonymous dashboard.** Every dashboard and admin API request needs a signed-in user (local account with TOTP, or OIDC
+  single sign-on, ADR-0038). It is reachable through an SSH tunnel and, when enabled, on its own (or the public) hostname behind
+  Cloudflare.
 - **No database server.** pulsed state is one local SQLite file (pure Go driver, WAL). No Postgres, no shared or network-mounted
   database. Events are never copied into SQLite.
 - **No reverse proxy** in front of pulsed. pulsed terminates TLS itself.
@@ -64,7 +66,7 @@ In scope for v1.0:
 | G-1 | A tool client can publish or subscribe only on subjects its grants allow. A new client has no permissions. | PL-AUTH-003..006 |
 | G-2 | A revoked client is disconnected within 5 s and cannot reconnect with the same credentials. | PL-AUTH-007 |
 | G-3 | Client seeds are shown once and never stored by pulsed. | PL-AUTH-004 |
-| G-4 | The admin UI and admin API are never reachable from the network while `auth.mode=none`. | PL-ADM-001..003 |
+| G-4 | Every admin UI and admin API request is made by a signed-in user and allowed only by that user's role; sign-in failures are throttled and audited. | PL-ADM-001..004, PL-USR-001..012 |
 | G-5 | Public HTTP routes accept only connections that passed Cloudflare Authenticated Origin Pulls in prod mode. | PL-EDGE-002..003 |
 | G-6 | The real client IP comes from `CF-Connecting-IP` only when the peer is in Cloudflare ranges and passed mTLS. | PL-EDGE-004 |
 | G-7 | Inbound webhooks are accepted only with a valid signature or secret for that hook. | PL-HOOK-002..004 |
@@ -86,7 +88,7 @@ In scope for v1.0:
 ### 4.3 Trust boundaries (summary; full model in `docs/THREAT_MODEL.md`)
 
 TB-1 tool client ↔ NATS 4222 (TLS + user JWT) · TB-2 Cloudflare ↔ pulsed :443 (AOP mTLS) · TB-3 webhook sender ↔ /hooks
-(signatures) · TB-4 operator ↔ admin UI (SSH tunnel; future OIDC) · TB-5 pulsed ↔ NATS (internal creds, TLS) · TB-6 pulsed ↔
+(signatures) · TB-4 operator ↔ admin UI (SSH tunnel or Cloudflare + AOP; user sign-in, TOTP, OIDC) · TB-5 pulsed ↔ NATS (internal creds, TLS) · TB-6 pulsed ↔
 outbound webhook targets (SSRF guard) · TB-7 pulsed ↔ S3 (age-encrypted) · TB-8 pulsed ↔ Cloudflare/ACME APIs (scoped tokens) ·
 TB-9 host root ↔ data volume (SQLite, NATS store) and master key · TB-10 banagent ↔ pulsed loopback ban endpoint (bearer token).
 
@@ -169,11 +171,28 @@ Requirement IDs are stable: `PL-<AREA>-NNN`. They are never reused or renumbered
 
 | ID | Requirement |
 |---|---|
-| PL-ADM-001 | **Loopback admin listener.** The admin UI and `/api/admin/v1` are served only on the admin listener (default `127.0.0.1:8080`). |
-| PL-ADM-002 | **Authenticator seam.** Admin requests pass an `Authenticator` interface. Modes: `none` (implemented) and `oidc` (stub that refuses to start until implemented). |
-| PL-ADM-003 | **Refuse unsafe exposure.** With `PULSE_PROFILE=prod`, pulsed refuses to start if `PULSE_ADMIN_PUBLIC=true` while `auth.mode=none`, or if the admin listener is not a loopback address while `auth.mode=none`. |
-| PL-ADM-004 | **Browser hardening.** Admin responses set a strict CSP, `X-Content-Type-Options`, `Referrer-Policy`, frame denial. State-changing admin requests require a custom `X-Pulse-CSRF` header. |
-| PL-ADM-005 | **Future OIDC contract.** `docs/operator/sso.md` specifies the redirect-to-login flow, session cookie and CSRF requirements the `oidc` mode must meet. |
+| PL-ADM-001 | **Admin listeners.** The admin UI and `/api/admin/v1` are served on the loopback admin listener (default `127.0.0.1:8080`) and, only with `PULSE_ADMIN_PUBLIC=true`, on the dashboard hostname of the public listener (PL-USR-011). |
+| PL-ADM-002 | ~~Authenticator seam (modes none/oidc).~~ **Withdrawn by ADR-0038:** replaced by PL-USR-001..012; there is no unauthenticated mode. |
+| PL-ADM-003 | **Refuse unsafe exposure.** With `PULSE_PROFILE=prod`, pulsed refuses to start if the loopback admin listener is not a loopback address (unless published only on host loopback), and refuses the removed `PULSE_AUTH_MODE`. |
+| PL-ADM-004 | **Browser hardening.** Admin responses set a strict CSP, `X-Content-Type-Options`, `Referrer-Policy`, frame denial (HSTS on https). State-changing requests need the session's CSRF token in `X-Pulse-CSRF` and a same-origin `Origin`; the admin API never enables CORS. |
+| PL-ADM-005 | ~~Future OIDC contract.~~ **Withdrawn by ADR-0038:** implemented as PL-USR-008..010. |
+
+### PL-USR — Dashboard users and sign-in (ADR-0038)
+
+| ID | Requirement |
+|---|---|
+| PL-USR-001 | **Bootstrap.** No default credentials. The first administrator is created through a one-time setup link from `pulsed admin bootstrap` (30 minutes, single use), issued only while no administrator exists. |
+| PL-USR-002 | **Local passwords.** Argon2id with versioned parameters (upgraded at login), NFKC-normalized, 12–1024 bytes, never truncated; administrators never set other users' passwords. |
+| PL-USR-003 | **Roles.** Administrator, operator, auditor and viewer. Every admin operation names one permission; a user without roles holds none. Role changes and disabling revoke the user's sessions. The last enabled administrator cannot be demoted, disabled or deleted. |
+| PL-USR-004 | **Sessions.** Server-side; a 256-bit token stored hashed; `HttpOnly`, `SameSite=Lax` cookie (`__Host-` and `Secure` on https); idle 30 min and absolute 12 h by default; bound to the listener that created it; rotated at login, MFA, re-authentication and factor changes; listable and revocable. |
+| PL-USR-005 | **Sign-in hardening.** One error for unknown accounts, wrong passwords and disabled users, with equal work; per-account and per-address throttling (exponential to 15 min, no permanent lockout); every attempt audited; failed sign-ins on the public listener count toward bans. |
+| PL-USR-006 | **TOTP.** RFC 6238 with no step reuse; mandatory for password accounts holding `PULSE_MFA_REQUIRED_ROLES` (default administrator, operator); 10 single-use recovery codes; re-enrollment keeps the old factor until the new one is confirmed. |
+| PL-USR-007 | **Recovery.** Invitations (72 h), password links (1 h) and break-glass logins from `pulsed admin recover` (30 min; revokes sessions and removes the factor) are single use and stored only as keyed MACs. |
+| PL-USR-008 | **OIDC.** Authorization code flow with PKCE S256, server-side state and nonce bound to the browser (10 min); ID tokens verified (RS256/ES256/EdDSA, iss, aud, azp, exp/iat/nbf with 60 s skew, nonce); access and refresh tokens discarded; identities are (issuer, subject), never matched by email. |
+| PL-USR-009 | **Provisioning and mapping.** Providers are preprovisioned or just-in-time with at least one restriction; group → role mappings replace a user's SSO roles at every SSO login; manual roles are kept; SSO sync never removes the last administrator. |
+| PL-USR-010 | **Step-up and SSO-only.** Sensitive actions need authentication within `PULSE_REAUTH_WINDOW` (5 min; at most 15 min in prod): password (+TOTP), a fresh IdP login (`prompt=login`, `auth_time`, `acr`), or TOTP for SSO users when the provider allows it. Password sign-in can be disabled only after a successful SSO test login and while an administrator can sign in with SSO. |
+| PL-USR-011 | **Public dashboard.** With `PULSE_ADMIN_PUBLIC=true` the dashboard is served behind Cloudflare and AOP on its own hostname (`PULSE_ADMIN_PUBLIC_HOST`, which then serves nothing else) or on the public API hostname for non-API paths; Host is checked; responses send HSTS. |
+| PL-USR-012 | **Personal access tokens.** For the CLI: accepted only on the loopback admin listener, one role capped by the user's current manual roles, expiry at most 366 days, stored as keyed MACs, revocable, every use attributed in the audit log. |
 
 ### PL-EDGE — Public listener and TLS
 
@@ -340,7 +359,7 @@ Requirement IDs are stable: `PL-<AREA>-NNN`. They are never reused or renumbered
 | PL-OPS-001 | **Image.** Multi-stage Dockerfile: node → Go cross-build → `gcr.io/distroless/static-debian13:nonroot`, UID 65532, all base images pinned by digest. |
 | PL-OPS-002 | **Commands.** `pulsed serve|init|banagent|healthcheck|openapi|keys export|version`. |
 | PL-OPS-003 | **Configuration.** All config via `PULSE_*` env vars, with `*_FILE` variants for secrets. `docs/operator/configuration.md` is the contract with the deployment repo. |
-| PL-OPS-004 | **Profiles.** `PULSE_PROFILE=dev|prod`. Prod refuses insecure settings (plain HTTP public listener, missing AOP CA, admin exposure with auth none, dev master key). |
+| PL-OPS-004 | **Profiles.** `PULSE_PROFILE=dev|prod`. Prod refuses insecure settings (plain HTTP public listener, missing AOP CA, a non-loopback admin listener, a reauth window over 15 min, an http dashboard URL, dev master key). |
 | PL-OPS-005 | **Dev stack.** `deploy/compose.dev.yaml` runs init, nats, pulsed, SeaweedFS (S3) and pebble (ACME). `make dev-up` starts it. |
 | PL-OPS-006 | **Reference prod compose.** `deploy/examples/compose.yaml` shows the prod topology (init, nats, pulsed, banagent) with memory limits. |
 | PL-OPS-007 | **CI.** golangci-lint, go vet, race tests, govulncheck, gitleaks, web typecheck, vitest and build on every push. All actions pinned by SHA. `GOTOOLCHAIN=local`. |
@@ -405,4 +424,4 @@ and it is committed locally.
 - RG-3: M2 spike results recorded and within the memory budget (PL-OPS-009).
 - RG-4: M11 restore drill passes (PL-BAK-007).
 - RG-5: externally verified on the test VM: firewall, bans, NATS TLS, AOP (M14).
-- RG-6: no `auth.mode=none` exposure possible in the prod profile (PL-ADM-003 test).
+- RG-6: no admin operation without a signed-in user and a permission (PL-USR-003, TestEveryOperationHasARule, TestRolesThroughTheAPI).

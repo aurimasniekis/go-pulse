@@ -4,9 +4,12 @@ import { spotlight } from '@mantine/spotlight'
 import { IconLayoutSidebarLeftCollapse, IconLayoutSidebarLeftExpand, IconMoon, IconSearch, IconSun } from '@tabler/icons-react'
 import { Link, useRouterState } from '@tanstack/react-router'
 import type { ReactNode } from 'react'
-import { brandIcon as Brand, nav } from '@/lib/nav'
+import { useMe } from '@/api/auth'
+import { brandIcon as Brand, nav, visibleNav } from '@/lib/nav'
 import { CommandPalette } from './CommandPalette'
+import { NoAccess } from './NoAccess'
 import { StatusIndicator } from './StatusIndicator'
+import { UserMenu } from './UserMenu'
 
 export function AppLayout({ children }: { children: ReactNode }) {
   const [collapsed, setCollapsed] = useLocalStorage({ key: 'pulse.sidebar.collapsed', defaultValue: false })
@@ -14,6 +17,11 @@ export function AppLayout({ children }: { children: ReactNode }) {
   const { setColorScheme } = useMantineColorScheme()
   const scheme = useComputedColorScheme('light')
   const path = useRouterState({ select: (s) => s.location.pathname })
+  const me = useMe().data
+  const perms = me?.permissions ?? []
+  const items = visibleNav(perms)
+  const page = nav.find((n) => (n.to === '/' ? path === '/' : path.startsWith(n.to)))
+  const allowed = !page || perms.includes(page.perm)
   const width = collapsed ? 52 : 210
   const groups = ['Events', 'Access', 'Operations'] as const
 
@@ -46,6 +54,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
                 {scheme === 'dark' ? <IconSun size={16} /> : <IconMoon size={16} />}
               </ActionIcon>
             </Tooltip>
+            <UserMenu />
           </Group>
         </Group>
       </AppShell.Header>
@@ -55,8 +64,8 @@ export function AppLayout({ children }: { children: ReactNode }) {
           <Stack gap={8}>
             {groups.map((g) => (
               <Stack key={g} gap={1}>
-                {!collapsed && <Text size="xs" c="dimmed" fw={600} tt="uppercase" px={8} pt={4}>{g}</Text>}
-                {nav.filter((n) => n.group === g).map((n) => {
+                {!collapsed && items.some((n) => n.group === g) && <Text size="xs" c="dimmed" fw={600} tt="uppercase" px={8} pt={4}>{g}</Text>}
+                {items.filter((n) => n.group === g).map((n) => {
                   const active = n.to === '/' ? path === '/' : path.startsWith(n.to)
                   const link = (
                     <NavLink
@@ -85,7 +94,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
         </AppShell.Section>
       </AppShell.Navbar>
 
-      <AppShell.Main>{children}</AppShell.Main>
+      <AppShell.Main>{allowed ? children : <NoAccess />}</AppShell.Main>
       <CommandPalette />
     </AppShell>
   )

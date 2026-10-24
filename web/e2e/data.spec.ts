@@ -1,6 +1,6 @@
 import { expect, test, type APIRequestContext } from '@playwright/test'
+import { csrf } from './admin'
 
-const csrf = { 'X-Pulse-CSRF': '1' }
 const run = Date.now().toString(36)
 
 async function seed(request: APIRequestContext) {

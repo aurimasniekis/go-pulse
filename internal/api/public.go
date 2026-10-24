@@ -56,7 +56,9 @@ func NewPublicAPI(mux *http.ServeMux, d *Deps) huma.API {
 	return api
 }
 
-// NewPublic builds the public listener handler: only /api/v1/*, /hooks/*, /ws and /healthz exist (PL-EDGE-001).
+// NewPublic builds the public listener handler: only /api/v1/*, /hooks/*, /ws and /healthz exist (PL-EDGE-001), plus the
+// dashboard when it is exposed (ADR-0038): on its own hostname (AdminPublicHost ≠ PublicAPIHost: the dashboard host
+// serves only the dashboard and the API host only the API), or on the API hostname for every other path.
 func NewPublic(d *Deps) http.Handler {
 	mux := http.NewServeMux()
 	NewPublicAPI(mux, d)
@@ -92,6 +94,29 @@ func NewPublic(d *Deps) http.Handler {
 		mux.ServeHTTP(w, r)
 	})
 	var hh http.Handler = h
+	if d.AdminPublicHost != "" {
+		admin := d.adminHandler(listener{kind: ListenerPublic, secure: d.PublicTLS})
+		adminLimit := newIPLimiter(50, 200)
+		separate := d.AdminPublicHost != d.PublicAPIHost
+		hh = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			onAdminHost := normalizeHost(r.Host) == d.AdminPublicHost
+			if !onAdminHost || (!separate && allowed(r.URL.Path)) {
+				if separate && d.PublicAPIHost != "" && normalizeHost(r.Host) != d.PublicAPIHost {
+					http.Error(w, "host not allowed", http.StatusMisdirectedRequest)
+					return
+				}
+				h.ServeHTTP(w, r)
+				return
+			}
+			if !adminLimit.allow(d.clientIP(r)) {
+				w.Header().Set("Retry-After", "1")
+				http.Error(w, "rate limited", http.StatusTooManyRequests)
+				return
+			}
+			r.Body = http.MaxBytesReader(w, r.Body, 72<<20) // object uploads are the largest admin bodies (64 MiB)
+			admin.ServeHTTP(w, r)
+		})
+	}
 	if d.Bans != nil {
 		hh = d.Bans.Middleware(d.clientIP, hh)
 	}
