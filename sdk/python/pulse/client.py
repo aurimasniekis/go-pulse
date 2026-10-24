@@ -293,6 +293,15 @@ class _Reset(Exception):
     pass
 
 
+def tls_context(ca: Optional[str] = None) -> ssl.SSLContext:
+    """The system roots plus ca (a PEM file), so a CA added for the internal bootstrap certificate keeps working once
+    4222 serves a publicly trusted one."""
+    ctx = ssl.create_default_context()
+    if ca:
+        ctx.load_verify_locations(cafile=ca)
+    return ctx
+
+
 async def connect(url: str, *, creds: Optional[str] = None, creds_data: Optional[str] = None, source: str = "",
                   name: str = "", ca: Optional[str] = None, stream: str = DEFAULT_STREAM, **nats_options: Any) -> Client:
     """Connects with a client's .creds (path or content). The inbox prefix _INBOX_<client-id> comes from the creds."""
@@ -305,8 +314,7 @@ async def connect(url: str, *, creds: Optional[str] = None, creds_data: Optional
     opts: Dict[str, Any] = dict(servers=[url], user_credentials=RawCredentials(creds_data), inbox_prefix=f"_INBOX_{cid}".encode(),
                                 name=name or source or f"pulse-py-{cid}", max_reconnect_attempts=-1, reconnect_time_wait=1)
     if url.startswith("tls://") or ca:
-        ctx = ssl.create_default_context(cafile=ca) if ca else ssl.create_default_context()
-        opts["tls"] = ctx
+        opts["tls"] = tls_context(ca)
     opts.update(nats_options)
     nc = await nats.connect(**opts)
     return Client(nc, cid, source, stream)

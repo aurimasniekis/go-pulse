@@ -10,6 +10,7 @@ import {
   type JetStreamClient,
   type JsMsg,
 } from '@nats-io/jetstream'
+import { withRoots } from './tls.js'
 import { ContentBinary, ContentJSON, ContentText, decode, encode, Event, newId, nowNs, toNs, validateFilter, type BlobRef, type TimeInput } from './envelope.js'
 
 export const DefaultStream = 'EVENTS'
@@ -48,7 +49,8 @@ export interface ConnectOptions {
   source?: string
   name?: string
   stream?: string
-  /** Extra CA (PEM) for tls:// in node, e.g. the internal CA while 4222 serves the bootstrap certificate. */
+  /** Extra CA (PEM) for tls:// in node, trusted next to node's root certificates (e.g. the internal CA while 4222 serves
+   * the bootstrap certificate). */
   ca?: string
   nats?: Partial<ConnectionOptions>
 }
@@ -302,7 +304,6 @@ export async function connect(o: ConnectOptions): Promise<Client> {
     name: o.name || o.source || `pulse-ts-${id}`,
     maxReconnectAttempts: -1,
     reconnectTimeWait: 1000,
-    ...(o.ca ? { tls: { ca: o.ca } } : {}),
     ...o.nats,
   }
   let nc: NatsConnection
@@ -310,6 +311,11 @@ export async function connect(o: ConnectOptions): Promise<Client> {
   else {
     const mod = '@nats-io/transport-node' // kept out of browser bundles
     const { connect: tcp } = (await import(/* @vite-ignore */ mod)) as { connect: (o: ConnectionOptions) => Promise<NatsConnection> }
+    if (o.ca && !o.nats?.tls) {
+      const tlsMod = 'node:tls'
+      const { rootCertificates } = (await import(/* @vite-ignore */ tlsMod)) as { rootCertificates: readonly string[] }
+      opts.tls = { ca: withRoots(o.ca, rootCertificates) }
+    }
     nc = await tcp(opts)
   }
   return new Client(nc, id, o.source ?? '', o.stream ?? DefaultStream)

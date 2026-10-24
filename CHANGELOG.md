@@ -83,4 +83,6 @@ versioning: [docs/VERSIONING.md](docs/VERSIONING.md).
   it now binds to the existing consumer.
 - The e2e overview test no longer depends on data left by earlier runs.
 - Inbound webhooks with a verified body above the NATS `max_payload` (1 MiB) answered 503; they now get 413.
+- Python and TypeScript SDKs: the `ca` option replaced the system roots instead of adding to them, so a tool that kept
+  it set failed once 4222 served a publicly trusted certificate.
 - `make secrets` ignores the user's git config: a global `color.ui=always` made gitleaks parse no commits locally.

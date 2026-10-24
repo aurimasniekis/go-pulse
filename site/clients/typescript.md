@@ -60,7 +60,7 @@ Anything a page can read, its users can read. Give each browser app its **own cl
 | `source` | `ce-source` for published events; also the connection name unless `name` is set. |
 | `name` | NATS connection name. |
 | `stream` | Default stream for subscriptions (`EVENTS`). |
-| `ca` | A CA as PEM for `tls://` in node, trusted **instead of** the system roots. Use it only while 4222 serves the internal bootstrap certificate, and remove it once the Let's Encrypt certificate is served. |
+| `ca` | An extra CA as PEM for `tls://` in node, added to the system roots. Needed only while 4222 serves the internal bootstrap certificate. |
 | `nats` | Extra `ConnectionOptions` for `@nats-io`. |
 
 The connection reconnects forever. `await c.close()` drains it. `c.nc` and `c.js` are the underlying connection and
