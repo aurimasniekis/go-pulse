@@ -66,6 +66,7 @@ export default defineConfig({
           { text: 'Backup and restore', link: '/operators/backups' },
           { text: 'Monitoring and alerts', link: '/operators/monitoring' },
           { text: 'Upgrades', link: '/operators/upgrades' },
+          { text: 'Terraform', link: '/operators/terraform' },
         ],
       },
       {

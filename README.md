@@ -167,7 +167,7 @@ Everything is on the **[documentation website](https://aurimasniekis.github.io/g
 - [Clients & SDKs](https://aurimasniekis.github.io/go-pulse/clients/): subjects and the envelope, the Go, Python and TypeScript SDKs, the CLI, the HTTP API
   and webhooks.
 - [Operator guides](https://aurimasniekis.github.io/go-pulse/operators/): users and single sign-on, clients and grants, streams, Cloudflare and TLS,
-  firewall and bans, keys, backups, monitoring and upgrades.
+  firewall and bans, keys, backups, monitoring, upgrades and Terraform.
 - [Reference](https://aurimasniekis.github.io/go-pulse/reference/configuration): configuration, server commands, the admin API and metrics.
 - [Security model](https://aurimasniekis.github.io/go-pulse/security/): what Pulse guarantees and what it does not.
 

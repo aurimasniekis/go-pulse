@@ -44,6 +44,7 @@ hostname. The admin commands of the `pulse` CLI (`pulse clients`, `pulse streams
 | Nightly encrypted backups, restores, disaster recovery | [Backup and restore](/operators/backups) |
 | Logs, metrics, alert rules, Telegram and Discord | [Monitoring and alerts](/operators/monitoring) |
 | New releases, migrations, rollback | [Upgrades](/operators/upgrades) |
+| Configuration as code | [Terraform](/operators/terraform) |
 
 First time? Start with [Deploy on a VPS](/guide/deploy), then [Connect your first tool](/guide/first-client).
 
