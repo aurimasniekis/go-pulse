@@ -16,6 +16,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/nats-io/nats.go"
 	"github.com/nats-io/nats.go/jetstream"
 	"github.com/oklog/ulid/v2"
 
@@ -327,6 +328,12 @@ func (s *Service) Handler() http.Handler {
 			return
 		}
 		ack, err := s.js.PublishMsg(r.Context(), msg)
+		if tooLarge(err) {
+			// The 5 MiB read limit is above NATS max_payload (1 MiB by default): the body was read but cannot be stored.
+			metrics.InboundHooks.WithLabelValues("error").Inc()
+			http.Error(w, "payload too large", http.StatusRequestEntityTooLarge)
+			return
+		}
 		if err != nil {
 			metrics.InboundHooks.WithLabelValues("error").Inc()
 			s.log.Error("webhook publish", "hook", h.Name, "err", err)
@@ -340,6 +347,13 @@ func (s *Service) Handler() http.Handler {
 		w.WriteHeader(http.StatusAccepted)
 		_ = json.NewEncoder(w).Encode(map[string]any{"seq": ack.Sequence, "duplicate": ack.Duplicate})
 	})
+}
+
+// tooLarge reports whether a publish failed because the message exceeds NATS max_payload or the stream's max_msg_size.
+func tooLarge(err error) bool {
+	var apiErr *jetstream.APIError
+	return errors.Is(err, nats.ErrMaxPayload) ||
+		(errors.As(err, &apiErr) && apiErr.ErrorCode == jetstream.JSErrCodeStreamMessageExceedsMaximum)
 }
 
 func (s *Service) lookup(ctx context.Context, name string) (*Hook, []byte, error) {

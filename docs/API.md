@@ -121,7 +121,7 @@ Payloads above ~1 MiB get 413: store them as blobs (NATS clients) and publish a 
 
 Verified requests are published to the hook's subject (default `evt.hook.<name>.received`) and answered with
 `202 {"seq": N, "duplicate": bool}`. Bad or missing signatures get 401 (no detail) and count toward bans; unknown or
-disabled hooks get 404; bodies above 5 MiB get 413.
+disabled hooks get 404; bodies above 1 MiB (the NATS `max_payload`) get 413.
 
 | Verifier | Check | Event fields |
 |---|---|---|

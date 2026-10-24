@@ -82,4 +82,5 @@ versioning: [docs/VERSIONING.md](docs/VERSIONING.md).
 - Go SDK: re-subscribing a durable with a different start position failed with "deliver policy can not be updated";
   it now binds to the existing consumer.
 - The e2e overview test no longer depends on data left by earlier runs.
+- Inbound webhooks with a verified body above the NATS `max_payload` (1 MiB) answered 503; they now get 413.
 - `make secrets` ignores the user's git config: a global `color.ui=always` made gitleaks parse no commits locally.

@@ -153,6 +153,11 @@ func TestStripeAndSecretHooks(t *testing.T) {
 	if r := post(t, srv.URL+"/hooks/simple", "{}", map[string]string{"X-Webhook-Secret": "shared-secret-value"}); r.StatusCode != http.StatusAccepted {
 		t.Fatalf("secret hook: %d", r.StatusCode)
 	}
+	// A verified body above NATS max_payload (1 MiB) cannot be stored: 413, not 503.
+	big := `{"pad":"` + strings.Repeat("x", 3<<19) + `"}`
+	if r := post(t, srv.URL+"/hooks/simple", big, map[string]string{"X-Webhook-Secret": "shared-secret-value"}); r.StatusCode != http.StatusRequestEntityTooLarge {
+		t.Fatalf("oversized secret hook: %d", r.StatusCode)
+	}
 	st, _ := js.Stream(ctx, "EVENTS")
 	m1, _ := st.GetMsg(ctx, 1)
 	m2, _ := st.GetMsg(ctx, 2)

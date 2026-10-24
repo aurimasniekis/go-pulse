@@ -19,8 +19,8 @@ https://events.example.com/hooks/<name>
 | `202 {"seq": N, "duplicate": bool}` | Verified and stored. |
 | `401` | Missing or bad signature. No detail is given, and the failure **counts towards a ban** of the sender's address. |
 | `404` | Unknown or disabled hook. |
-| `413` | Body above 5 MiB: the request is cut off. |
-| `503` | Not stored. A verified body above 1 MiB (the NATS `max_payload`) cannot be stored and currently gets `503`; otherwise NATS is temporarily unavailable. |
+| `413` | Body too large: above 1 MiB (the NATS `max_payload`) a verified body cannot be stored; above 5 MiB the request is cut off. |
+| `503` | Not stored: NATS is temporarily unavailable. |
 
 The event goes to the hook's subject, by default `evt.hook.<name>.received`. Its source is `hook:<name>`, the body is
 the payload unchanged, and the content type is the request's.
