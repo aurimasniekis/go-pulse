@@ -43,3 +43,5 @@ __pycache__/
 __pycache__/
 /sdk/ts/node_modules/
 /sdk/ts/dist/
+/pulse
+/pulsed
