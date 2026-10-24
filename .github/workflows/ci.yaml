@@ -65,10 +65,14 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: pnpm
-          cache-dependency-path: web/pnpm-lock.yaml
+          cache-dependency-path: |
+            web/pnpm-lock.yaml
+            sdk/ts/pnpm-lock.yaml
       - name: install, typecheck, test, build
         working-directory: web
+        # e2e/sdk-browser.spec.ts imports types from sdk/ts/src, so the typecheck needs the SDK's dependencies.
         run: |
+          pnpm --dir ../sdk/ts install --frozen-lockfile
           pnpm install --frozen-lockfile
           pnpm typecheck
           pnpm test

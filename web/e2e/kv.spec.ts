@@ -52,7 +52,7 @@ test('objects: upload, download, delete; blobs is read-only', async ({ page, req
   const chooser = page.waitForEvent('filechooser')
   await page.getByRole('button', { name: 'Upload' }).click()
   await (await chooser).setFiles({ name: 'notes.txt', mimeType: 'text/plain', buffer: Buffer.from('hello from e2e') })
-  await expect(page.getByText('Uploaded')).toBeVisible()
+  await expect(page.getByText('Uploaded', { exact: true })).toBeVisible()
   const row = page.getByTestId('objects').getByRole('row', { name: /notes\.txt/ })
   await expect(row).toContainText('14 B')
   const download = page.waitForEvent('download')

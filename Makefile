@@ -55,7 +55,8 @@ vuln: ## govulncheck
 secrets: ## gitleaks over the git history (ignores user git config: forced colour breaks its parser)
 	GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1 $(GITLEAKS) git --redact --config .gitleaks.toml .
 
-web-test: ## Web typecheck + vitest
+web-test: ## Web typecheck + vitest (the e2e specs import sdk/ts, so its dependencies are installed first)
+	cd sdk/ts && pnpm install --frozen-lockfile --silent
 	cd web && pnpm typecheck && pnpm test
 
 check: lint test web-test vuln secrets ## Everything CI runs (except e2e)
