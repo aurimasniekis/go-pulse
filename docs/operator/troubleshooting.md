@@ -11,6 +11,6 @@
 | `curl` to the public API hangs or gets 403 | Security page (banned?), Cloudflare WAF events | Lift the ban; check the token's CIDR limits. |
 | Alerts appear but no messages arrive | Alerts page → Notifiers (sent/failed/suppressed, last error) | Fix the token or webhook file; use "Test". Rate-limited messages count as suppressed. |
 | Backups fail | Backups page error; `pulse backup ls` | S3 endpoint, credentials and bucket; the error names the failing step. |
-| Disk filling up | Overview forecast; `disk_forecast` and `stream_usage` alerts | Lower `PULSE_EVENTS_MAX_BYTES` or add disk. EVENTS discards its oldest events at max_bytes. |
+| Disk filling up | Overview forecast; `disk_forecast` and `stream_usage` alerts | Add disk, or accept that `EVENTS` discards its oldest events at `max_bytes`. pulsed never shrinks `EVENTS`: a lower `PULSE_EVENTS_MAX_BYTES` is ignored with a warning. |
 | Dashboard shows "not built" | The binary was built without `make web` | Use the release image; local builds need `make web` first. |
 | Live tail shows "sampled out" | Tail rate limit (200/s per session) | The Explorer has every stored event. |

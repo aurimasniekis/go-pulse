@@ -10,7 +10,7 @@ GOVULNCHECK  ?= $(GO) run golang.org/x/vuln/cmd/govulncheck@v1.9.0
 DEV          := docker compose -f deploy/compose.dev.yaml -p pulse-dev
 
 .DEFAULT_GOAL := help
-.PHONY: help api test-nft test-acme test-s3 drill sdk-test sdk-build test-sdk-interop web web-dev build build-go test race vet lint vuln secrets web-test check image dev-up dev-down dev-logs dev-reset spike e2e clean
+.PHONY: help api test-nft test-acme test-s3 drill sdk-test sdk-build test-sdk-interop web web-dev build build-go test race vet lint vuln secrets web-test check image dev-up dev-down dev-logs dev-reset spike e2e screenshots site site-dev clean
 
 help: ## List targets
 	@awk 'BEGIN {FS = ":.*## "} /^[a-zA-Z_-]+:.*## / {printf "  \033[36m%-14s\033[0m %s\n", $$1, $$2}' $(MAKEFILE_LIST)
@@ -117,6 +117,15 @@ spike: ## M2 sizing spike: ~10 GB / 5k subjects into NATS under mem_limit 900m (
 
 e2e: sdk-build ## Playwright against the dev stack (make dev-up first)
 	cd web && pnpm e2e
+
+screenshots: ## Regenerate site/public/screenshots from a fresh, fictional pulse-docs stack (~20 min, Docker)
+	./scripts/screenshots.sh
+
+site: ## Build the documentation website (site/, VitePress) into site/.vitepress/dist
+	cd site && pnpm install --frozen-lockfile && pnpm build
+
+site-dev: ## Documentation website dev server
+	cd site && pnpm install --frozen-lockfile && pnpm dev
 
 clean: ## Remove build output
 	rm -rf bin dist internal/ui/dist/assets internal/ui/dist/index.html

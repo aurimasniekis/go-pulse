@@ -25,7 +25,7 @@ Every other path on the public listener returns 404 (PL-EDGE-001). The public li
 - Live data uses SSE: `event` messages carry `id: <stream seq>`; reconnect with `Last-Event-ID` to resume. A comment
   keepalive is sent every 20 s (Cloudflare closes idle connections after 100 s).
 
-## Admin API (M3 scope)
+## Admin API
 
 | Method | Path | Purpose |
 |---|---|---|
@@ -81,7 +81,7 @@ Counts come from headers-only consumers and are committed every 10 s together wi
 ## Public API
 
 Every route needs `Authorization: Bearer pulse_<prefix>_<secret>`. A missing or invalid token gets 401 (and counts as a
-failed login for the ban detector, M8); a valid token without the needed grant gets 403. Tokens may be limited to
+failed login for the ban detector); a valid token without the needed grant gets 403. Tokens may be limited to
 source networks.
 
 | Method | Path | Grant | Purpose |
@@ -165,16 +165,18 @@ Tools subscribe with a `subscribe` grant on `_sys.alert.>` (the only grantable `
 | Metric | Type | Labels |
 |---|---|---|
 | `pulse_build_info` | gauge | `version` |
-| `pulse_http_requests_total`, `pulse_http_request_duration_seconds` | counter, histogram | `listener`, `route` (first path segment only), `method`, `code` |
+| `pulse_http_requests_total` | counter | `listener`, `route` (first path segment only), `method`, `code` |
+| `pulse_http_request_duration_seconds` | histogram | `listener`, `route` |
 | `pulse_ingest_events_total` | counter | `via` = http, hook, admin |
 | `pulse_rollup_events_total`, `pulse_rollup_bytes_total` | counter | `stream` (all publishers, incl. raw NATS) |
-| `pulse_auth_failures_total`, `pulse_bans_total`, `pulse_bans_active` | counter, counter, gauge | `source` |
+| `pulse_auth_failures_total`, `pulse_bans_total` | counter | `source` |
+| `pulse_bans_active` | gauge | — |
 | `pulse_inbound_hooks_total`, `pulse_outbound_deliveries_total` | counter | `result` / `outcome` |
 | `pulse_alerts_firing`, `pulse_alert_transitions_total`, `pulse_notifications_total` | gauge, counter, counter | `severity` / `rule`,`state` / `notifier`,`result` |
 | `pulse_certificate_not_after_timestamp_seconds` | gauge | `certificate` |
 | `pulse_acme_attempts_total`, `pulse_tail_sessions`, `pulse_nats_connected` | counter, gauge, gauge | `result` |
 | `pulse_stream_{bytes,max_bytes,messages,consumers,first_timestamp_seconds}` | gauge | `stream` |
-| `nats_up`, `nats_connections`, `nats_*_msgs_total`, `nats_*_bytes_total`, `nats_slow_consumers_total`, `nats_mem_bytes`, `nats_cpu_percent` | gauge/counter | — (VARZ at scrape time, cached 5 s) |
+| `nats_up`, `nats_connections`, `nats_connections_total`, `nats_subscriptions`, `nats_*_msgs_total`, `nats_*_bytes_total`, `nats_slow_consumers_total`, `nats_mem_bytes`, `nats_cpu_percent` | gauge/counter | — (VARZ at scrape time, cached 5 s) |
 | `nats_jetstream_{storage,storage_max,memory}_bytes`, `nats_jetstream_{streams,consumers,messages}`, `nats_jetstream_api_{requests,errors}_total` | gauge/counter | — (JSZ) |
 
 Plus the Go and process collectors (`go_*`, `process_*`).

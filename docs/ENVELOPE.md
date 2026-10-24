@@ -43,7 +43,7 @@ carries the reference headers. In Go: `ref, _ := c.PutBlob(ctx, r, ".jpg")` then
 Go:
 
 ```go
-c, err := pulse.Connect("tls://r.events.wan.lt:4222", pulse.WithCredsFile("bot.creds"), pulse.WithSource("bot"))
+c, err := pulse.Connect("tls://r.events.example.com:4222", pulse.WithCredsFile("bot.creds"), pulse.WithSource("bot"))
 ack, err := c.Publish(ctx, "evt.home.door.opened", "home.door.opened.v1", map[string]any{"door": "front"})
 sub, err := c.Subscribe(ctx, "evt.home.>", pulse.Handle(func(ctx context.Context, e pulse.Event, d Door) error {
 	return nil
@@ -53,12 +53,12 @@ sub, err := c.Subscribe(ctx, "evt.home.>", pulse.Handle(func(ctx context.Context
 CLI:
 
 ```sh
-pulse context add home --url tls://r.events.wan.lt:4222 --creds ~/.config/pulse/bot.creds
+pulse context add home --url tls://r.events.example.com:4222 --creds ~/.config/pulse/bot.creds
 pulse pub evt.home.door.opened '{"door":"front"}' -t home.door.opened.v1
 pulse sub 'evt.home.>' --since 2026-01-01 --json
 ```
 
-Python and TypeScript examples arrive with M13.
+Python and TypeScript: see [sdk/python/README.md](../sdk/python/README.md) and [sdk/ts/README.md](../sdk/ts/README.md).
 
 ## Errors to expect
 

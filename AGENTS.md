@@ -18,12 +18,14 @@ Pulse is a personal, security-sensitive event bus (NATS JetStream + `pulsed`). T
 - Events live in JetStream; pulsed state lives in SQLite (ADR-0024). No other datastore.
 - Crypto: Go standard library and `golang.org/x/crypto` only; nkeys/jwt from nats-io. No `InsecureSkipVerify`.
 - Never commit secrets, creds, seeds, master keys or private infrastructure details. Generate test keys at test time.
-- No LICENSE file until the operator decides (R-01).
+- The repository is public (ADR-0037, Apache-2.0). Use example hostnames (`events.example.com`) and TEST-NET
+  addresses in docs, code and tests.
 
-## Git workflow (commit locally, never push)
+## Git workflow (commit locally, push only when asked)
 
 - Work on `main`. Commit each completed milestone (one or more local commits).
 - Stage only relevant files by explicit path after reviewing `git status` and the diff.
 - Generate the message with the `/cc` skill, then run `git commit` yourself. If `/cc` is unavailable, leave changes uncommitted and say so.
-- **Never `git push`**, create remotes, push tags or open PRs without a specific explicit instruction.
+- The remote is `origin` (github.com/aurimasniekis/go-pulse, public). **Never `git push`**, push tags, create
+  releases or open PRs without a specific explicit instruction.
 - Never amend, rebase, force-switch branches or discard changes. Report commit hashes.

@@ -27,6 +27,11 @@ node_modules/
 /web/playwright-report/
 /web/blob-report/
 
+# Documentation website (site/)
+/site/node_modules/
+/site/.vitepress/dist/
+/site/.vitepress/cache/
+
 # Python
 __pycache__/
 *.egg-info/

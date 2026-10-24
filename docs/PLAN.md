@@ -19,7 +19,7 @@ live in JetStream. pulsed's own state lives in SQLite (ADR-0024).
 |---|---|---|
 | A-1 | One VPS: 2 vCPU, 2 GB RAM, 50–100 GB disk, Debian 13. | Re-measure sizing (SIZING.md). |
 | A-2 | Event volume ≤ ~1M events/day, ≤ 50k distinct subjects. | Rollup dimensions and subject index caps need revisiting. |
-| A-3 | Cloudflare free plan in front of `events.wan.lt`. | More WAF and rate-limit rules become possible (R-03). |
+| A-3 | Cloudflare free plan in front of `events.example.com`. | More WAF and rate-limit rules become possible (R-03). |
 | A-4 | Go 1.27.3 (ADR-0019), Node 24.22, pnpm 10. | Pin bumps go through CI. |
 | A-5 | The operator reaches the admin UI with `ssh -L 8080:127.0.0.1:8080`. | OIDC (R-02) is required before exposure. |
 
@@ -198,6 +198,7 @@ Status values: `planned`, `in-progress`, `implemented`, `tested`, `externally-ve
 | 2026-10-24 | M13 | Python SDK (`sdk/python`, nats-py: connect with creds, publish, ordered/durable subscribe, request, blobs) and TS SDK (`sdk/ts`, @nats-io v3.4.0: node tls:// and ws://, browser bundle) with the same surface as the dashboard snippets; both pass the 37 conformance vectors; Go ↔ Python ↔ TS interop (`make test-sdk-interop`: identical replay with since, durable resume, blobs both ways, publish-back) and a real-browser replay over `/ws` through the dev stack (e2e sdk-browser.spec); CI job `sdk`. Found and fixed: re-subscribing a Go durable with a different start position failed ("deliver policy can not be updated"); regression test added. ADR-0036. |
 | 2026-10-24 | M14 | events-wan-lt (uncommitted, per the user's rule): roles base, firewall, fail2ban, docker, alloy, pulse; `make test-ansible` converges them in a privileged Debian 13 container with pulsed:dev and passes all assertions and a changed=0 second run. Findings fed back here: banagent needs root with only NET_ADMIN/DAC_READ_SEARCH (be3fc7a), Debian's nftables unit flushes everything on stop (firewall contract updated). VM verification (`scripts/vm-verify.sh`) waits for the test VM. |
 | 2026-10-24 | M15 | events-wan-lt: `make pin-image` (attestation check + digest), `make deploy`, docs/GO-LIVE.md. Waiting for a tagged release (no remote yet) and the VPS. |
+| 2026-10-24 | — | Repository prepared for publication (ADR-0037): Apache-2.0, README, SECURITY/CONTRIBUTING/RELEASING, VitePress website in `site/` with Pages workflow, `make screenshots`. Writing the docs found R-05 (consumer scoping) and R-06 (no EVENTS shrink path) and an image build break (`.dockerignore`), fixed. |
 
 ## 6. Acceptance checklist (mapped to requirement IDs)
 
@@ -208,7 +209,7 @@ E browser E2E · C CI/static check · S spike/perf · R restore drill · X exter
 
 #### PL-BUS — Streams and subjects
 
-- [x] `PL-BUS-001` EVENTS stream — M2 — ✅ tested: internal/streams TestEnsureEvents (config, drift correction, grow, shrink refused/confirmed)
+- [ ] `PL-BUS-001` EVENTS stream — M2 — ◐ tested: internal/streams TestEnsureEvents (config, drift correction, grow, shrink refused/confirmed); the confirmation path is not wired into `pulsed serve` or the dashboard (R-06)
 - [x] `PL-BUS-002` Subject grammar — M2 — ✅ tested: pkg/pulse/envelope conformance subjects; SDK TestDeduplicationAndValidation
 - [x] `PL-BUS-003` Raw publishes accepted — M2 — ✅ tested: pkg/pulse TestRawPublishIsUntyped; envelope decode vector
 - [x] `PL-BUS-004` Payload size — M2 — ✅ tested: pkg/pulse TestBlobs (3.2 MB via Object Store, checksum, no access without grant)
@@ -445,9 +446,9 @@ E browser E2E · C CI/static check · S spike/perf · R restore drill · X exter
 | K-8 | Installing SDKs from git (pnpm `github:…#path:/sdk/ts`, pip `#subdirectory=`). | M13. | Publish to a private registry. |
 | K-9 | SQLite single writer under bursty admin + rollup + delivery-log writes. | M5/M7 load tests. | Batch delivery-log writes. |
 
-## 8. Commit workflow (local only)
+## 8. Commit workflow
 
 1. `git status` and inspect the diff. Include only the milestone's files; no secrets.
 2. `git add <explicit paths>`.
 3. Generate the message with `/cc` (Conventional Commits). `/cc` prints a message only.
-4. `git commit` with that message. 5. Report the hash. **Never push**, never create remotes, tags on remotes or PRs.
+4. `git commit` with that message. 5. Report the hash. **Never push** to `origin`, push tags or open PRs without an explicit instruction (ADR-0037).

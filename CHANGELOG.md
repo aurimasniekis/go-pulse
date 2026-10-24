@@ -43,7 +43,17 @@ versioning: [docs/VERSIONING.md](docs/VERSIONING.md).
   admin API tunnel. Operator guides in `docs/operator/` (deployment, keys, TLS, bans, backups, upgrades,
   troubleshooting).
 
+- Apache-2.0 license (ADR-0037), a README, `SECURITY.md` and `CONTRIBUTING.md`, and a documentation website built from
+  `site/` (VitePress) and deployed to GitHub Pages, with screenshots from a throwaway stack (`make screenshots`).
+
+### Changed
+- Example hostnames are `events.example.com` and `r.events.example.com` everywhere in the repository.
+
 ### Fixed
+- The image build failed since the browser SDK e2e test imports `sdk/ts`, which is outside the Docker build context;
+  `web/e2e/` is no longer part of the context.
+- Docs: the threat model overstated consumer isolation between clients (T-12, R-05); `EVENTS` cannot be shrunk and the
+  troubleshooting advice to lower `PULSE_EVENTS_MAX_BYTES` was wrong (R-06); metric labels in docs/API.md.
 - Outbound webhook delivery errors no longer include the destination URL, which can carry the secret (Slack and
   Discord webhook paths, query tokens); they were stored in the delivery log and logged.
 - Reference compose: banagent could not write nftables sets (added capabilities do not reach the image's non-root

@@ -130,7 +130,7 @@ func newContextCmd() *cobra.Command {
 			return err
 		},
 	}
-	addCmd.Flags().StringVar(&add.URL, "url", "", "NATS URL, e.g. tls://r.events.wan.lt:4222")
+	addCmd.Flags().StringVar(&add.URL, "url", "", "NATS URL, e.g. tls://r.events.example.com:4222")
 	addCmd.Flags().StringVar(&add.Creds, "creds", "", "path to the .creds file")
 	addCmd.Flags().StringVar(&add.CA, "ca", "", "extra CA PEM (internal CA during bootstrap)")
 	addCmd.Flags().StringVar(&add.AdminURL, "admin-url", "", "admin API base URL (via ssh -L), e.g. http://127.0.0.1:8080")

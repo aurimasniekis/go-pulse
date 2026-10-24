@@ -1,0 +1,10 @@
+# Overrides for the documentation-screenshot stack (scripts/screenshots.sh), layered on deploy/compose.dev.yaml.
+# Snippets show example hostnames, and outbound webhooks may reach the receiver the spec runs on the Docker host.
+services:
+  pulsed:
+    environment:
+      PULSE_PUBLIC_NATS_URL: tls://r.events.example.com:4222
+      PULSE_PUBLIC_URL: https://events.example.com
+      PULSE_OUTBOUND_ALLOW: 192.168.65.0/24,172.16.0.0/12
+    extra_hosts:
+      - "automations.home.arpa:host-gateway"

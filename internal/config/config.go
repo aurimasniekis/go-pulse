@@ -37,10 +37,10 @@ type Config struct {
 	NATSWebsocketListen string
 	NATSWebsocketURL    string // where pulsed proxies /ws to
 	NATSMaxFileStore    int64
-	RawHost             string // r.events.wan.lt
+	RawHost             string // r.events.example.com
 	PublicNATSURL       string // what tools use, shown in snippets
 	PublicURL           string // public HTTPS base URL, shown in snippets
-	PublicHost          string // events.wan.lt
+	PublicHost          string // events.example.com
 	EventsMaxBytes      int64
 
 	// Listeners

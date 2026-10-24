@@ -8,8 +8,12 @@ version = "0.1.0"
 description = "Python SDK for Pulse, a personal durable event bus on NATS JetStream"
 readme = "README.md"
 requires-python = ">=3.10"
-license = { text = "Proprietary" }
+license = { text = "Apache-2.0" }
 dependencies = ["nats-py>=2.10,<3", "nkeys>=0.2"]
+
+[project.urls]
+Homepage = "https://aurimasniekis.github.io/go-pulse/"
+Source = "https://github.com/aurimasniekis/go-pulse"
 
 [project.optional-dependencies]
 test = ["pytest>=8", "pytest-asyncio>=0.24"]

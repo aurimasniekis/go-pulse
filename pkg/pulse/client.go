@@ -1,6 +1,6 @@
 // Package pulse is the Go SDK for Pulse (PL-SDK-001): publish, subscribe and replay events over NATS JetStream.
 //
-//	c, err := pulse.Connect("tls://r.events.wan.lt:4222", pulse.WithCredsFile("bot.creds"), pulse.WithSource("bot"))
+//	c, err := pulse.Connect("tls://r.events.example.com:4222", pulse.WithCredsFile("bot.creds"), pulse.WithSource("bot"))
 //	ack, err := c.Publish(ctx, "evt.home.door.opened", "home.door.opened.v1", map[string]any{"door": "front"})
 //	sub, err := c.Subscribe(ctx, "evt.home.>", pulse.Handle(func(ctx context.Context, e pulse.Event, v Door) error {…}),
 //		pulse.Since(time.Now().Add(-24*time.Hour)))

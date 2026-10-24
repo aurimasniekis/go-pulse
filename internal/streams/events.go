@@ -81,7 +81,7 @@ func EnsureEvents(ctx context.Context, js jetstream.JetStream, maxBytes int64, a
 	}
 	if want.MaxBytes < cur.MaxBytes && cur.MaxBytes > 0 && !allowShrink {
 		res.Warnings = append(res.Warnings, fmt.Sprintf("configured max_bytes %d is below the current %d; keeping %d (shrinking deletes "+
-			"old events; confirm from the dashboard or set allowShrink)", want.MaxBytes, cur.MaxBytes, cur.MaxBytes))
+			"old events and pulsed never does it on its own; see DECISIONS.md R-06)", want.MaxBytes, cur.MaxBytes, cur.MaxBytes))
 		want.MaxBytes = cur.MaxBytes
 	}
 	upd := cur

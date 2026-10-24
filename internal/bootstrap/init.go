@@ -28,7 +28,7 @@ const (
 type Options struct {
 	Layout          Layout
 	MasterKey       []byte
-	RawHost         string   // public raw NATS hostname (SAN on the bootstrap leaf), e.g. r.events.wan.lt
+	RawHost         string   // public raw NATS hostname (SAN on the bootstrap leaf), e.g. r.events.example.com
 	ExtraSANs       []string // additional names/IPs for the leaf
 	ClientListen    string
 	MonitorListen   string

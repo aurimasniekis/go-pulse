@@ -12,7 +12,7 @@
   the one VPS that runs it.
 - **Decision:** Module `github.com/aurimasniekis/go-pulse` holds the product: `pulsed` (server, init, banagent), `pulse` (CLI),
   the embedded React UI, the Go/Python/TS SDKs, the Dockerfile, CI and the release workflow to `ghcr.io/aurimasniekis/pulsed`
-  (private). Env prefix `PULSE_`. The deployment repo `events-wan-lt` holds Ansible, the prod compose with pinned image digests,
+  (public since ADR-0037). Env prefix `PULSE_`. The deployment repo `events-wan-lt` holds Ansible, the prod compose with pinned image digests,
   the Alloy config, the vault, inventories, the Terraform Cloudflare module and runbooks. The interface between them is the
   image tag/digest, `docs/operator/configuration.md` and `deploy/examples/compose.yaml`.
 - **Alternatives:** one repo for product and infra (mixes secrets/inventories with product code); hosted brokers (cost, lock-in,
@@ -102,11 +102,11 @@
 
 ### ADR-0010 — Hostnames and raw NATS TLS via Let's Encrypt DNS-01
 - **Status:** accepted
-- **Decision:** `events.wan.lt` is proxied (orange cloud). `r.events.wan.lt` is DNS-only (grey cloud) for raw NATS on 4222 with a
+- **Decision:** `events.example.com` is proxied (orange cloud). `r.events.example.com` is DNS-only (grey cloud) for raw NATS on 4222 with a
   Let's Encrypt certificate that pulsed obtains itself with lego and the Cloudflare DNS-01 provider (scoped token:
   Zone.DNS edit on the zone). Until then, 4222 serves a bootstrap leaf from the internal CA. Renewal is 30 days before expiry.
   After writing files atomically, pulsed sends `$SYS.REQ.SERVER.<id>.RELOAD` and checks the served certificate serial.
-- **Consequences:** Clients use system roots for `r.events.wan.lt`. During bootstrap, clients must trust the internal CA
+- **Consequences:** Clients use system roots for `r.events.example.com`. During bootstrap, clients must trust the internal CA
   (`pulsed` exposes it in the UI).
 
 ### ADR-0011 — fail2ban-style bans in pulsed, enforced in nftables, HTTP and optionally Cloudflare
@@ -302,7 +302,7 @@
 - **Decision:**
   - `nats.conf` lists both pairs in `tls { certs: [...] }`: the ACME pair (`tls/acme.crt|key`) first, then the internal
     leaf. NATS (Go `crypto/tls`) picks the first certificate whose names match the client's SNI and falls back to the first
-    entry. Tools on `r.events.wan.lt` get Let's Encrypt; pulsed keeps SNI `nats` and the internal CA.
+    entry. Tools on `r.events.example.com` get Let's Encrypt; pulsed keeps SNI `nats` and the internal CA.
   - pulsed runs lego with the account key from `keys.enc` (resolve by key, else register). It uses DNS-01 only:
     Cloudflare with a scoped token, or pebble's challtestsrv in dev and tests. The prod profile refuses challtestsrv.
   - Renewal starts at `min(30 days, lifetime / 3)` before expiry. For 90-day certificates that is 30 days; for the
@@ -414,11 +414,31 @@
 - **Consequences:** SDK behaviour around consumers is pulsed's code, not the libraries'. Library upgrades are checked
   by `make test-sdk-interop` (CI job `sdk`).
 
+### ADR-0037 — Apache-2.0 license, public repository and documentation website — resolves R-01
+- **Status:** accepted (2026-10-24, operator decision)
+- **Context:** R-01 left the license open and the repository private. The operator asked for the repository to be public
+  with a README, guides and a website like hallpass's.
+- **Decision:**
+  - License: Apache License 2.0 (`LICENSE`, `NOTICE`), the same as hallpass. The Python and TypeScript SDK packages
+    declare `Apache-2.0`.
+  - `github.com/aurimasniekis/go-pulse` is public. The image `ghcr.io/aurimasniekis/pulsed` is public once the first
+    release is pushed; the deployment repository may still log in to GHCR, which is harmless.
+  - The documentation website is built from `site/` (VitePress) and deployed to GitHub Pages by
+    `.github/workflows/pages.yaml`. `docs/` stays the source of truth for contracts (GOAL, PLAN, DECISIONS, threat
+    model, configuration contract); the website explains them for readers. Screenshots come from a throwaway stack
+    with fictional data (`make screenshots`).
+  - Example hostnames in the repository are `events.example.com` / `r.events.example.com`; the real deployment's
+    names live only in the deployment repository.
+- **Consequences:** Security reports go through GitHub private vulnerability reporting (`SECURITY.md`). Pushes to
+  `main` run CI on GitHub, so PL-OPS-006..008 can be verified there.
+
 ## 2. Open review items
 
 | ID | Item | Default until decided |
 |---|---|---|
-| R-01 | License for the repository. | No LICENSE file. |
+| R-01 | ~~License for the repository.~~ Resolved by ADR-0037: Apache-2.0. | — |
 | R-02 | Central SSO provider and claims mapping for `auth.mode=oidc`. | `oidc` refuses to start. |
 | R-03 | Cloudflare plan upgrade (more WAF rules, rate-limit periods, IP lists). | Free plan limits (see events-wan-lt). |
 | R-04 | Off-site copy of age identities. | Operator keeps identities offline. |
+| R-05 | Scope `subscribe` grants' `CONSUMER.INFO`/`MSG.NEXT`/`$JS.ACK` to consumers the client created (today `.<stream>.*`), e.g. client-prefixed ephemeral names in their own token. Found while writing the security page (THREAT_MODEL T-12). | Guessing another client's durable needs its 80-bit random client ID. |
+| R-06 | A confirmation path for shrinking `EVENTS` (PL-BUS-001). `pulsed serve` always refuses a lower `PULSE_EVENTS_MAX_BYTES` and the dashboard cannot edit managed streams. | Keep the current size; shrink only with the nats CLI as the APP account, after a backup. |

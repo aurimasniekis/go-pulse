@@ -1,10 +1,8 @@
-# Reference production topology (PL-OPS-006). The deployment repository (events-wan-lt) renders its own copy of this
-# file from docs/operator/configuration.md and pins the pulsed image by digest.
+# Reference production topology (PL-OPS-006). A deployment repository renders its own copy of this file from
+# docs/operator/configuration.md and pins the pulsed image by digest.
 #
-# Host prerequisites (see events-wan-lt): Docker with userland-proxy=false and ip6tables=true; nftables table
+# Host prerequisites (docs/operator/deployment.md): Docker with userland-proxy=false and ip6tables=true; nftables table
 # inet pulse_edge (CF-only 443, ban sets); secrets under /srv/pulse/secrets owned by uid 65532, mode 0400.
-#
-# Services marked (Mx) depend on features that land in that milestone.
 
 x-pulse-env: &pulse-env
   PULSE_PROFILE: prod
