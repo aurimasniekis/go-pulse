@@ -171,8 +171,8 @@ Status values: `planned`, `in-progress`, `implemented`, `tested`, `externally-ve
 | M8 | Security and edge TLS | tested (VM/Cloudflare pending) | bb92060 |
 | M9 | ACME | tested against pebble (Let's Encrypt/Cloudflare pending) | 3155b52 |
 | M10 | Observability | tested (live Telegram/Discord pending) | fc24724 |
-| M11 | Backups | tested; gate PL-BAK-007 passed (production S3 pending) | (this commit) |
-| M12 | Remaining UI | planned | |
+| M11 | Backups | tested; gate PL-BAK-007 passed (production S3 pending) | 20db4e6 |
+| M12 | Remaining UI | tested | (this commit) |
 | M13 | Python and TS SDKs | planned | |
 | M14 | Ansible (events-wan-lt) | planned | n/a (no commits in that repo) |
 | M15 | Terraform + deploy (events-wan-lt) | planned | n/a |
@@ -194,6 +194,7 @@ Status values: `planned`, `in-progress`, `implemented`, `tested`, `externally-ve
 | 2026-10-24 | M9 | ACME manager on lego (account by key from `keys.enc`, DNS-01 via Cloudflare or challtestsrv), ACME pair listed before the internal leaf in `nats.conf` and selected by SNI (ADR-0032 amends ADR-0023), atomic write → re-render → RELOAD → served-serial check over a raw INFO/TLS handshake, renewal at min(30 d, lifetime/3) (found with pebble's 6-day certificates), `GET /system/certificates`, System page (server, NATS, JetStream, certificates, ACME status). `make test-acme` runs pebble + challtestsrv in Docker against a real nats-server. Canceled requests now return 499 instead of logging a 500. `make secrets` was scanning 0 commits locally (global `color.ui=always` breaks gitleaks' log parser); it now runs with `GIT_CONFIG_GLOBAL=/dev/null` and scans all 9 commits clean. |
 | 2026-10-24 | M10 | Prometheus registry on the metrics listener (pulsed counters, scrape-time VARZ/JSZ/stream gauges, bounded route labels), alert engine (9 built-ins incl. `nats_down`, custom threshold rules on rollups, pending/firing/resolved in SQLite, reminders, `_sys.alert.<rule>` events, history pruned at 90 d), Telegram and Discord notifiers (file secrets, rate limit, retries, URL-free errors), alerts admin API + Alerts page, System page (runtime, VARZ, connections), Alloy in the dev stack (target verified `up`) and a reference prod config. Found: Huma ignores path params on embedded input structs (inlined); e2e overview test was flaky because earlier runs' domains tie in the top-10 (seeding now gives the run a clear lead). |
 | 2026-10-24 | M11 | Backups (ADR-0035). Gate PL-BAK-007 passed: NATS 2.15 snapshots are NATSARC1 and restore keeps sequences and timestamps; republishing keeps none (0/15). pulsed snapshots every APP stream, stores message records in sequence-anchored buckets (HMAC names, S2 + age, deduplicated: an unchanged night uploads ~7 KB), plus `pulse.db` (VACUUM INTO) and `keys.enc`; verification, GFS 7/4/12 with chunk GC, authenticated restore (manifest MAC, chunk HMACs; replace pre-checks all chunks), background restore jobs, `pulsed backup keygen|list|run|restore`, Backups page, `backup_stale` alert wired, SeaweedFS 4.48 in the dev stack, `make test-s3`. Found and fixed while testing: the end-of-snapshot message has no status header when the archive fits one chunk; a restore stream filter that opened up after the first match (regression test). |
+| 2026-10-24 | M12 | KV & Objects browser (buckets, keys with filter and history, set/delete, object upload ≤ 64 MiB / download as attachment / delete; `blobs` read-only), Settings page (effective configuration with secrets as set/not set, per-browser time zone and colour scheme), audit time-range filters, every-page Playwright smoke (heading, no page/console errors), nav ↔ route vitest, missing-UI handler test. The Alerts (M10) and Backups (M11) pages landed with their milestones. e2e overview seeding now beats the current top-10 leader instead of relying on fixed counts (35/35 three runs in a row). |
 
 ## 6. Acceptance checklist (mapped to requirement IDs)
 
@@ -371,13 +372,13 @@ E browser E2E · C CI/static check · S spike/perf · R restore drill · X exter
 - [ ] `PL-UI-001` Stack — M0 — ◐ implemented: Vite 8 + Mantine 8 + TanStack Router/Query/Table-ready/Virtual + embed; ECharts arrives with M5 charts
 - [ ] `PL-UI-002` Look — M0 — ◐ implemented: theme (4px radius, compact inputs, Inter/JetBrains Mono, indigo, light/dark), checked by screenshots; no visual regression test
 - [x] `PL-UI-003` Shell — M4 — ✅ tested: e2e shell (status indicator, theme toggle, Cmd-K navigation); collapsible sidebar
-- [ ] `PL-UI-004` Pages — M12
+- [x] `PL-UI-004` Pages — M12 — ✅ tested: all 15 pages exist and render without errors (e2e pages.spec); functional e2e for every page with actions (smoke, data, access, webhooks, security, alerts, backups, kv)
 - [x] `PL-UI-005` Typed API — M4 — ✅ tested: web/src/api/client.ts (openapi-fetch + generated types), typecheck in CI
 - [ ] `PL-UI-006` Charts — M4 — ◐ implemented: ECharts (SVG) themed from Mantine tokens per color scheme, palette validated with the dataviz validator (light/dark); no visual regression test
 - [x] `PL-UI-007` Large lists — M4 — ✅ implemented: VirtualTable (@tanstack/react-virtual) for explorer/tail; e2e renders it
 - [x] `PL-UI-008` Secret display — M4 — ✅ tested: SecretModal (copy/download, dropped from state on close); e2e checks the secret disappears
-- [ ] `PL-UI-009` Tests — M12
-- [ ] `PL-UI-010` Missing UI — M0 — ◐ implemented: internal/api uiHandler serves a notice when the UI is not built; that path is untested (tests run with a built UI); SPA fallback tested
+- [x] `PL-UI-009` Tests — M12 — ✅ tested: vitest (22 tests) and Playwright smoke of every page (pages.spec) plus 19 flow tests against the dev stack
+- [x] `PL-UI-010` Missing UI — M0/M12 — ✅ tested: internal/api TestUIHandler (notice when not built, SPA fallback, asset caching, API paths 404)
 
 #### PL-SDK — SDKs and CLI
 
@@ -406,7 +407,7 @@ E browser E2E · C CI/static check · S spike/perf · R restore drill · X exter
 #### PL-AUD — Audit
 
 - [x] `PL-AUD-001` Audit stream — M6 — ✅ tested: audit rows for client, token, stream, consumer, event publish and key export actions
-- [ ] `PL-AUD-002` Audit page — M12 — ◐ implemented: Audit page with action/actor/target/result filters and paging; time-range filter UI pending M12
+- [x] `PL-AUD-002` Audit page — M12 — ✅ tested: action/actor/target/result and time-range filters (presets + custom) in the URL, paging (e2e kv.spec audit test, access.spec)
 - [x] `PL-AUD-003` No secrets — M6 — ✅ tested: TestClientsAndAuditAPI asserts no seed in audit output; details carry names/grants/keys only
 
 #### PL-TST — Testing

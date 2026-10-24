@@ -1,4 +1,4 @@
-import { formatBytes, formatDuration, formatNumber, hexDump, payloadBytes, prettyJSON, preview, shellQuote, timeAgo } from './format'
+import { formatBytes, formatDuration, formatNumber, hexDump, payloadBytes, prettyJSON, preview, shellQuote, timeAgo, formatTime, getTimeZone, setTimeZone } from './format'
 
 test('formatBytes', () => {
   expect(formatBytes(0)).toBe('0 B')
@@ -37,4 +37,15 @@ test('shellQuote', () => {
   expect(shellQuote('evt.home.>')).toBe(`'evt.home.>'`)
   expect(shellQuote('evt.home.door')).toBe('evt.home.door')
   expect(shellQuote("it's")).toBe(`'it'\\''s'`)
+})
+
+describe('formatTime time zone', () => {
+  it('formats in UTC with a Z when chosen, and back to local', () => {
+    setTimeZone('utc')
+    expect(getTimeZone()).toBe('utc')
+    expect(formatTime('2026-10-23T21:04:05.123Z')).toBe('2026-10-23 21:04:05.123Z')
+    setTimeZone('local')
+    expect(formatTime('2026-10-23T21:04:05.123Z')).not.toContain('Z')
+    expect(formatTime(undefined)).toBe('—')
+  })
 })

@@ -4,13 +4,16 @@ const csrf = { 'X-Pulse-CSRF': '1' }
 const run = Date.now().toString(36)
 
 async function seed(request: APIRequestContext) {
+  // The dev stack keeps data between runs, so earlier runs' domains fill the 24 h top-10. Give this run's domain a
+  // clear lead over the current leader (typed, so the untyped filter below still sees one event).
+  const ov = await request.get('/api/admin/v1/overview')
+  const top = ((await ov.json()) as { top_prefixes_24h?: { msgs: number }[] }).top_prefixes_24h ?? []
+  const lead = Math.max(20, (top[0]?.msgs ?? 0) + 5)
   const events = [
     ...Array.from({ length: 5 }, (_, i) => ({ subject: `evt.e2e${run}.door.opened`, type: 'e2e.door.opened.v1', data: JSON.stringify({ door: 'front', n: i }) })),
     ...Array.from({ length: 3 }, () => ({ subject: `evt.e2e${run}.light.on`, type: 'e2e.light.on.v1', data: '{"room":"hall"}' })),
     { subject: `evt.e2e${run}.raw.thing`, data: 'plain text', content_type: 'text/plain; charset=utf-8' },
-    // The dev stack keeps data between runs: earlier runs' domains tie at ~10 events in the 24 h top-10, so give this
-    // run's domain a clear lead (typed, so the untyped filter below still sees one event).
-    ...Array.from({ length: 20 }, (_, i) => ({ subject: `evt.e2e${run}.burst.tick`, type: 'e2e.burst.tick.v1', data: JSON.stringify({ i }) })),
+    ...Array.from({ length: lead }, (_, i) => ({ subject: `evt.e2e${run}.burst.tick`, type: 'e2e.burst.tick.v1', data: JSON.stringify({ i }) })),
   ]
   for (const e of events) {
     const r = await request.post('/api/admin/v1/events', { headers: csrf, data: { content_type: 'application/json', ...e } })

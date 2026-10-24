@@ -71,13 +71,6 @@ test('live tail: starts and stops', async ({ page }) => {
   await expect(page.getByTestId('tail-status')).toHaveText('idle')
 })
 
-test('placeholder pages render', async ({ page }) => {
-  for (const path of ['/settings']) {
-    await page.goto(path)
-    await expect(page.getByText('Not built yet')).toBeVisible()
-  }
-})
-
 test('system: server status and certificates', async ({ page }) => {
   await page.goto('/system')
   await expect(page.getByRole('heading', { name: 'System' })).toBeVisible()

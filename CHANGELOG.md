@@ -35,6 +35,8 @@ versioning: [docs/VERSIONING.md](docs/VERSIONING.md).
 - M11: nightly age-encrypted backups to S3 (`PULSE_BACKUP_*`): SQLite, `keys.enc` and every stream as NATSARC1
   snapshots stored deduplicated; verification, GFS retention, authenticated restores from the Backups page and
   `pulsed backup keygen|list|run|restore`; SeaweedFS in the dev stack.
+- M12: KV & Objects browser, Settings page (effective configuration, display time zone), audit time filters, and a
+  Playwright check of every page.
 
 ### Fixed
 - Admin API requests canceled by the browser return 499 instead of logging an internal error.

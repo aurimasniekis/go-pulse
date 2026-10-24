@@ -187,6 +187,7 @@ func Start(ctx context.Context, cfg *config.Config, log *slog.Logger) (*App, err
 		return nil, fmt.Errorf("acme: %w", err)
 	}
 	deps.Started = time.Now().UTC()
+	deps.Config = configSummary(cfg)
 	deps.AccountNames = map[string]string{a.Keys.Pub(a.Keys.SysAccount): "SYS", a.Keys.Pub(a.Keys.AppAccount): "APP"}
 	backupStatus, err := a.setupBackups(cfg, deps)
 	if err != nil {

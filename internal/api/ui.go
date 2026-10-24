@@ -14,8 +14,9 @@ const missingUI = `<!doctype html><html><head><meta charset="utf-8"><title>Pulse
 <code>/api/admin/v1</code>.</p></body></html>`
 
 // uiHandler serves the embedded SPA with index.html fallback (PL-UI-010 when not built).
-func uiHandler() http.Handler {
-	fsys := ui.FS()
+func uiHandler() http.Handler { return uiHandlerFS(ui.FS()) }
+
+func uiHandlerFS(fsys fs.FS) http.Handler {
 	if fsys == nil {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			if strings.HasPrefix(r.URL.Path, "/api/") {

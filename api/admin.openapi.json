@@ -676,6 +676,37 @@
         ],
         "type": "object"
       },
+      "Buckets": {
+        "additionalProperties": false,
+        "properties": {
+          "$schema": {
+            "description": "A URL to the JSON Schema for this object.",
+            "examples": [
+              "/api/admin/v1/schemas/Buckets.json"
+            ],
+            "format": "uri",
+            "readOnly": true,
+            "type": "string"
+          },
+          "kv": {
+            "items": {
+              "$ref": "#/components/schemas/KVBucket"
+            },
+            "type": "array"
+          },
+          "objects": {
+            "items": {
+              "$ref": "#/components/schemas/ObjectBucket"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "kv",
+          "objects"
+        ],
+        "type": "object"
+      },
       "CertificateInfo": {
         "additionalProperties": false,
         "properties": {
@@ -928,6 +959,45 @@
         },
         "type": "object"
       },
+      "ConfigItem": {
+        "additionalProperties": false,
+        "properties": {
+          "env": {
+            "type": "string"
+          },
+          "secret": {
+            "description": "The value is a secret: only set/not set is shown",
+            "type": "boolean"
+          },
+          "value": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "env",
+          "value"
+        ],
+        "type": "object"
+      },
+      "ConfigSection": {
+        "additionalProperties": false,
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ConfigItem"
+            },
+            "type": "array"
+          },
+          "title": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "title",
+          "items"
+        ],
+        "type": "object"
+      },
       "ConnDTO": {
         "additionalProperties": false,
         "properties": {
@@ -1169,6 +1239,86 @@
           "network",
           "duration_hours",
           "reason"
+        ],
+        "type": "object"
+      },
+      "Create-kv-bucketRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "$schema": {
+            "description": "A URL to the JSON Schema for this object.",
+            "examples": [
+              "/api/admin/v1/schemas/Create-kv-bucketRequest.json"
+            ],
+            "format": "uri",
+            "readOnly": true,
+            "type": "string"
+          },
+          "description": {
+            "maxLength": 256,
+            "type": "string"
+          },
+          "history": {
+            "default": 1,
+            "format": "int32",
+            "maximum": 64,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "max_bytes": {
+            "description": "-1 or 0: unlimited",
+            "format": "int64",
+            "minimum": -1,
+            "type": "integer"
+          },
+          "name": {
+            "pattern": "^[A-Za-z0-9_-]{1,64}$",
+            "type": "string"
+          },
+          "ttl_seconds": {
+            "format": "int64",
+            "minimum": 0,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
+      "Create-object-bucketRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "$schema": {
+            "description": "A URL to the JSON Schema for this object.",
+            "examples": [
+              "/api/admin/v1/schemas/Create-object-bucketRequest.json"
+            ],
+            "format": "uri",
+            "readOnly": true,
+            "type": "string"
+          },
+          "description": {
+            "maxLength": 256,
+            "type": "string"
+          },
+          "max_bytes": {
+            "format": "int64",
+            "minimum": -1,
+            "type": "integer"
+          },
+          "name": {
+            "pattern": "^[A-Za-z0-9_-]{1,64}$",
+            "type": "string"
+          },
+          "ttl_seconds": {
+            "format": "int64",
+            "minimum": 0,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "name"
         ],
         "type": "object"
       },
@@ -2062,6 +2212,209 @@
         ],
         "type": "object"
       },
+      "KVBucket": {
+        "additionalProperties": false,
+        "properties": {
+          "$schema": {
+            "description": "A URL to the JSON Schema for this object.",
+            "examples": [
+              "/api/admin/v1/schemas/KVBucket.json"
+            ],
+            "format": "uri",
+            "readOnly": true,
+            "type": "string"
+          },
+          "bytes": {
+            "format": "int64",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "history": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "name": {
+            "type": "string"
+          },
+          "ttl_seconds": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "values": {
+            "description": "Stored values, including history and delete markers",
+            "format": "int64",
+            "minimum": 0,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "name",
+          "values",
+          "bytes",
+          "history",
+          "ttl_seconds"
+        ],
+        "type": "object"
+      },
+      "KVEntry": {
+        "additionalProperties": false,
+        "properties": {
+          "$schema": {
+            "description": "A URL to the JSON Schema for this object.",
+            "examples": [
+              "/api/admin/v1/schemas/KVEntry.json"
+            ],
+            "format": "uri",
+            "readOnly": true,
+            "type": "string"
+          },
+          "created": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "encoding": {
+            "enum": [
+              "utf8",
+              "base64"
+            ],
+            "type": "string"
+          },
+          "history": {
+            "items": {
+              "$ref": "#/components/schemas/KVRevision"
+            },
+            "type": "array"
+          },
+          "key": {
+            "type": "string"
+          },
+          "revision": {
+            "format": "int64",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "value": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "key",
+          "revision",
+          "created",
+          "value",
+          "encoding",
+          "history"
+        ],
+        "type": "object"
+      },
+      "KVKey": {
+        "additionalProperties": false,
+        "properties": {
+          "$schema": {
+            "description": "A URL to the JSON Schema for this object.",
+            "examples": [
+              "/api/admin/v1/schemas/KVKey.json"
+            ],
+            "format": "uri",
+            "readOnly": true,
+            "type": "string"
+          },
+          "created": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "key": {
+            "type": "string"
+          },
+          "operation": {
+            "enum": [
+              "put",
+              "delete",
+              "purge"
+            ],
+            "type": "string"
+          },
+          "revision": {
+            "format": "int64",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "size": {
+            "format": "int64",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "key",
+          "revision",
+          "created",
+          "size",
+          "operation"
+        ],
+        "type": "object"
+      },
+      "KVKeys": {
+        "additionalProperties": false,
+        "properties": {
+          "$schema": {
+            "description": "A URL to the JSON Schema for this object.",
+            "examples": [
+              "/api/admin/v1/schemas/KVKeys.json"
+            ],
+            "format": "uri",
+            "readOnly": true,
+            "type": "string"
+          },
+          "keys": {
+            "items": {
+              "$ref": "#/components/schemas/KVKey"
+            },
+            "type": "array"
+          },
+          "truncated": {
+            "description": "More keys exist than the limit",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "keys",
+          "truncated"
+        ],
+        "type": "object"
+      },
+      "KVRevision": {
+        "additionalProperties": false,
+        "properties": {
+          "created": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "operation": {
+            "enum": [
+              "put",
+              "delete",
+              "purge"
+            ],
+            "type": "string"
+          },
+          "revision": {
+            "format": "int64",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "size": {
+            "format": "int64",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "revision",
+          "created",
+          "operation",
+          "size"
+        ],
+        "type": "object"
+      },
       "KeyCount": {
         "additionalProperties": false,
         "properties": {
@@ -2254,6 +2607,95 @@
           "sent",
           "failed",
           "suppressed"
+        ],
+        "type": "object"
+      },
+      "ObjectBucket": {
+        "additionalProperties": false,
+        "properties": {
+          "$schema": {
+            "description": "A URL to the JSON Schema for this object.",
+            "examples": [
+              "/api/admin/v1/schemas/ObjectBucket.json"
+            ],
+            "format": "uri",
+            "readOnly": true,
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "managed": {
+            "description": "Owned by pulsed (event blobs): read-only here",
+            "type": "boolean"
+          },
+          "name": {
+            "type": "string"
+          },
+          "sealed": {
+            "type": "boolean"
+          },
+          "size": {
+            "format": "int64",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "ttl_seconds": {
+            "format": "int64",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "name",
+          "size",
+          "ttl_seconds",
+          "sealed",
+          "managed"
+        ],
+        "type": "object"
+      },
+      "ObjectEntry": {
+        "additionalProperties": false,
+        "properties": {
+          "$schema": {
+            "description": "A URL to the JSON Schema for this object.",
+            "examples": [
+              "/api/admin/v1/schemas/ObjectEntry.json"
+            ],
+            "format": "uri",
+            "readOnly": true,
+            "type": "string"
+          },
+          "chunks": {
+            "format": "int32",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "description": {
+            "type": "string"
+          },
+          "digest": {
+            "type": "string"
+          },
+          "modified": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "size": {
+            "format": "int64",
+            "minimum": 0,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "name",
+          "size",
+          "chunks",
+          "modified",
+          "digest"
         ],
         "type": "object"
       },
@@ -2523,6 +2965,35 @@
           "seq",
           "id",
           "duplicate"
+        ],
+        "type": "object"
+      },
+      "Put-kv-entryRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "$schema": {
+            "description": "A URL to the JSON Schema for this object.",
+            "examples": [
+              "/api/admin/v1/schemas/Put-kv-entryRequest.json"
+            ],
+            "format": "uri",
+            "readOnly": true,
+            "type": "string"
+          },
+          "encoding": {
+            "default": "utf8",
+            "enum": [
+              "utf8",
+              "base64"
+            ],
+            "type": "string"
+          },
+          "value": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "value"
         ],
         "type": "object"
       },
@@ -5675,6 +6146,622 @@
         ]
       }
     },
+    "/kv": {
+      "get": {
+        "operationId": "list-buckets",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Buckets"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "KV and object buckets",
+        "tags": [
+          "kv"
+        ]
+      },
+      "post": {
+        "operationId": "create-kv-bucket",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Create-kv-bucketRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/KVBucket"
+                }
+              }
+            },
+            "description": "Created"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Create a KV bucket",
+        "tags": [
+          "kv"
+        ]
+      }
+    },
+    "/kv/{bucket}": {
+      "delete": {
+        "operationId": "delete-kv-bucket",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "bucket",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "explode": false,
+            "in": "query",
+            "name": "confirm",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Delete a KV bucket",
+        "tags": [
+          "kv"
+        ]
+      }
+    },
+    "/kv/{bucket}/entry": {
+      "delete": {
+        "operationId": "delete-kv-entry",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "bucket",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "explode": false,
+            "in": "query",
+            "name": "key",
+            "required": true,
+            "schema": {
+              "maxLength": 1024,
+              "type": "string"
+            }
+          },
+          {
+            "explode": false,
+            "in": "query",
+            "name": "purge",
+            "schema": {
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Delete a key (keeps history unless purge)",
+        "tags": [
+          "kv"
+        ]
+      },
+      "get": {
+        "operationId": "get-kv-entry",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "bucket",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "explode": false,
+            "in": "query",
+            "name": "key",
+            "required": true,
+            "schema": {
+              "maxLength": 1024,
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/KVEntry"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "A key's value and history",
+        "tags": [
+          "kv"
+        ]
+      },
+      "put": {
+        "operationId": "put-kv-entry",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "bucket",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "explode": false,
+            "in": "query",
+            "name": "key",
+            "required": true,
+            "schema": {
+              "maxLength": 1024,
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Put-kv-entryRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/KVKey"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Set a key",
+        "tags": [
+          "kv"
+        ]
+      }
+    },
+    "/kv/{bucket}/keys": {
+      "get": {
+        "operationId": "list-kv-keys",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "bucket",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Key filter with * and \u003e wildcards",
+            "explode": false,
+            "in": "query",
+            "name": "filter",
+            "schema": {
+              "description": "Key filter with * and \u003e wildcards",
+              "maxLength": 256,
+              "type": "string"
+            }
+          },
+          {
+            "explode": false,
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "default": 1000,
+              "format": "int64",
+              "maximum": 5000,
+              "minimum": 1,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/KVKeys"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Keys with their latest revision",
+        "tags": [
+          "kv"
+        ]
+      }
+    },
+    "/objects": {
+      "post": {
+        "operationId": "create-object-bucket",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Create-object-bucketRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ObjectBucket"
+                }
+              }
+            },
+            "description": "Created"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Create an object store",
+        "tags": [
+          "kv"
+        ]
+      }
+    },
+    "/objects/{bucket}": {
+      "delete": {
+        "operationId": "delete-object-bucket",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "bucket",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "explode": false,
+            "in": "query",
+            "name": "confirm",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Delete an object store",
+        "tags": [
+          "kv"
+        ]
+      },
+      "get": {
+        "operationId": "list-objects",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "bucket",
+            "required": true,
+            "schema": {
+              "maxLength": 64,
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ObjectEntry"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Objects in a store",
+        "tags": [
+          "kv"
+        ]
+      }
+    },
+    "/objects/{bucket}/download": {
+      "get": {
+        "operationId": "download-object",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "bucket",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "explode": false,
+            "in": "query",
+            "name": "name",
+            "required": true,
+            "schema": {
+              "maxLength": 1024,
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/octet-stream": {}
+            },
+            "description": "Object content"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Download an object",
+        "tags": [
+          "kv"
+        ]
+      }
+    },
+    "/objects/{bucket}/object": {
+      "delete": {
+        "operationId": "delete-object",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "bucket",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "explode": false,
+            "in": "query",
+            "name": "name",
+            "required": true,
+            "schema": {
+              "maxLength": 1024,
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Delete an object",
+        "tags": [
+          "kv"
+        ]
+      }
+    },
+    "/objects/{bucket}/upload": {
+      "put": {
+        "operationId": "upload-object",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "bucket",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "explode": false,
+            "in": "query",
+            "name": "name",
+            "required": true,
+            "schema": {
+              "maxLength": 1024,
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/octet-stream": {
+              "schema": {
+                "contentMediaType": "application/octet-stream",
+                "format": "binary",
+                "type": "string"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ObjectEntry"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Upload an object (≤ 64 MiB)",
+        "tags": [
+          "kv"
+        ]
+      }
+    },
     "/overview": {
       "get": {
         "operationId": "get-overview",
@@ -6332,6 +7419,40 @@
           }
         },
         "summary": "TLS certificates and ACME status",
+        "tags": [
+          "system"
+        ]
+      }
+    },
+    "/system/config": {
+      "get": {
+        "operationId": "get-config",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ConfigSection"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Effective configuration (no secret values)",
         "tags": [
           "system"
         ]

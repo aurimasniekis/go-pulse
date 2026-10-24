@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/tls"
 	"crypto/x509"
+	"encoding/json"
 	"fmt"
 	"io"
 	"log/slog"
@@ -184,5 +185,18 @@ func TestPublicTLSWithAOPAndAuthErrors(t *testing.T) {
 			t.Fatalf("auth error not seen by the detector: %+v", a.Bans.Recent())
 		}
 		time.Sleep(50 * time.Millisecond)
+	}
+}
+
+func TestConfigSummaryHidesSecrets(t *testing.T) {
+	cfg := &config.Config{MasterKey: []byte("0123456789abcdef0123456789abcdef"), TelegramToken: "123:abc", BackupS3SecretKey: "s3cr3t"} // gitleaks:allow (test literal)
+	b, _ := json.Marshal(configSummary(cfg))
+	for _, secret := range []string{"123:abc", "s3cr3t", "0123456789abcdef"} {
+		if strings.Contains(string(b), secret) {
+			t.Fatalf("summary leaks %q", secret)
+		}
+	}
+	if !strings.Contains(string(b), `"env":"PULSE_TELEGRAM_BOT_TOKEN_FILE","value":"set","secret":true`) {
+		t.Fatalf("%s", b)
 	}
 }

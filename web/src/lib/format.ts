@@ -49,12 +49,42 @@ export function formatDuration(seconds: number | undefined | null): string {
   return out.join(' ') || '0s'
 }
 
-/** Absolute timestamp in local time with milliseconds, e.g. 2026-10-23 21:04:05.123. */
+export type TimeZonePref = 'local' | 'utc'
+const tzKey = 'pulse.timezone'
+
+function readTimeZone(): TimeZonePref {
+  try {
+    return globalThis.localStorage?.getItem(tzKey) === 'utc' ? 'utc' : 'local'
+  } catch {
+    return 'local'
+  }
+}
+
+let timeZone: TimeZonePref = readTimeZone()
+
+/** The display time zone (Settings page; kept in this browser only). */
+export function getTimeZone(): TimeZonePref {
+  return timeZone
+}
+
+export function setTimeZone(z: TimeZonePref) {
+  timeZone = z
+  try {
+    globalThis.localStorage?.setItem(tzKey, z)
+  } catch {
+    // private mode or blocked storage: the choice lasts for this page only
+  }
+}
+
+/** Absolute timestamp with milliseconds in the display time zone, e.g. 2026-10-23 21:04:05.123 (UTC gets a Z). */
 export function formatTime(iso: string | undefined | null): string {
   if (!iso) return '—'
   const d = new Date(iso)
   if (Number.isNaN(d.getTime()) || d.getFullYear() < 1971) return '—'
   const p = (n: number, w = 2) => String(n).padStart(w, '0')
+  if (timeZone === 'utc') {
+    return `${d.getUTCFullYear()}-${p(d.getUTCMonth() + 1)}-${p(d.getUTCDate())} ${p(d.getUTCHours())}:${p(d.getUTCMinutes())}:${p(d.getUTCSeconds())}.${p(d.getUTCMilliseconds(), 3)}Z`
+  }
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}.${p(d.getMilliseconds(), 3)}`
 }
 

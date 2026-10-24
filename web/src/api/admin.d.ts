@@ -552,6 +552,163 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/kv": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** KV and object buckets */
+        get: operations["list-buckets"];
+        put?: never;
+        /** Create a KV bucket */
+        post: operations["create-kv-bucket"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/kv/{bucket}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Delete a KV bucket */
+        delete: operations["delete-kv-bucket"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/kv/{bucket}/entry": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** A key's value and history */
+        get: operations["get-kv-entry"];
+        /** Set a key */
+        put: operations["put-kv-entry"];
+        post?: never;
+        /** Delete a key (keeps history unless purge) */
+        delete: operations["delete-kv-entry"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/kv/{bucket}/keys": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Keys with their latest revision */
+        get: operations["list-kv-keys"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/objects": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Create an object store */
+        post: operations["create-object-bucket"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/objects/{bucket}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Objects in a store */
+        get: operations["list-objects"];
+        put?: never;
+        post?: never;
+        /** Delete an object store */
+        delete: operations["delete-object-bucket"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/objects/{bucket}/download": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Download an object */
+        get: operations["download-object"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/objects/{bucket}/object": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Delete an object */
+        delete: operations["delete-object"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/objects/{bucket}/upload": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Upload an object (≤ 64 MiB) */
+        put: operations["upload-object"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/overview": {
         parameters: {
             query?: never;
@@ -774,6 +931,23 @@ export interface paths {
         };
         /** TLS certificates and ACME status */
         get: operations["get-certificates"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/system/config": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Effective configuration (no secret values) */
+        get: operations["get-config"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1133,6 +1307,16 @@ export interface components {
             /** Format: int64 */
             size: number;
         };
+        Buckets: {
+            /**
+             * Format: uri
+             * @description A URL to the JSON Schema for this object.
+             * @example /api/admin/v1/schemas/Buckets.json
+             */
+            readonly $schema?: string;
+            kv: components["schemas"]["KVBucket"][];
+            objects: components["schemas"]["ObjectBucket"][];
+        };
         CertificateInfo: {
             /** Format: int64 */
             days_left: number;
@@ -1227,6 +1411,16 @@ export interface components {
             /** @description ce-type for published events (github/stripe derive it from the payload) */
             type?: string;
         };
+        ConfigItem: {
+            env: string;
+            /** @description The value is a secret: only set/not set is shown */
+            secret?: boolean;
+            value: string;
+        };
+        ConfigSection: {
+            items: components["schemas"]["ConfigItem"][];
+            title: string;
+        };
         ConnDTO: {
             /** @description Account name (APP, SYS); set on the System page */
             account?: string;
@@ -1312,6 +1506,42 @@ export interface components {
             /** @description IP or CIDR; a single IPv6 address bans its /64 */
             network: string;
             reason: string;
+        };
+        "Create-kv-bucketRequest": {
+            /**
+             * Format: uri
+             * @description A URL to the JSON Schema for this object.
+             * @example /api/admin/v1/schemas/Create-kv-bucketRequest.json
+             */
+            readonly $schema?: string;
+            description?: string;
+            /**
+             * Format: int32
+             * @default 1
+             */
+            history: number;
+            /**
+             * Format: int64
+             * @description -1 or 0: unlimited
+             */
+            max_bytes?: number;
+            name: string;
+            /** Format: int64 */
+            ttl_seconds?: number;
+        };
+        "Create-object-bucketRequest": {
+            /**
+             * Format: uri
+             * @description A URL to the JSON Schema for this object.
+             * @example /api/admin/v1/schemas/Create-object-bucketRequest.json
+             */
+            readonly $schema?: string;
+            description?: string;
+            /** Format: int64 */
+            max_bytes?: number;
+            name: string;
+            /** Format: int64 */
+            ttl_seconds?: number;
         };
         "Create-tokenResponse": {
             /**
@@ -1659,6 +1889,81 @@ export interface components {
             max_storage: number;
             store_dir: string;
         };
+        KVBucket: {
+            /**
+             * Format: uri
+             * @description A URL to the JSON Schema for this object.
+             * @example /api/admin/v1/schemas/KVBucket.json
+             */
+            readonly $schema?: string;
+            /** Format: int64 */
+            bytes: number;
+            /** Format: int64 */
+            history: number;
+            name: string;
+            /** Format: int64 */
+            ttl_seconds: number;
+            /**
+             * Format: int64
+             * @description Stored values, including history and delete markers
+             */
+            values: number;
+        };
+        KVEntry: {
+            /**
+             * Format: uri
+             * @description A URL to the JSON Schema for this object.
+             * @example /api/admin/v1/schemas/KVEntry.json
+             */
+            readonly $schema?: string;
+            /** Format: date-time */
+            created: string;
+            /** @enum {string} */
+            encoding: "utf8" | "base64";
+            history: components["schemas"]["KVRevision"][];
+            key: string;
+            /** Format: int64 */
+            revision: number;
+            value: string;
+        };
+        KVKey: {
+            /**
+             * Format: uri
+             * @description A URL to the JSON Schema for this object.
+             * @example /api/admin/v1/schemas/KVKey.json
+             */
+            readonly $schema?: string;
+            /** Format: date-time */
+            created: string;
+            key: string;
+            /** @enum {string} */
+            operation: "put" | "delete" | "purge";
+            /** Format: int64 */
+            revision: number;
+            /** Format: int64 */
+            size: number;
+        };
+        KVKeys: {
+            /**
+             * Format: uri
+             * @description A URL to the JSON Schema for this object.
+             * @example /api/admin/v1/schemas/KVKeys.json
+             */
+            readonly $schema?: string;
+            keys: components["schemas"]["KVKey"][];
+            /** @description More keys exist than the limit */
+            truncated: boolean;
+        };
+        KVRevision: {
+            /** Format: date-time */
+            created: string;
+            /** @enum {string} */
+            operation: "put" | "delete" | "purge";
+            /** Format: int64 */
+            revision: number;
+            /** Format: int64 */
+            size: number;
+        };
         KeyCount: {
             /** Format: int64 */
             bytes: number;
@@ -1738,6 +2043,40 @@ export interface components {
              * @description Dropped by the rate limit or a full queue
              */
             suppressed: number;
+        };
+        ObjectBucket: {
+            /**
+             * Format: uri
+             * @description A URL to the JSON Schema for this object.
+             * @example /api/admin/v1/schemas/ObjectBucket.json
+             */
+            readonly $schema?: string;
+            description?: string;
+            /** @description Owned by pulsed (event blobs): read-only here */
+            managed: boolean;
+            name: string;
+            sealed: boolean;
+            /** Format: int64 */
+            size: number;
+            /** Format: int64 */
+            ttl_seconds: number;
+        };
+        ObjectEntry: {
+            /**
+             * Format: uri
+             * @description A URL to the JSON Schema for this object.
+             * @example /api/admin/v1/schemas/ObjectEntry.json
+             */
+            readonly $schema?: string;
+            /** Format: int32 */
+            chunks: number;
+            description?: string;
+            digest: string;
+            /** Format: date-time */
+            modified: string;
+            name: string;
+            /** Format: int64 */
+            size: number;
         };
         Offender: {
             /** Format: int64 */
@@ -1837,6 +2176,20 @@ export interface components {
             /** Format: int64 */
             seq: number;
             stream: string;
+        };
+        "Put-kv-entryRequest": {
+            /**
+             * Format: uri
+             * @description A URL to the JSON Schema for this object.
+             * @example /api/admin/v1/schemas/Put-kv-entryRequest.json
+             */
+            readonly $schema?: string;
+            /**
+             * @default utf8
+             * @enum {string}
+             */
+            encoding: "utf8" | "base64";
+            value: string;
         };
         RemoteBackup: {
             /** Format: int64 */
@@ -3607,6 +3960,432 @@ export interface operations {
             };
         };
     };
+    "list-buckets": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Buckets"];
+                };
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
+    "create-kv-bucket": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["Create-kv-bucketRequest"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["KVBucket"];
+                };
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
+    "delete-kv-bucket": {
+        parameters: {
+            query?: {
+                confirm?: string;
+            };
+            header?: never;
+            path: {
+                bucket: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
+    "get-kv-entry": {
+        parameters: {
+            query: {
+                key: string;
+            };
+            header?: never;
+            path: {
+                bucket: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["KVEntry"];
+                };
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
+    "put-kv-entry": {
+        parameters: {
+            query: {
+                key: string;
+            };
+            header?: never;
+            path: {
+                bucket: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["Put-kv-entryRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["KVKey"];
+                };
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
+    "delete-kv-entry": {
+        parameters: {
+            query: {
+                key: string;
+                purge?: boolean;
+            };
+            header?: never;
+            path: {
+                bucket: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
+    "list-kv-keys": {
+        parameters: {
+            query?: {
+                /** @description Key filter with * and > wildcards */
+                filter?: string;
+                limit?: number;
+            };
+            header?: never;
+            path: {
+                bucket: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["KVKeys"];
+                };
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
+    "create-object-bucket": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["Create-object-bucketRequest"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ObjectBucket"];
+                };
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
+    "list-objects": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                bucket: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ObjectEntry"][];
+                };
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
+    "delete-object-bucket": {
+        parameters: {
+            query?: {
+                confirm?: string;
+            };
+            header?: never;
+            path: {
+                bucket: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
+    "download-object": {
+        parameters: {
+            query: {
+                name: string;
+            };
+            header?: never;
+            path: {
+                bucket: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Object content */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/octet-stream": unknown;
+                };
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
+    "delete-object": {
+        parameters: {
+            query: {
+                name: string;
+            };
+            header?: never;
+            path: {
+                bucket: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
+    "upload-object": {
+        parameters: {
+            query: {
+                name: string;
+            };
+            header?: never;
+            path: {
+                bucket: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/octet-stream": string;
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ObjectEntry"];
+                };
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
     "get-overview": {
         parameters: {
             query?: {
@@ -4096,6 +4875,35 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Certificates"];
+                };
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
+    "get-config": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConfigSection"][];
                 };
             };
             /** @description Error */

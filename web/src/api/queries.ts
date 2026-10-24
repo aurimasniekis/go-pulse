@@ -166,6 +166,8 @@ export interface AuditQuery {
   actor?: string
   target?: string
   result?: 'ok' | 'denied' | 'error'
+  since?: string // ISO time
+  until?: string
 }
 
 export function useAudit(q: AuditQuery) {
@@ -233,4 +235,36 @@ export function useBackups() {
     // Poll faster while a backup or restore runs.
     refetchInterval: (q) => (q.state.data?.settings?.running || q.state.data?.last_restore?.status === 'running' ? 2_000 : 15_000),
   })
+}
+
+export function useBuckets() {
+  return useQuery({ queryKey: ['buckets'], queryFn: async () => unwrap(await admin.GET('/kv')), refetchInterval: 15_000 })
+}
+
+export function useKVKeys(bucket: string | null, filter: string) {
+  return useQuery({
+    queryKey: ['kv', bucket, 'keys', filter],
+    enabled: !!bucket,
+    queryFn: async () => unwrap(await admin.GET('/kv/{bucket}/keys', { params: { path: { bucket: bucket! }, query: { filter: filter || undefined } } })),
+  })
+}
+
+export function useKVEntry(bucket: string | null, key: string | null) {
+  return useQuery({
+    queryKey: ['kv', bucket, 'entry', key],
+    enabled: !!bucket && !!key,
+    queryFn: async () => unwrap(await admin.GET('/kv/{bucket}/entry', { params: { path: { bucket: bucket! }, query: { key: key! } } })),
+  })
+}
+
+export function useObjects(bucket: string | null) {
+  return useQuery({
+    queryKey: ['objects', bucket],
+    enabled: !!bucket,
+    queryFn: async () => unwrap(await admin.GET('/objects/{bucket}', { params: { path: { bucket: bucket! } } })),
+  })
+}
+
+export function useConfig() {
+  return useQuery({ queryKey: ['config'], queryFn: async () => unwrap(await admin.GET('/system/config')), staleTime: 60_000 })
 }

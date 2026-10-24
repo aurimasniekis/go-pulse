@@ -80,6 +80,7 @@ type Deps struct {
 	AccountNames map[string]string
 	Backups      *backup.Service
 	BackupStore  BackupStore
+	Config       []ConfigSection // the Settings page (built from the configuration at start)
 }
 
 func (d *Deps) accountNames() map[string]string {
@@ -149,6 +150,8 @@ func NewAdminAPI(mux *http.ServeMux, d *Deps) huma.API {
 	registerSecurity(api, d)
 	registerAlerts(api, d)
 	registerBackups(api, d)
+	registerKV(api, d)
+	registerConfig(api, d)
 	registerConnections(api, d)
 	return api
 }
@@ -276,4 +279,29 @@ func mapQueryErr(d *Deps, op string, err error) error {
 	default:
 		return d.internalErr(op, err)
 	}
+}
+
+// ConfigItem is one effective setting; secrets show only whether they are set.
+type ConfigItem struct {
+	Env    string `json:"env"`
+	Value  string `json:"value"`
+	Secret bool   `json:"secret,omitempty" doc:"The value is a secret: only set/not set is shown"`
+}
+
+// ConfigSection groups settings for the Settings page.
+type ConfigSection struct {
+	Title string       `json:"title"`
+	Items []ConfigItem `json:"items"`
+}
+
+func registerConfig(api huma.API, d *Deps) {
+	huma.Register(api, huma.Operation{OperationID: "get-config", Method: http.MethodGet, Path: "/system/config",
+		Summary: "Effective configuration (no secret values)", Tags: []string{"system"}},
+		func(_ context.Context, _ *struct{}) (*struct{ Body []ConfigSection }, error) {
+			out := d.Config
+			if out == nil {
+				out = []ConfigSection{}
+			}
+			return &struct{ Body []ConfigSection }{out}, nil
+		})
 }

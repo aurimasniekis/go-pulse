@@ -188,3 +188,13 @@ object store, including earlier servers'), `POST /backups/{id}/plan` (dry run) a
 "streams": [...], "replace": bool}`; the identity is used for that request only. A wrong identity, or an object that
 fails its integrity check, returns 422.
 
+## KV and objects (PL-UI-004)
+
+Admin: `GET /kv` (KV and object buckets), `POST /kv`, `DELETE /kv/{bucket}?confirm=`, `GET /kv/{bucket}/keys?filter=&limit=`
+(latest revision per key; `truncated` when more exist), `GET|PUT|DELETE /kv/{bucket}/entry?key=` (value as utf8 or base64,
+history; `?purge=true` drops history), `POST /objects`, `DELETE /objects/{bucket}?confirm=`, `GET /objects/{bucket}`,
+`GET /objects/{bucket}/download?name=` (attachment, `nosniff`), `PUT /objects/{bucket}/upload?name=` (raw body ≤ 64 MiB),
+`DELETE /objects/{bucket}/object?name=`. The managed `blobs` store is read-only here (409). Every change is audited.
+
+`GET /system/config` returns the effective configuration for the Settings page; secrets appear only as set / not set.
+
