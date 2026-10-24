@@ -37,8 +37,12 @@ versioning: [docs/VERSIONING.md](docs/VERSIONING.md).
   `pulsed backup keygen|list|run|restore`; SeaweedFS in the dev stack.
 - M12: KV & Objects browser, Settings page (effective configuration, display time zone), audit time filters, and a
   Playwright check of every page.
+- M13: Python SDK (`sdk/python`) and TypeScript SDK (`@pulse/sdk`, node and browser over `/ws`) with conformance and
+  Go ↔ Python ↔ TS interop tests.
 
 ### Fixed
 - Admin API requests canceled by the browser return 499 instead of logging an internal error.
+- Go SDK: re-subscribing a durable with a different start position failed with "deliver policy can not be updated";
+  it now binds to the existing consumer.
 - The e2e overview test no longer depends on data left by earlier runs.
 - `make secrets` ignores the user's git config: a global `color.ui=always` made gitleaks parse no commits locally.

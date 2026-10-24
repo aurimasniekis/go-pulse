@@ -10,7 +10,7 @@ GOVULNCHECK  ?= $(GO) run golang.org/x/vuln/cmd/govulncheck@v1.9.0
 DEV          := docker compose -f deploy/compose.dev.yaml -p pulse-dev
 
 .DEFAULT_GOAL := help
-.PHONY: help api test-nft test-acme test-s3 drill web web-dev build build-go test race vet lint vuln secrets web-test check image dev-up dev-down dev-logs dev-reset spike e2e clean
+.PHONY: help api test-nft test-acme test-s3 drill sdk-test sdk-build test-sdk-interop web web-dev build build-go test race vet lint vuln secrets web-test check image dev-up dev-down dev-logs dev-reset spike e2e clean
 
 help: ## List targets
 	@awk 'BEGIN {FS = ":.*## "} /^[a-zA-Z_-]+:.*## / {printf "  \033[36m%-14s\033[0m %s\n", $$1, $$2}' $(MAKEFILE_LIST)
@@ -91,6 +91,21 @@ test-nft: ## banagent against real nftables in a privileged Linux container (nee
 test-acme: ## ACME DNS-01 against pebble, NATS reload and served-cert check (needs Docker)
 	./scripts/test-acme.sh
 
+sdk/python/.venv:
+	python3 -m venv sdk/python/.venv
+	sdk/python/.venv/bin/pip install -q -e 'sdk/python[test]'
+
+sdk-test: sdk/python/.venv ## Python and TS SDK unit tests (conformance vectors)
+	sdk/python/.venv/bin/pytest -q sdk/python/tests
+	cd sdk/ts && pnpm install --frozen-lockfile --silent && pnpm -s typecheck && pnpm -s test
+
+sdk-build: ## Build the TS SDK (dist/, including the browser bundle the e2e uses)
+	cd sdk/ts && pnpm install --frozen-lockfile --silent && pnpm -s build
+
+test-sdk-interop: sdk/python/.venv ## Go ↔ Python ↔ TS (node tls:// and ws://) interop against a real server
+	cd sdk/ts && pnpm install --frozen-lockfile --silent && pnpm -s build
+	$(GO) test -tags interop -count=1 -v ./internal/sdktest/
+
 drill: ## Restore drill, the PL-BAK-007 release gate (embedded NATS; no Docker)
 	$(GO) test -race -count=1 -v -run TestRestoreDrill ./internal/backup/
 
@@ -100,7 +115,7 @@ test-s3: ## Backups against a real S3 service (SeaweedFS in Docker)
 spike: ## M2 sizing spike: ~10 GB / 5k subjects into NATS under mem_limit 900m (heavy; run only when intended)
 	./scripts/spike.sh
 
-e2e: ## Playwright against the dev stack (make dev-up first)
+e2e: sdk-build ## Playwright against the dev stack (make dev-up first)
 	cd web && pnpm e2e
 
 clean: ## Remove build output

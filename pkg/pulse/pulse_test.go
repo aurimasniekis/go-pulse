@@ -220,7 +220,9 @@ func TestDurableTypedHandlerAndRedelivery(t *testing.T) {
 		got <- v.Door
 		return nil
 	})
-	s, err := c.Subscribe(ctx, "evt.home.>", h, pulse.Durable("doors"))
+	// Start from a time: resuming below without it must bind to the existing durable, not try to update its start
+	// position (regression: "deliver policy can not be updated").
+	s, err := c.Subscribe(ctx, "evt.home.>", h, pulse.Durable("doors"), pulse.Since(time.Now().Add(-time.Hour)))
 	if err != nil {
 		t.Fatal(err)
 	}

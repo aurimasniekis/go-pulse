@@ -1,0 +1,36 @@
+{
+  "name": "@pulse/sdk",
+  "version": "0.1.0",
+  "description": "TypeScript SDK for Pulse, a personal durable event bus on NATS JetStream (node and browser)",
+  "license": "UNLICENSED",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./browser": "./dist/pulse.browser.js"
+  },
+  "files": ["dist", "src"],
+  "engines": { "node": ">=22" },
+  "scripts": {
+    "build": "tsc -p tsconfig.json && esbuild src/browser.ts --bundle --format=iife --global-name=Pulse --target=es2022 --outfile=dist/pulse.browser.js",
+    "prepare": "pnpm run build",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@nats-io/jetstream": "3.4.0",
+    "@nats-io/nats-core": "3.4.0",
+    "@nats-io/transport-node": "3.4.0"
+  },
+  "devDependencies": {
+    "@types/node": "24.10.1",
+    "esbuild": "0.28.2",
+    "typescript": "5.9.3",
+    "vitest": "5.0.5"
+  },
+  "packageManager": "pnpm@10.11.0"
+}

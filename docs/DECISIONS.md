@@ -387,6 +387,33 @@
     (tens of GB); revisit if a stream grows far beyond that.
   - A snapshot after a mid-window delete re-uploads that window.
 
+### ADR-0036 — Python and TypeScript SDKs stay inside a scoped client's grants
+- **Status:** accepted (M13)
+- **Context:** Scoped clients may only create consumers through the filtered create subject
+  (`$JS.API.CONSUMER.CREATE.<stream>.<name>.<filter>`), pull with `MSG.NEXT`, and direct-get by subject (ADR-0025).
+  Library conveniences that use other subjects would fail with permission violations.
+- **Decision:**
+  - **Python** (nats-py 2.x): consumers are created by name with one `filter_subject`, so nats-py uses the filtered
+    create subject, then read with pull fetches. The ordered replay is pulsed's own loop: ack-none, memory storage,
+    `inactive_threshold` 5 min. It watches consumer sequence continuity and recreates from the last stream
+    sequence + 1 after a gap or a lost consumer.
+  - **TS** (@nats-io v3.4.0): ordered consumers get `filter_subjects` as a string (not an array), which keeps the
+    filtered create subject. Durables are added with `name` + `durable_name`. The TCP transport is imported
+    dynamically, so the esbuild browser bundle stays free of node modules. `ws://` / `wss://` use `wsconnect` in
+    browsers and node ≥ 22.
+  - **Blobs**: the NATS Object Store protocol (meta with `Nats-Rollup: sub`, padded base64url names, 128 KiB chunks,
+    `SHA-256=` digest) is implemented directly over the granted subjects. It is wire-compatible with Go's
+    `jetstream.ObjectStore`, which the interop test proves in both directions.
+  - **Durables**: all SDKs bind to an existing durable and create it only when missing. Re-subscribing with another
+    start position no longer fails with "deliver policy can not be updated"; this fixed a bug the interop test found
+    in the Go SDK. Leaving a loop is at-least-once: unsettled and prefetched messages are redelivered after `ack_wait`.
+  - **Times** are integer nanoseconds in both SDKs (Python `int`, TS `bigint`), because `ce-time` and stream
+    timestamps carry nanoseconds that `datetime` / `Date` would round.
+  - The TS SDK builds with TypeScript 5.9.3, so `prepare` works for consumers on the current stable compiler; the
+    dashboard uses TypeScript 7.
+- **Consequences:** SDK behaviour around consumers is pulsed's code, not the libraries'. Library upgrades are checked
+  by `make test-sdk-interop` (CI job `sdk`).
+
 ## 2. Open review items
 
 | ID | Item | Default until decided |

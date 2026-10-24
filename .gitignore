@@ -36,3 +36,10 @@ __pycache__/
 .idea/
 .vscode/
 .DS_Store
+
+# SDK build and test artefacts
+/sdk/python/.venv/
+/sdk/python/*.egg-info/
+__pycache__/
+/sdk/ts/node_modules/
+/sdk/ts/dist/

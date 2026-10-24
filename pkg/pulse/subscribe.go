@@ -157,9 +157,14 @@ func (c *Client) Subscribe(ctx context.Context, filter string, h Handler, opts .
 		if o.deliver == jetstream.DeliverByStartSequencePolicy {
 			cfg.OptStartSeq = o.seq
 		}
-		cons, err = c.js.CreateOrUpdateConsumer(ctx, o.stream, cfg)
-		if err != nil && errors.Is(err, jetstream.ErrConsumerExists) {
-			cons, err = c.js.Consumer(ctx, o.stream, cfg.Durable)
+		// An existing durable keeps its server-side position and configuration: bind to it. Updating it would fail
+		// for start-position changes ("deliver policy can not be updated") and is not what resuming means.
+		cons, err = c.js.Consumer(ctx, o.stream, cfg.Durable)
+		if errors.Is(err, jetstream.ErrConsumerNotFound) {
+			cons, err = c.js.CreateConsumer(ctx, o.stream, cfg)
+			if errors.Is(err, jetstream.ErrConsumerExists) {
+				cons, err = c.js.Consumer(ctx, o.stream, cfg.Durable)
+			}
 		}
 	}
 	if err != nil {

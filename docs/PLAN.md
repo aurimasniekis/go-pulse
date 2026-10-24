@@ -172,8 +172,8 @@ Status values: `planned`, `in-progress`, `implemented`, `tested`, `externally-ve
 | M9 | ACME | tested against pebble (Let's Encrypt/Cloudflare pending) | 3155b52 |
 | M10 | Observability | tested (live Telegram/Discord pending) | fc24724 |
 | M11 | Backups | tested; gate PL-BAK-007 passed (production S3 pending) | 20db4e6 |
-| M12 | Remaining UI | tested | (this commit) |
-| M13 | Python and TS SDKs | planned | |
+| M12 | Remaining UI | tested | 281a9ba |
+| M13 | Python and TS SDKs | tested | (this commit) |
 | M14 | Ansible (events-wan-lt) | planned | n/a (no commits in that repo) |
 | M15 | Terraform + deploy (events-wan-lt) | planned | n/a |
 
@@ -195,6 +195,7 @@ Status values: `planned`, `in-progress`, `implemented`, `tested`, `externally-ve
 | 2026-10-24 | M10 | Prometheus registry on the metrics listener (pulsed counters, scrape-time VARZ/JSZ/stream gauges, bounded route labels), alert engine (9 built-ins incl. `nats_down`, custom threshold rules on rollups, pending/firing/resolved in SQLite, reminders, `_sys.alert.<rule>` events, history pruned at 90 d), Telegram and Discord notifiers (file secrets, rate limit, retries, URL-free errors), alerts admin API + Alerts page, System page (runtime, VARZ, connections), Alloy in the dev stack (target verified `up`) and a reference prod config. Found: Huma ignores path params on embedded input structs (inlined); e2e overview test was flaky because earlier runs' domains tie in the top-10 (seeding now gives the run a clear lead). |
 | 2026-10-24 | M11 | Backups (ADR-0035). Gate PL-BAK-007 passed: NATS 2.15 snapshots are NATSARC1 and restore keeps sequences and timestamps; republishing keeps none (0/15). pulsed snapshots every APP stream, stores message records in sequence-anchored buckets (HMAC names, S2 + age, deduplicated: an unchanged night uploads ~7 KB), plus `pulse.db` (VACUUM INTO) and `keys.enc`; verification, GFS 7/4/12 with chunk GC, authenticated restore (manifest MAC, chunk HMACs; replace pre-checks all chunks), background restore jobs, `pulsed backup keygen|list|run|restore`, Backups page, `backup_stale` alert wired, SeaweedFS 4.48 in the dev stack, `make test-s3`. Found and fixed while testing: the end-of-snapshot message has no status header when the archive fits one chunk; a restore stream filter that opened up after the first match (regression test). |
 | 2026-10-24 | M12 | KV & Objects browser (buckets, keys with filter and history, set/delete, object upload ≤ 64 MiB / download as attachment / delete; `blobs` read-only), Settings page (effective configuration with secrets as set/not set, per-browser time zone and colour scheme), audit time-range filters, every-page Playwright smoke (heading, no page/console errors), nav ↔ route vitest, missing-UI handler test. The Alerts (M10) and Backups (M11) pages landed with their milestones. e2e overview seeding now beats the current top-10 leader instead of relying on fixed counts (35/35 three runs in a row). |
+| 2026-10-24 | M13 | Python SDK (`sdk/python`, nats-py: connect with creds, publish, ordered/durable subscribe, request, blobs) and TS SDK (`sdk/ts`, @nats-io v3.4.0: node tls:// and ws://, browser bundle) with the same surface as the dashboard snippets; both pass the 37 conformance vectors; Go ↔ Python ↔ TS interop (`make test-sdk-interop`: identical replay with since, durable resume, blobs both ways, publish-back) and a real-browser replay over `/ws` through the dev stack (e2e sdk-browser.spec); CI job `sdk`. Found and fixed: re-subscribing a Go durable with a different start position failed ("deliver policy can not be updated"); regression test added. ADR-0036. |
 
 ## 6. Acceptance checklist (mapped to requirement IDs)
 
@@ -383,12 +384,12 @@ E browser E2E · C CI/static check · S spike/perf · R restore drill · X exter
 #### PL-SDK — SDKs and CLI
 
 - [x] `PL-SDK-001` Go SDK — M2 — ✅ tested: pkg/pulse integration tests (publish, since, durable + redelivery, Handle[T], blobs); Request untested
-- [ ] `PL-SDK-002` Python SDK — M13
-- [ ] `PL-SDK-003` TS SDK — M13
-- [ ] `PL-SDK-004` Conformance — M13
-- [ ] `PL-SDK-005` Interop e2e — M13
+- [x] `PL-SDK-002` Python SDK — M13 — ✅ tested: sdk/python conformance (pytest), interop (internal/sdktest TestInterop/python)
+- [x] `PL-SDK-003` TS SDK — M13 — ✅ tested: sdk/ts conformance (vitest), interop over tls:// and ws:// (TestInterop/ts-node, ts-ws), real browser over /ws (e2e sdk-browser.spec)
+- [x] `PL-SDK-004` Conformance — M13 — ✅ tested: Go, Python and TS pass sdk/conformance/vectors.json
+- [x] `PL-SDK-005` Interop e2e — M13 — ✅ tested: make test-sdk-interop (Go publishes 6 envelope shapes incl. a blob; Python/TS replay identically, resume durables, publish events + blobs Go reads); browser via /ws in e2e
 - [ ] `PL-SDK-006` CLI — M2 — ◐ partial: `context`, `pub`, `sub --since/--seq/--new/--durable/--json` tested (cmd/pulse); `req`, `streams`, `tail`, `clients`, `backup` pending
-- [x] `PL-SDK-007` Inbox prefix — M2 — ✅ tested: pkg/pulse (inbox prefix from creds tag; client permissions only allow _INBOX_<id>)
+- [x] `PL-SDK-007` Inbox prefix — M2/M13 — ✅ tested: pkg/pulse (inbox prefix from creds tag; client permissions only allow _INBOX_<id>); Python and TS derive it from the creds and run within the scoped grants in TestInterop
 
 #### PL-OPS — Packaging and operations
 
