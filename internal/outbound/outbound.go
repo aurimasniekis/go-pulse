@@ -26,6 +26,7 @@ import (
 	"github.com/oklog/ulid/v2"
 
 	"github.com/aurimasniekis/go-pulse/internal/audit"
+	"github.com/aurimasniekis/go-pulse/internal/metrics"
 	"github.com/aurimasniekis/go-pulse/internal/netguard"
 	"github.com/aurimasniekis/go-pulse/internal/secretbox"
 	"github.com/aurimasniekis/go-pulse/internal/store"
@@ -423,6 +424,7 @@ func (s *Service) PruneDeliveries(ctx context.Context) error {
 }
 
 func (s *Service) record(ctx context.Context, d Delivery) {
+	metrics.OutboundDeliveries.WithLabelValues(d.Outcome).Inc()
 	if len(d.ResponseExcerpt) > excerptLimit {
 		d.ResponseExcerpt = d.ResponseExcerpt[:excerptLimit]
 	}

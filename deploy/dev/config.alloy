@@ -1,0 +1,28 @@
+// Dev Alloy config (PL-OBS-008): scrapes pulsed over the compose network and the container's own view of host
+// metrics. Nothing leaves the machine: no remote_write is configured. Inspect targets at http://127.0.0.1:12345.
+
+prometheus.exporter.unix "host" { }
+
+prometheus.scrape "host" {
+  targets         = prometheus.exporter.unix.host.targets
+  scrape_interval = "30s"
+  forward_to      = []
+}
+
+prometheus.scrape "pulsed" {
+  targets         = [{"__address__" = "pulsed:9464", "job" = "pulsed"}]
+  scrape_interval = "15s"
+  forward_to      = []
+}
+
+// To ship metrics, add a remote_write and point both scrapes' forward_to at it:
+//
+// prometheus.remote_write "default" {
+//   endpoint {
+//     url = "https://prometheus.example.com/api/v1/write"
+//     basic_auth {
+//       username      = "pulse"
+//       password_file = "/run/secrets/remote_write_password"
+//     }
+//   }
+// }

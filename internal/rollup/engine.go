@@ -15,6 +15,7 @@ import (
 
 	"github.com/nats-io/nats.go/jetstream"
 
+	"github.com/aurimasniekis/go-pulse/internal/metrics"
 	"github.com/aurimasniekis/go-pulse/internal/store"
 )
 
@@ -330,6 +331,8 @@ func (w *worker) handle(m jetstream.Msg) {
 	full := win.n >= maxPendingMessages
 	w.mu.Unlock()
 	w.e.cache.add(w.stream, ts-ts%60, size)
+	metrics.RollupEvents.WithLabelValues(w.stream).Inc()
+	metrics.RollupBytes.WithLabelValues(w.stream).Add(float64(size))
 	if full {
 		go func() { _ = w.flush(w.ctx) }()
 	}

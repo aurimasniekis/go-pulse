@@ -20,6 +20,7 @@ import (
 	"github.com/oklog/ulid/v2"
 
 	"github.com/aurimasniekis/go-pulse/internal/audit"
+	"github.com/aurimasniekis/go-pulse/internal/metrics"
 	"github.com/aurimasniekis/go-pulse/internal/secretbox"
 	"github.com/aurimasniekis/go-pulse/internal/store"
 	"github.com/aurimasniekis/go-pulse/pkg/pulse/envelope"
@@ -312,6 +313,7 @@ func (s *Service) Handler() http.Handler {
 		ip := s.ClientIP(r)
 		if err := Verify(h.Kind, h.Config, secret, r.Header, body, s.now()); err != nil {
 			s.count(r.Context(), h.ID, false)
+			metrics.InboundHooks.WithLabelValues("rejected").Inc()
 			if s.OnFailure != nil {
 				s.OnFailure(ip, "webhook")
 			}
@@ -326,11 +328,14 @@ func (s *Service) Handler() http.Handler {
 		}
 		ack, err := s.js.PublishMsg(r.Context(), msg)
 		if err != nil {
+			metrics.InboundHooks.WithLabelValues("error").Inc()
 			s.log.Error("webhook publish", "hook", h.Name, "err", err)
 			http.Error(w, "temporarily unavailable", http.StatusServiceUnavailable)
 			return
 		}
 		s.count(r.Context(), h.ID, true)
+		metrics.InboundHooks.WithLabelValues("accepted").Inc()
+		metrics.IngestEvents.WithLabelValues("hook").Inc()
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusAccepted)
 		_ = json.NewEncoder(w).Encode(map[string]any{"seq": ack.Sequence, "duplicate": ack.Duplicate})

@@ -28,7 +28,12 @@ versioning: [docs/VERSIONING.md](docs/VERSIONING.md).
 - M9: Let's Encrypt for raw NATS (`PULSE_ACME_*`): DNS-01 via Cloudflare, served next to the internal leaf by SNI,
   verified after reload, renewed early; `GET /system/certificates`; System page with server, NATS, JetStream and
   certificate status; `make test-acme` (pebble).
+- M10: Prometheus `/metrics` (pulsed, NATS, JetStream, streams, Go runtime); alert engine with built-in and custom
+  threshold rules, `_sys.alert.<rule>` events and history; Telegram and Discord notifiers (`PULSE_TELEGRAM_*`,
+  `PULSE_DISCORD_*`); Alerts page; System page with runtime, server stats and connections; Grafana Alloy in the dev
+  stack and a reference config.
 
 ### Fixed
 - Admin API requests canceled by the browser return 499 instead of logging an internal error.
+- The e2e overview test no longer depends on data left by earlier runs.
 - `make secrets` ignores the user's git config: a global `color.ui=always` made gitleaks parse no commits locally.

@@ -77,6 +77,16 @@ type Config struct {
 	ACMECAFile       string   // extra roots for the ACME directory's TLS (pebble)
 	ACMENATSAddr     string   // host:port to verify the served certificate on (default: from PULSE_NATS_URL)
 
+	// Alerts and notifiers (PL-OBS-004..006)
+	AlertInterval       time.Duration
+	AlertRepeat         time.Duration // < 0 disables reminders
+	TelegramToken       string
+	TelegramChatID      string
+	TelegramAPIURL      string
+	TelegramMinSeverity string
+	DiscordWebhookURL   string
+	DiscordMinSeverity  string
+
 	ShutdownTimeout time.Duration
 }
 
@@ -137,6 +147,23 @@ func Load(getenv Getenv) (*Config, error) {
 		ACMEDNSResolvers:       e.list("PULSE_ACME_DNS_RESOLVERS"),
 		ACMECAFile:             e.str("PULSE_ACME_CA_FILE", ""),
 		ACMENATSAddr:           e.str("PULSE_ACME_NATS_ADDR", ""),
+	}
+	c.AlertInterval = e.dur("PULSE_ALERT_INTERVAL", time.Minute)
+	if v := strings.TrimSpace(getenv("PULSE_ALERT_REPEAT")); v == "off" || v == "0" {
+		c.AlertRepeat = -1
+	} else {
+		c.AlertRepeat = e.dur("PULSE_ALERT_REPEAT", 24*time.Hour)
+	}
+	c.TelegramChatID = e.str("PULSE_TELEGRAM_CHAT_ID", "")
+	c.TelegramAPIURL = e.str("PULSE_TELEGRAM_API_URL", "https://api.telegram.org")
+	c.TelegramMinSeverity = e.str("PULSE_TELEGRAM_MIN_SEVERITY", "warning")
+	c.DiscordMinSeverity = e.str("PULSE_DISCORD_MIN_SEVERITY", "warning")
+	for name, dst := range map[string]*string{"PULSE_TELEGRAM_BOT_TOKEN": &c.TelegramToken, "PULSE_DISCORD_WEBHOOK_URL": &c.DiscordWebhookURL} {
+		if v, err := e.secret(name, c.Profile == ProfileProd); err != nil {
+			e.errs = append(e.errs, err)
+		} else {
+			*dst = v
+		}
 	}
 	if c.ACMEEnabled && c.ACMEDNSProvider == "cloudflare" {
 		if tok, err := e.secret("PULSE_ACME_CF_TOKEN", c.Profile == ProfileProd); err != nil {
@@ -234,6 +261,22 @@ func (c *Config) Validate() error {
 		default:
 			errs = append(errs, fmt.Errorf("PULSE_ACME_DNS_PROVIDER must be cloudflare or challtestsrv, got %q", c.ACMEDNSProvider))
 		}
+	}
+	if (c.TelegramToken == "") != (c.TelegramChatID == "") {
+		errs = append(errs, errors.New("the Telegram notifier needs PULSE_TELEGRAM_BOT_TOKEN_FILE and PULSE_TELEGRAM_CHAT_ID together"))
+	}
+	if c.DiscordWebhookURL != "" && !strings.HasPrefix(c.DiscordWebhookURL, "https://") && c.Profile == ProfileProd {
+		errs = append(errs, errors.New("PULSE_DISCORD_WEBHOOK_URL_FILE must contain an https:// URL"))
+	}
+	for k, v := range map[string]string{"PULSE_TELEGRAM_MIN_SEVERITY": c.TelegramMinSeverity, "PULSE_DISCORD_MIN_SEVERITY": c.DiscordMinSeverity} {
+		switch v {
+		case "info", "warning", "critical":
+		default:
+			errs = append(errs, fmt.Errorf("%s must be info, warning or critical, got %q", k, v))
+		}
+	}
+	if c.AlertInterval < 5*time.Second {
+		errs = append(errs, errors.New("PULSE_ALERT_INTERVAL must be at least 5s"))
 	}
 	if c.BanThreshold < 2 || c.BanWindow < time.Minute || c.BanDuration < time.Minute || c.BanMax < c.BanDuration {
 		errs = append(errs, errors.New("ban settings out of range (threshold ≥ 2, window ≥ 1m, duration ≥ 1m, max ≥ duration)"))

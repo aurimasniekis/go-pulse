@@ -26,6 +26,7 @@
 | PL-EDGE | I (AOP with a locally generated CA and client cert, real-IP rules, XFF rewrite, route allowlist) + Docker ACME test against pebble/challtestsrv with a real nats-server (`make test-acme`) + X |
 | PL-BAN | U (windows, escalation, never-ban) + I (advisory → ban) + Linux-only nft test (privileged container) + X |
 | PL-HOOK | U (GitHub/Stripe doc vectors, HMAC, tolerance) + I (dispatcher retries against httptest, SSRF dialer) |
+| PL-OBS | U (route labels, notifier payloads/limits/secrecy, rule validation) + I (alert transitions on SQLite, alert events on NATS, /metrics scrape of a running app) + E (Alerts and System pages) + X (live Telegram/Discord) |
 | PL-BAK | R (restore drill incl. timestamp preservation) |
 | PL-UI | U (vitest) + E (Playwright smoke for every page) |
 | PL-SDK | U (conformance) + I (interop e2e) |

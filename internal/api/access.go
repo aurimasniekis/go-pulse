@@ -55,12 +55,14 @@ type ConnDTO struct {
 	Lang       string    `json:"lang"`
 	Version    string    `json:"version"`
 	Kind       string    `json:"kind" doc:"Client or WebSocket"`
+	Account    string    `json:"account,omitempty" doc:"Account name (APP, SYS); set on the System page"`
+	Pending    int       `json:"pending_bytes"`
 }
 
 func connDTO(c sysapi.ConnInfo) ConnDTO {
 	return ConnDTO{CID: c.Cid, IP: c.IP, Port: c.Port, Start: c.Start, LastActive: c.LastActivity, RTT: c.RTT, Uptime: c.Uptime,
 		Subs: c.NumSubs, InMsgs: c.InMsgs, OutMsgs: c.OutMsgs, InBytes: c.InBytes, OutBytes: c.OutBytes, Name: c.Name, Lang: c.Lang,
-		Version: c.Version, Kind: c.Type}
+		Version: c.Version, Kind: c.Type, Pending: c.Pending}
 }
 
 func (d *Deps) clientDTO(ctx context.Context, c *clients.Client, counts map[string]int) ClientDTO {

@@ -31,6 +31,7 @@ import (
 	"github.com/go-acme/lego/v4/registration"
 
 	"github.com/aurimasniekis/go-pulse/internal/certs"
+	"github.com/aurimasniekis/go-pulse/internal/metrics"
 	"github.com/aurimasniekis/go-pulse/internal/secretbox"
 )
 
@@ -200,8 +201,10 @@ func (m *Manager) Ensure(ctx context.Context) error {
 	err := m.issue(ctx)
 	m.mu.Lock()
 	if err != nil {
+		metrics.ACMEAttempts.WithLabelValues("error").Inc()
 		m.st.LastError = err.Error()
 	} else {
+		metrics.ACMEAttempts.WithLabelValues("ok").Inc()
 		m.st.LastError, m.st.LastSuccess = "", m.o.Now().UTC()
 	}
 	m.mu.Unlock()

@@ -16,6 +16,7 @@ import (
 	"github.com/nats-io/nats.go/jetstream"
 
 	"github.com/aurimasniekis/go-pulse/internal/acme"
+	"github.com/aurimasniekis/go-pulse/internal/alerts"
 	"github.com/aurimasniekis/go-pulse/internal/api"
 	"github.com/aurimasniekis/go-pulse/internal/audit"
 	"github.com/aurimasniekis/go-pulse/internal/auth"
@@ -25,6 +26,7 @@ import (
 	"github.com/aurimasniekis/go-pulse/internal/clients"
 	"github.com/aurimasniekis/go-pulse/internal/config"
 	"github.com/aurimasniekis/go-pulse/internal/hooks"
+	"github.com/aurimasniekis/go-pulse/internal/metrics"
 	"github.com/aurimasniekis/go-pulse/internal/natsconn"
 	"github.com/aurimasniekis/go-pulse/internal/outbound"
 	"github.com/aurimasniekis/go-pulse/internal/query"
@@ -43,6 +45,7 @@ type App struct {
 	DB       *store.DB
 	Keys     *bootstrap.KeySet
 	ACME     *acme.Manager
+	Alerts   *alerts.Engine
 	SysConn  *nats.Conn
 	AppConn  *nats.Conn
 	JS       jetstream.JetStream
@@ -185,6 +188,11 @@ func Start(ctx context.Context, cfg *config.Config, log *slog.Logger) (*App, err
 	if err := a.setupACME(cfg, deps); err != nil {
 		return nil, fmt.Errorf("acme: %w", err)
 	}
+	deps.Started = time.Now().UTC()
+	deps.AccountNames = map[string]string{a.Keys.Pub(a.Keys.SysAccount): "SYS", a.Keys.Pub(a.Keys.AppAccount): "APP"}
+	if err := a.setupObservability(ctx, cfg, deps); err != nil {
+		return nil, fmt.Errorf("observability: %w", err)
+	}
 	if err := a.serve(ctx, "admin", cfg.AdminAddr, api.NewAdmin(deps)); err != nil {
 		return nil, err
 	}
@@ -240,6 +248,7 @@ func (a *App) goLoop(ctx context.Context, name string, every time.Duration, fn f
 func (a *App) startMetrics(ctx context.Context) error {
 	mux := http.NewServeMux()
 	a.metrics = mux
+	mux.Handle("GET /metrics", metrics.Handler())
 	mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, _ *http.Request) { _, _ = w.Write([]byte("ok\n")) })
 	mux.HandleFunc("GET /readyz", func(w http.ResponseWriter, _ *http.Request) {
 		if !a.Ready() {
@@ -297,6 +306,9 @@ func (a *App) Shutdown(ctx context.Context) {
 
 // Close releases everything without draining.
 func (a *App) Close() {
+	if a.Alerts != nil {
+		metrics.SetSources(metrics.Sources{}) // scrapes must not touch closed connections
+	}
 	if a.stopLoops != nil {
 		a.stopLoops()
 	}

@@ -29,7 +29,8 @@ Every other path on the public listener returns 404 (PL-EDGE-001). The public li
 
 | Method | Path | Purpose |
 |---|---|---|
-| GET | `/system/info` | Version, profile, auth mode, NATS connection, JetStream usage |
+| GET | `/system/info` | Version, profile, auth mode, NATS connection and server stats (VARZ), JetStream usage, pulsed runtime |
+| GET | `/system/connections` | NATS connections across accounts (SYS, APP), busiest first (`sort`, `limit`) |
 | GET | `/system/certificates` | Internal CA, NATS leaf, Let's Encrypt, origin and AOP CA certificates (names, issuer, serial, expiry, days left) plus ACME status when enabled (ADR-0032) |
 | GET | `/streams` | Streams in the APP account (`kind`: stream, kv, object; `managed` for EVENTS and blobs) |
 | GET/PUT/DELETE | `/streams/{name}` | Read, update, delete a user stream (EVENTS and blobs are managed) |
@@ -134,3 +135,46 @@ Admin endpoints: `/hooks/inbound` (CRUD, `rotate_secret`), `/hooks/outbound` (CR
 
 Admin: `GET /security` (edge status, active bans, history, recent failures, offenders, allowlist), `POST /security/bans`,
 `POST /security/bans/lift`, `POST /security/allowlist`, `POST /security/allowlist/remove`.
+
+## Alerts (PL-OBS-004..006, ADR-0033)
+
+Admin: `GET /alerts` (rules with live instances, notifier counters, firing count), `POST /alerts/rules` (custom threshold
+rule), `PUT /alerts/rules/{id}`, `DELETE /alerts/rules/{id}` (custom only; built-ins return 409), `POST /alerts/evaluate`,
+`GET /alerts/history?rule=&before_id=&limit=`, `POST /alerts/notifiers/{name}/test` (502 with the reason on failure).
+
+Built-in rules (ids = kinds): `disk_forecast` (30 d), `stream_usage` (85 %), `cert_expiry` (14 d), `backup_stale` (36 h,
+reports *no data* until backups exist), `client_expiry` (30 d, PL-AUTH-012), `ban_storm` (10 in 10 min),
+`slow_consumers` (new ones in 10 min), `dead_letters` (24 h), `nats_down` (held 60 s). Custom `threshold` rules count
+events or payload bytes for the whole stream, one ce-type or one subject prefix over a window, `above` or `below` a
+threshold (`below 1` is a dead-man switch). Prefixes of 1–2 tokens are counted per minute, 3 tokens per hour, 4 per day;
+the window must be a multiple of that step, and only completed buckets count.
+
+Each firing/resolved transition is written to the history and published (core NATS, APP account, not persisted) as:
+
+```
+subject:  _sys.alert.<rule id>                       e.g. _sys.alert.cert_expiry, _sys.alert.custom_xxxxx
+ce-type:  pulse.alert.firing.v1 | pulse.alert.resolved.v1
+ce-source: pulsed
+data:     {"rule_id","rule_name","kind","key","state","severity","summary","value","since","at"}
+```
+
+Tools subscribe with a `subscribe` grant on `_sys.alert.>` (the only grantable `_sys` subject).
+
+## Metrics (`GET /metrics` on the metrics listener, PL-OBS-002)
+
+| Metric | Type | Labels |
+|---|---|---|
+| `pulse_build_info` | gauge | `version` |
+| `pulse_http_requests_total`, `pulse_http_request_duration_seconds` | counter, histogram | `listener`, `route` (first path segment only), `method`, `code` |
+| `pulse_ingest_events_total` | counter | `via` = http, hook, admin |
+| `pulse_rollup_events_total`, `pulse_rollup_bytes_total` | counter | `stream` (all publishers, incl. raw NATS) |
+| `pulse_auth_failures_total`, `pulse_bans_total`, `pulse_bans_active` | counter, counter, gauge | `source` |
+| `pulse_inbound_hooks_total`, `pulse_outbound_deliveries_total` | counter | `result` / `outcome` |
+| `pulse_alerts_firing`, `pulse_alert_transitions_total`, `pulse_notifications_total` | gauge, counter, counter | `severity` / `rule`,`state` / `notifier`,`result` |
+| `pulse_certificate_not_after_timestamp_seconds` | gauge | `certificate` |
+| `pulse_acme_attempts_total`, `pulse_tail_sessions`, `pulse_nats_connected` | counter, gauge, gauge | `result` |
+| `pulse_stream_{bytes,max_bytes,messages,consumers,first_timestamp_seconds}` | gauge | `stream` |
+| `nats_up`, `nats_connections`, `nats_*_msgs_total`, `nats_*_bytes_total`, `nats_slow_consumers_total`, `nats_mem_bytes`, `nats_cpu_percent` | gauge/counter | — (VARZ at scrape time, cached 5 s) |
+| `nats_jetstream_{storage,storage_max,memory}_bytes`, `nats_jetstream_{streams,consumers,messages}`, `nats_jetstream_api_{requests,errors}_total` | gauge/counter | — (JSZ) |
+
+Plus the Go and process collectors (`go_*`, `process_*`).

@@ -1,0 +1,31 @@
+// Reference Alloy config for the VPS (PL-OBS-008). Alloy runs with network_mode: host, so pulsed's metrics listener
+// is reached on host loopback. prometheus.exporter.unix reads the host's /proc and /sys (mounted read-only).
+// No remote_write is configured; the block below is a placeholder.
+
+prometheus.exporter.unix "host" {
+  procfs_path = "/host/proc"
+  sysfs_path  = "/host/sys"
+  rootfs_path = "/host/root"
+}
+
+prometheus.scrape "host" {
+  targets         = prometheus.exporter.unix.host.targets
+  scrape_interval = "30s"
+  forward_to      = []
+}
+
+prometheus.scrape "pulsed" {
+  targets         = [{"__address__" = "127.0.0.1:9464", "job" = "pulsed"}]
+  scrape_interval = "15s"
+  forward_to      = []
+}
+
+// prometheus.remote_write "default" {
+//   endpoint {
+//     url = "https://prometheus.example.com/api/v1/write"
+//     basic_auth {
+//       username      = "pulse"
+//       password_file = "/run/secrets/remote_write_password"
+//     }
+//   }
+// }

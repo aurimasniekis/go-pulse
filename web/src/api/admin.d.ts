@@ -4,6 +4,109 @@
  */
 
 export interface paths {
+    "/alerts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Alert rules, live state and notifiers */
+        get: operations["get-alerts"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/alerts/evaluate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Evaluate all rules now */
+        post: operations["evaluate-alerts"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/alerts/history": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Firing and resolved transitions, newest first */
+        get: operations["list-alert-history"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/alerts/notifiers/{name}/test": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Send a test notification */
+        post: operations["test-notifier"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/alerts/rules": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Create a custom threshold rule */
+        post: operations["create-alert-rule"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/alerts/rules/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Update a rule */
+        put: operations["update-alert-rule"];
+        post?: never;
+        /** Delete a custom rule */
+        delete: operations["delete-alert-rule"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/audit": {
         parameters: {
             query?: never;
@@ -577,6 +680,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/system/connections": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** NATS connections across accounts, busiest first */
+        get: operations["list-connections"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/system/info": {
         parameters: {
             query?: never;
@@ -697,6 +817,79 @@ export interface components {
             readonly $schema?: string;
             network: string;
             note?: string;
+        };
+        AlertHistoryEntry: {
+            /** Format: int64 */
+            id: number;
+            key: string;
+            rule_id: string;
+            rule_name: string;
+            severity: string;
+            /** @enum {string} */
+            state: "firing" | "resolved";
+            summary: string;
+            /** Format: date-time */
+            time: string;
+            /** Format: double */
+            value: number;
+        };
+        AlertInstance: {
+            /** Format: date-time */
+            fired_at?: string;
+            key: string;
+            /** Format: date-time */
+            since: string;
+            /** @enum {string} */
+            state: "pending" | "firing";
+            summary: string;
+            /** Format: double */
+            value: number;
+        };
+        AlertRule: {
+            /**
+             * Format: uri
+             * @description A URL to the JSON Schema for this object.
+             * @example /api/admin/v1/schemas/AlertRule.json
+             */
+            readonly $schema?: string;
+            builtin: boolean;
+            description: string;
+            enabled: boolean;
+            /**
+             * Format: int64
+             * @description The condition must hold this long before the alert fires
+             */
+            for_seconds: number;
+            id: string;
+            /** @description Keys whose condition holds now (pending or firing) */
+            instances: components["schemas"]["AlertInstance"][];
+            kind: string;
+            /** @description The last evaluation failed; the state was left unchanged */
+            last_error?: string;
+            /** Format: date-time */
+            last_eval?: string;
+            name: string;
+            /** @description Why the rule cannot evaluate (e.g. backups are not configured) */
+            no_data?: string;
+            params: components["schemas"]["RuleParams"];
+            /** @enum {string} */
+            severity: "info" | "warning" | "critical";
+        };
+        AlertsOverview: {
+            /**
+             * Format: uri
+             * @description A URL to the JSON Schema for this object.
+             * @example /api/admin/v1/schemas/AlertsOverview.json
+             */
+            readonly $schema?: string;
+            /**
+             * Format: int64
+             * @description Firing instances across all rules
+             */
+            firing: number;
+            /** @description Configured notifiers (Telegram and Discord come from configuration files) */
+            notifiers: components["schemas"]["NotifierStatus"][];
+            rules: components["schemas"]["AlertRule"][];
         };
         AllowEntry: {
             actor: string;
@@ -844,6 +1037,8 @@ export interface components {
             type?: string;
         };
         ConnDTO: {
+            /** @description Account name (APP, SYS); set on the System page */
+            account?: string;
             /** Format: int64 */
             cid: number;
             /** Format: int64 */
@@ -862,6 +1057,8 @@ export interface components {
             /** Format: int64 */
             out_msgs: number;
             /** Format: int64 */
+            pending_bytes: number;
+            /** Format: int64 */
             port: number;
             rtt: string;
             /** Format: date-time */
@@ -870,6 +1067,17 @@ export interface components {
             subscriptions: number;
             uptime: string;
             version: string;
+        };
+        Connections: {
+            /**
+             * Format: uri
+             * @description A URL to the JSON Schema for this object.
+             * @example /api/admin/v1/schemas/Connections.json
+             */
+            readonly $schema?: string;
+            connections: components["schemas"]["ConnDTO"][];
+            /** Format: int64 */
+            total: number;
         };
         ConsumerDTO: {
             /** Format: int64 */
@@ -1316,6 +1524,30 @@ export interface components {
             rate: number;
             reason: string;
         };
+        NotifierStatus: {
+            /**
+             * Format: uri
+             * @description A URL to the JSON Schema for this object.
+             * @example /api/admin/v1/schemas/NotifierStatus.json
+             */
+            readonly $schema?: string;
+            /** Format: int64 */
+            failed: number;
+            /** @enum {string} */
+            kind: "telegram" | "discord";
+            last_error?: string;
+            /** Format: date-time */
+            last_sent?: string;
+            min_severity: string;
+            name: string;
+            /** Format: int64 */
+            sent: number;
+            /**
+             * Format: int64
+             * @description Dropped by the rate limit or a full queue
+             */
+            suppressed: number;
+        };
         Offender: {
             /** Format: int64 */
             count: number;
@@ -1434,6 +1666,87 @@ export interface components {
             /** Format: int64 */
             expires_in_days?: number;
         };
+        RuleInput: {
+            /**
+             * Format: uri
+             * @description A URL to the JSON Schema for this object.
+             * @example /api/admin/v1/schemas/RuleInput.json
+             */
+            readonly $schema?: string;
+            enabled: boolean;
+            /** Format: int64 */
+            for_seconds?: number;
+            name?: string;
+            params: components["schemas"]["RuleParams"];
+            /** @enum {string} */
+            severity: "info" | "warning" | "critical";
+        };
+        RuleParams: {
+            /**
+             * Format: int64
+             * @description ban_storm: bans within the window
+             */
+            count?: number;
+            /**
+             * Format: double
+             * @description disk_forecast, cert_expiry, client_expiry: fire when less than this many days are left
+             */
+            days?: number;
+            /**
+             * @description threshold: what to count
+             * @enum {string}
+             */
+            dimension?: "total" | "type" | "prefix";
+            /**
+             * Format: double
+             * @description backup_stale: no successful backup for this long; dead_letters: look-back window
+             */
+            hours?: number;
+            /** @description threshold: subject prefix (1–4 tokens) or ce-type; empty for total */
+            key?: string;
+            /**
+             * @description threshold: events or payload bytes
+             * @enum {string}
+             */
+            metric?: "msgs" | "bytes";
+            /**
+             * @description threshold: fire when the count is above or below the threshold
+             * @enum {string}
+             */
+            op?: "above" | "below";
+            /**
+             * Format: double
+             * @description stream_usage: fire above this fraction of max_bytes (0–1)
+             */
+            ratio?: number;
+            /** @description threshold: stream (default EVENTS) */
+            stream?: string;
+            /** Format: double */
+            threshold?: number;
+            /**
+             * Format: int64
+             * @description ban_storm, slow_consumers, threshold: evaluation window
+             */
+            window_minutes?: number;
+        };
+        RuntimeStats: {
+            /** Format: int64 */
+            cpus: number;
+            /** Format: int32 */
+            gc_cycles: number;
+            go_version: string;
+            /** Format: int64 */
+            goroutines: number;
+            /** Format: int64 */
+            heap_bytes: number;
+            /** Format: date-time */
+            started?: string;
+            /**
+             * Format: int64
+             * @description Memory obtained from the OS
+             */
+            sys_bytes: number;
+        };
         SecretOutHookBody: {
             /**
              * Format: uri
@@ -1495,6 +1808,38 @@ export interface components {
             step: number;
             /** Format: int64 */
             to: number;
+        };
+        ServerStats: {
+            /** Format: date-time */
+            config_load_time: string;
+            /** Format: int64 */
+            connections: number;
+            /** Format: int64 */
+            cores: number;
+            /** Format: double */
+            cpu_percent: number;
+            go: string;
+            /** Format: int64 */
+            in_bytes: number;
+            /** Format: int64 */
+            in_msgs: number;
+            /** Format: int64 */
+            max_payload: number;
+            /** Format: int64 */
+            mem_bytes: number;
+            /** Format: int64 */
+            out_bytes: number;
+            /** Format: int64 */
+            out_msgs: number;
+            /** Format: int64 */
+            slow_consumers: number;
+            /** Format: date-time */
+            start: string;
+            /** Format: int32 */
+            subscriptions: number;
+            /** Format: int64 */
+            total_connections: number;
+            uptime: string;
         };
         StreamDTO: {
             /**
@@ -1621,6 +1966,9 @@ export interface components {
             nats: components["schemas"]["SystemInfoNATSStruct"];
             profile: string;
             ready: boolean;
+            runtime: components["schemas"]["RuntimeStats"];
+            /** @description NATS server statistics (VARZ) */
+            server?: components["schemas"]["ServerStats"];
             version: string;
         };
         SystemInfoConnectStruct: {
@@ -1707,6 +2055,225 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    "get-alerts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AlertsOverview"];
+                };
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
+    "evaluate-alerts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AlertsOverview"];
+                };
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
+    "list-alert-history": {
+        parameters: {
+            query?: {
+                rule?: string;
+                before_id?: number;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AlertHistoryEntry"][];
+                };
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
+    "test-notifier": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                name: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotifierStatus"];
+                };
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
+    "create-alert-rule": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RuleInput"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AlertRule"];
+                };
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
+    "update-alert-rule": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RuleInput"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AlertRule"];
+                };
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
+    "delete-alert-rule": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
     "list-audit": {
         parameters: {
             query?: {
@@ -3081,6 +3648,38 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Certificates"];
+                };
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
+    "list-connections": {
+        parameters: {
+            query?: {
+                sort?: "msgs_to" | "msgs_from" | "bytes_to" | "bytes_from" | "pending" | "start" | "last";
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Connections"];
                 };
             };
             /** @description Error */

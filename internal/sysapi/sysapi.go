@@ -218,6 +218,7 @@ type ConnzOptions struct {
 	Offset  int    `json:"offset,omitempty"`
 	CID     uint64 `json:"cid,omitempty"`
 	User    string `json:"user,omitempty"`
+	Sort    string `json:"sort,omitempty"` // e.g. msgs_to, bytes_to, start, last
 }
 
 // Connz lists connections.

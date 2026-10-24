@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -54,6 +55,17 @@ func get(t *testing.T, url string) int {
 	return resp.StatusCode
 }
 
+func getBody(t *testing.T, url string) string {
+	t.Helper()
+	resp, err := http.Get(url) //nolint:gosec // test URL
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+	b, _ := io.ReadAll(resp.Body)
+	return string(b)
+}
+
 func TestStartReadyShutdown(t *testing.T) {
 	env := natstest.Start(t)
 	cfg := testConfig(t, env)
@@ -69,6 +81,22 @@ func TestStartReadyShutdown(t *testing.T) {
 	}
 	if code := get(t, "http://"+cfg.MetricsAddr+"/healthz"); code != http.StatusOK {
 		t.Fatalf("healthz %d", code)
+	}
+	// /metrics: pulsed counters, scrape-time NATS and stream gauges, Go runtime (PL-OBS-002).
+	get(t, "http://"+cfg.AdminAddr+"/api/admin/v1/system/info")
+	body := getBody(t, "http://"+cfg.MetricsAddr+"/metrics")
+	for _, want := range []string{`pulse_build_info{version=`, "nats_up 1", `pulse_stream_bytes{stream="EVENTS"}`, "nats_jetstream_streams",
+		`pulse_http_requests_total{code="200",listener="admin",method="GET",route="/api/admin/v1/system"}`, "pulse_bans_active 0",
+		`pulse_alerts_firing{severity="critical"}`, `pulse_certificate_not_after_timestamp_seconds{certificate="Internal CA"}`, "go_goroutines"} {
+		if !strings.Contains(body, want) {
+			t.Errorf("/metrics lacks %s", want)
+		}
+	}
+	if a.Alerts == nil {
+		t.Fatal("alert engine not started")
+	}
+	if rules, err := a.Alerts.List(ctx); err != nil || len(rules) < 9 {
+		t.Fatalf("builtin rules not seeded: %d %v", len(rules), err)
 	}
 	// A second pulsed on the same data directory is refused (PL-DB-003).
 	if _, err := Start(ctx, testConfig(t, env), log); err == nil {

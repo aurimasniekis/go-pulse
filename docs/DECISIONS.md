@@ -322,6 +322,45 @@
     integration test `make test-acme` (Docker), which drives a real nats-server subprocess through obtain → install →
     reload → verify and renewal.
 
+### ADR-0033 — Alert engine: rules and state in SQLite, events on core NATS, file-based notifiers
+- **Status:** accepted (M10)
+- **Decision:**
+  - Rules live in `alert_rules`. The built-ins are seeded with defaults; operator changes survive re-seeding. Custom rules
+    are `threshold` rules on rollups.
+  - Live state is one `alert_state` row per (rule, key) that holds now: `pending` until `for_seconds` passes, then
+    `firing`. Transitions go to `alert_history`, which is kept 90 days (PL-DB-005).
+  - Every rule is evaluated each `PULSE_ALERT_INTERVAL` (1 min). A rule that errors or has no data (e.g. backups before
+    M11) keeps its current state. It is never treated as "resolved".
+  - Disabling a rule clears its state and records "rule disabled" as resolved, without notifying.
+  - Built-ins add `nats_down` (pulsed lost NATS for 60 s) to the PL-OBS-004 list. Notifications still go out over HTTP
+    in that case; the event publish fails and is logged.
+  - Alert events are published on core NATS in the APP account as `_sys.alert.<rule>`, not stored in a stream. Live
+    subscribers get them; the history is in SQLite.
+  - Notifiers (Telegram, Discord) are configured from files, not the UI, so tokens never pass through the API or the
+    database.
+    - Each notifier has a severity floor, a token-bucket rate limit and an async queue of 100; overflow is counted as
+      suppressed.
+    - Up to 3 attempts on 429/5xx/network errors, honouring `Retry-After` ≤ 30 s.
+    - Transport errors are stripped of their URL, because the URL carries the secret.
+  - Reminders re-notify every `PULSE_ALERT_REPEAT` (24 h) while firing. They are not written to the history.
+- **Consequences:** Alert events are lost while no tool subscribes. Tools that must not miss alerts read
+  `GET /alerts/history`, or a future persistent `_sys` stream (open question).
+
+### ADR-0034 — Metrics: one pulsed registry, scrape-time NATS gauges, bounded labels; Alloy pinned
+- **Status:** accepted (M10)
+- **Decision:**
+  - pulsed uses its own Prometheus registry, not the global one, with the Go and process collectors.
+  - Counters are incremented by the feature packages. Gauges (VARZ, JSZ, stream info, bans, tail sessions, firing
+    alerts, certificate expiry) are read at scrape time; NATS data is cached for 5 s.
+  - HTTP metrics label the route by its first static path segment only (`/api/v1/publish`, `/hooks`, `ui`), never by
+    names or IDs.
+  - Alloy `v1.20.1` is pinned by digest. It was the newest release at least two weeks old when M10 landed; 1.21.x was
+    days old.
+  - The reference config scrapes pulsed on host loopback and the host through `prometheus.exporter.unix` with `/proc`,
+    `/sys` and `/` mounted read-only. `forward_to = []` and a commented `remote_write` keep everything local (PL-OBS-008).
+- **Consequences:** Without remote_write the scrapes only feed Alloy's own UI (target health). Shipping metrics is a
+  one-block change.
+
 ## 2. Open review items
 
 | ID | Item | Default until decided |

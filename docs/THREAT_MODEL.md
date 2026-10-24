@@ -50,10 +50,11 @@
 | T-14 | Backup disclosure | ADV-7 | age encryption before upload; identities offline | PL-BAK-002 | Deletion by provider (use versioned buckets). |
 | T-15 | Disk exhaustion / ingest flood | ADV-3 | `max_bytes` with discard old, `max_payload` 1 MB, per-IP rate limits, disk forecast alerts | PL-BUS-001, PL-OBS-004 | A granted publisher can push old history out. |
 | T-16 | Explorer queries as a DoS vector | ADV-8 | Budgets (50k msgs, 64 MB, 3 s, 4 concurrent), tail session caps | PL-EXP-006..007 | — |
-| T-17 | Log/audit leaks of secrets | all | Redaction helpers; audit never stores secrets | PL-OBS-001, PL-AUD-003 | — |
+| T-17 | Log/audit leaks of secrets | all | Redaction helpers; audit never stores secrets; notifier tokens/webhook URLs come from files and transport errors are stripped of their URL (ADR-0033) | PL-OBS-001, PL-AUD-003, PL-OBS-006 | A notifier service echoing a token in an error body would be logged (truncated); neither Telegram nor Discord does. |
 | T-18 | Cloudflare/DNS token misuse | ADV-1 after host compromise | Scoped tokens (DNS edit only for ACME, list edit only for bans) | PL-EDGE-006, PL-BAN-008 | — |
 | T-19 | Ban of the operator or Cloudflare itself | ADV-1 (framing) | Never-ban list incl. CF ranges, private ranges, allowlist | PL-BAN-004 | — |
 | T-20 | SQLite corruption or concurrent writers | — | flock, WAL + `synchronous=FULL`, `quick_check`, backups | PL-DB-001..007 | — |
+| T-22 | Metrics endpoint reveals topology (stream names, connection counts, certificate expiry) | ADV-8 | Metrics listener on host loopback only; route labels carry no names, IDs or subjects (ADR-0034) | PL-OBS-002 | ADV-8 already has the admin UI (T-07). |
 | T-21 | DNS rebinding: a web page resolves its own hostname to 127.0.0.1 and talks to the auth-none admin API from the operator's browser | ADV-1 via operator browser | Admin listener accepts only Host 127.0.0.1/localhost/::1 (+ `PULSE_ADMIN_HOSTS`), 421 otherwise; CSRF header on writes; no CORS | PL-ADM-004 | Only while the operator has the SSH tunnel open; host check closes it. |
 
 ## 4. Out of scope

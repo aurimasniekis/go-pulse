@@ -1,7 +1,7 @@
-# Local development stack (PL-OPS-005): init → nats → pulsed.
-# Host ports are overridable with PULSE_DEV_{NATS,ADMIN,METRICS,PUBLIC}_PORT when the defaults are taken.
+# Local development stack (PL-OPS-005): init → nats → pulsed → alloy.
+# Host ports are overridable with PULSE_DEV_{NATS,ADMIN,METRICS,PUBLIC,ALLOY}_PORT when the defaults are taken.
 # `make dev-up` generates deploy/.dev/master.key (gitignored) and builds pulsed:dev from the repo.
-# SeaweedFS (S3, M11) and pebble (ACME, M9) join this file in their milestones.
+# SeaweedFS (S3, M11) joins this file in its milestone; pebble runs in `make test-acme` (ADR-0032).
 
 x-pulse-env: &pulse-env
   PULSE_PROFILE: dev
@@ -84,4 +84,17 @@ services:
       nats:
         condition: service_healthy
     mem_limit: 448m
+    restart: unless-stopped
+
+  alloy:
+    image: grafana/alloy:v1.20.1@sha256:2aa2099af76c0098d4af7a4d6e48f86cb66dc1a000222ad927a1c67c6542d13f
+    command: ["run", "--server.http.listen-addr=0.0.0.0:12345", "--storage.path=/var/lib/alloy/data", "/etc/alloy/config.alloy"]
+    volumes:
+      - ./dev/config.alloy:/etc/alloy/config.alloy:ro
+    ports:
+      - "127.0.0.1:${PULSE_DEV_ALLOY_PORT:-12345}:12345"
+    depends_on:
+      pulsed:
+        condition: service_healthy
+    mem_limit: 192m
     restart: unless-stopped

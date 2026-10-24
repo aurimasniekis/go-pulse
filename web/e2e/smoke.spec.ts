@@ -72,7 +72,7 @@ test('live tail: starts and stops', async ({ page }) => {
 })
 
 test('placeholder pages render', async ({ page }) => {
-  for (const path of ['/settings', '/alerts']) {
+  for (const path of ['/settings']) {
     await page.goto(path)
     await expect(page.getByText('Not built yet')).toBeVisible()
   }
@@ -88,4 +88,7 @@ test('system: server status and certificates', async ({ page }) => {
   // The dev stack runs without ACME: the Let's Encrypt row is listed as not present and no ACME card is shown.
   await expect(certs.getByRole('row', { name: /Let's Encrypt/ })).toContainText('not present')
   await expect(page.getByTestId('acme-status')).toHaveCount(0)
+  // NATS server stats and the connection list (pulsed's own SYS and APP connections at least).
+  await expect(page.getByText('Slow consumers')).toBeVisible()
+  await expect(page.getByTestId('connections').getByRole('row', { name: /pulsed-app/ })).toContainText('APP')
 })

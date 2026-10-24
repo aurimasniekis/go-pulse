@@ -69,6 +69,213 @@
         ],
         "type": "object"
       },
+      "AlertHistoryEntry": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "key": {
+            "type": "string"
+          },
+          "rule_id": {
+            "type": "string"
+          },
+          "rule_name": {
+            "type": "string"
+          },
+          "severity": {
+            "type": "string"
+          },
+          "state": {
+            "enum": [
+              "firing",
+              "resolved"
+            ],
+            "type": "string"
+          },
+          "summary": {
+            "type": "string"
+          },
+          "time": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "value": {
+            "format": "double",
+            "type": "number"
+          }
+        },
+        "required": [
+          "id",
+          "time",
+          "rule_id",
+          "rule_name",
+          "key",
+          "state",
+          "severity",
+          "summary",
+          "value"
+        ],
+        "type": "object"
+      },
+      "AlertInstance": {
+        "additionalProperties": false,
+        "properties": {
+          "fired_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "key": {
+            "type": "string"
+          },
+          "since": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "state": {
+            "enum": [
+              "pending",
+              "firing"
+            ],
+            "type": "string"
+          },
+          "summary": {
+            "type": "string"
+          },
+          "value": {
+            "format": "double",
+            "type": "number"
+          }
+        },
+        "required": [
+          "key",
+          "state",
+          "since",
+          "value",
+          "summary"
+        ],
+        "type": "object"
+      },
+      "AlertRule": {
+        "additionalProperties": false,
+        "properties": {
+          "$schema": {
+            "description": "A URL to the JSON Schema for this object.",
+            "examples": [
+              "/api/admin/v1/schemas/AlertRule.json"
+            ],
+            "format": "uri",
+            "readOnly": true,
+            "type": "string"
+          },
+          "builtin": {
+            "type": "boolean"
+          },
+          "description": {
+            "type": "string"
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "for_seconds": {
+            "description": "The condition must hold this long before the alert fires",
+            "format": "int64",
+            "type": "integer"
+          },
+          "id": {
+            "type": "string"
+          },
+          "instances": {
+            "description": "Keys whose condition holds now (pending or firing)",
+            "items": {
+              "$ref": "#/components/schemas/AlertInstance"
+            },
+            "type": "array"
+          },
+          "kind": {
+            "type": "string"
+          },
+          "last_error": {
+            "description": "The last evaluation failed; the state was left unchanged",
+            "type": "string"
+          },
+          "last_eval": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "no_data": {
+            "description": "Why the rule cannot evaluate (e.g. backups are not configured)",
+            "type": "string"
+          },
+          "params": {
+            "$ref": "#/components/schemas/RuleParams"
+          },
+          "severity": {
+            "enum": [
+              "info",
+              "warning",
+              "critical"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "builtin",
+          "name",
+          "description",
+          "enabled",
+          "severity",
+          "params",
+          "for_seconds",
+          "instances"
+        ],
+        "type": "object"
+      },
+      "AlertsOverview": {
+        "additionalProperties": false,
+        "properties": {
+          "$schema": {
+            "description": "A URL to the JSON Schema for this object.",
+            "examples": [
+              "/api/admin/v1/schemas/AlertsOverview.json"
+            ],
+            "format": "uri",
+            "readOnly": true,
+            "type": "string"
+          },
+          "firing": {
+            "description": "Firing instances across all rules",
+            "format": "int64",
+            "type": "integer"
+          },
+          "notifiers": {
+            "description": "Configured notifiers (Telegram and Discord come from configuration files)",
+            "items": {
+              "$ref": "#/components/schemas/NotifierStatus"
+            },
+            "type": "array"
+          },
+          "rules": {
+            "items": {
+              "$ref": "#/components/schemas/AlertRule"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "rules",
+          "notifiers",
+          "firing"
+        ],
+        "type": "object"
+      },
       "AllowEntry": {
         "additionalProperties": false,
         "properties": {
@@ -461,6 +668,10 @@
       "ConnDTO": {
         "additionalProperties": false,
         "properties": {
+          "account": {
+            "description": "Account name (APP, SYS); set on the System page",
+            "type": "string"
+          },
           "cid": {
             "format": "int64",
             "minimum": 0,
@@ -496,6 +707,10 @@
             "type": "integer"
           },
           "out_msgs": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "pending_bytes": {
             "format": "int64",
             "type": "integer"
           },
@@ -538,7 +753,37 @@
           "name",
           "lang",
           "version",
-          "kind"
+          "kind",
+          "pending_bytes"
+        ],
+        "type": "object"
+      },
+      "Connections": {
+        "additionalProperties": false,
+        "properties": {
+          "$schema": {
+            "description": "A URL to the JSON Schema for this object.",
+            "examples": [
+              "/api/admin/v1/schemas/Connections.json"
+            ],
+            "format": "uri",
+            "readOnly": true,
+            "type": "string"
+          },
+          "connections": {
+            "items": {
+              "$ref": "#/components/schemas/ConnDTO"
+            },
+            "type": "array"
+          },
+          "total": {
+            "format": "int64",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "total",
+          "connections"
         ],
         "type": "object"
       },
@@ -1693,6 +1938,62 @@
         ],
         "type": "object"
       },
+      "NotifierStatus": {
+        "additionalProperties": false,
+        "properties": {
+          "$schema": {
+            "description": "A URL to the JSON Schema for this object.",
+            "examples": [
+              "/api/admin/v1/schemas/NotifierStatus.json"
+            ],
+            "format": "uri",
+            "readOnly": true,
+            "type": "string"
+          },
+          "failed": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "kind": {
+            "enum": [
+              "telegram",
+              "discord"
+            ],
+            "type": "string"
+          },
+          "last_error": {
+            "type": "string"
+          },
+          "last_sent": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "min_severity": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "sent": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "suppressed": {
+            "description": "Dropped by the rate limit or a full queue",
+            "format": "int64",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "name",
+          "kind",
+          "min_severity",
+          "sent",
+          "failed",
+          "suppressed"
+        ],
+        "type": "object"
+      },
       "Offender": {
         "additionalProperties": false,
         "properties": {
@@ -2005,6 +2306,161 @@
         },
         "type": "object"
       },
+      "RuleInput": {
+        "additionalProperties": false,
+        "properties": {
+          "$schema": {
+            "description": "A URL to the JSON Schema for this object.",
+            "examples": [
+              "/api/admin/v1/schemas/RuleInput.json"
+            ],
+            "format": "uri",
+            "readOnly": true,
+            "type": "string"
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "for_seconds": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "name": {
+            "maxLength": 100,
+            "type": "string"
+          },
+          "params": {
+            "$ref": "#/components/schemas/RuleParams"
+          },
+          "severity": {
+            "enum": [
+              "info",
+              "warning",
+              "critical"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "enabled",
+          "severity",
+          "params"
+        ],
+        "type": "object"
+      },
+      "RuleParams": {
+        "additionalProperties": false,
+        "properties": {
+          "count": {
+            "description": "ban_storm: bans within the window",
+            "format": "int64",
+            "type": "integer"
+          },
+          "days": {
+            "description": "disk_forecast, cert_expiry, client_expiry: fire when less than this many days are left",
+            "format": "double",
+            "type": "number"
+          },
+          "dimension": {
+            "description": "threshold: what to count",
+            "enum": [
+              "total",
+              "type",
+              "prefix"
+            ],
+            "type": "string"
+          },
+          "hours": {
+            "description": "backup_stale: no successful backup for this long; dead_letters: look-back window",
+            "format": "double",
+            "type": "number"
+          },
+          "key": {
+            "description": "threshold: subject prefix (1–4 tokens) or ce-type; empty for total",
+            "type": "string"
+          },
+          "metric": {
+            "description": "threshold: events or payload bytes",
+            "enum": [
+              "msgs",
+              "bytes"
+            ],
+            "type": "string"
+          },
+          "op": {
+            "description": "threshold: fire when the count is above or below the threshold",
+            "enum": [
+              "above",
+              "below"
+            ],
+            "type": "string"
+          },
+          "ratio": {
+            "description": "stream_usage: fire above this fraction of max_bytes (0–1)",
+            "format": "double",
+            "type": "number"
+          },
+          "stream": {
+            "description": "threshold: stream (default EVENTS)",
+            "type": "string"
+          },
+          "threshold": {
+            "format": "double",
+            "type": "number"
+          },
+          "window_minutes": {
+            "description": "ban_storm, slow_consumers, threshold: evaluation window",
+            "format": "int64",
+            "type": "integer"
+          }
+        },
+        "type": "object"
+      },
+      "RuntimeStats": {
+        "additionalProperties": false,
+        "properties": {
+          "cpus": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "gc_cycles": {
+            "format": "int32",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "go_version": {
+            "type": "string"
+          },
+          "goroutines": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "heap_bytes": {
+            "format": "int64",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "started": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "sys_bytes": {
+            "description": "Memory obtained from the OS",
+            "format": "int64",
+            "minimum": 0,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "go_version",
+          "goroutines",
+          "heap_bytes",
+          "sys_bytes",
+          "gc_cycles",
+          "cpus"
+        ],
+        "type": "object"
+      },
       "SecretOutHookBody": {
         "additionalProperties": false,
         "properties": {
@@ -2177,6 +2633,94 @@
           "to",
           "dim",
           "series"
+        ],
+        "type": "object"
+      },
+      "ServerStats": {
+        "additionalProperties": false,
+        "properties": {
+          "config_load_time": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "connections": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "cores": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "cpu_percent": {
+            "format": "double",
+            "type": "number"
+          },
+          "go": {
+            "type": "string"
+          },
+          "in_bytes": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "in_msgs": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "max_payload": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "mem_bytes": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "out_bytes": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "out_msgs": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "slow_consumers": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "start": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "subscriptions": {
+            "format": "int32",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "total_connections": {
+            "format": "int64",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "uptime": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "start",
+          "uptime",
+          "go",
+          "mem_bytes",
+          "cpu_percent",
+          "cores",
+          "connections",
+          "total_connections",
+          "subscriptions",
+          "in_msgs",
+          "out_msgs",
+          "in_bytes",
+          "out_bytes",
+          "slow_consumers",
+          "max_payload",
+          "config_load_time"
         ],
         "type": "object"
       },
@@ -2515,6 +3059,13 @@
           "ready": {
             "type": "boolean"
           },
+          "runtime": {
+            "$ref": "#/components/schemas/RuntimeStats"
+          },
+          "server": {
+            "$ref": "#/components/schemas/ServerStats",
+            "description": "NATS server statistics (VARZ)"
+          },
           "version": {
             "type": "string"
           }
@@ -2525,6 +3076,7 @@
           "auth_mode",
           "ready",
           "nats",
+          "runtime",
           "connect"
         ],
         "type": "object"
@@ -2771,6 +3323,299 @@
   },
   "openapi": "3.1.0",
   "paths": {
+    "/alerts": {
+      "get": {
+        "operationId": "get-alerts",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AlertsOverview"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Alert rules, live state and notifiers",
+        "tags": [
+          "alerts"
+        ]
+      }
+    },
+    "/alerts/evaluate": {
+      "post": {
+        "operationId": "evaluate-alerts",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AlertsOverview"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Evaluate all rules now",
+        "tags": [
+          "alerts"
+        ]
+      }
+    },
+    "/alerts/history": {
+      "get": {
+        "operationId": "list-alert-history",
+        "parameters": [
+          {
+            "explode": false,
+            "in": "query",
+            "name": "rule",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "explode": false,
+            "in": "query",
+            "name": "before_id",
+            "schema": {
+              "format": "int64",
+              "minimum": 0,
+              "type": "integer"
+            }
+          },
+          {
+            "explode": false,
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "default": 100,
+              "format": "int64",
+              "maximum": 500,
+              "minimum": 1,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/AlertHistoryEntry"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Firing and resolved transitions, newest first",
+        "tags": [
+          "alerts"
+        ]
+      }
+    },
+    "/alerts/notifiers/{name}/test": {
+      "post": {
+        "operationId": "test-notifier",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotifierStatus"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Send a test notification",
+        "tags": [
+          "alerts"
+        ]
+      }
+    },
+    "/alerts/rules": {
+      "post": {
+        "operationId": "create-alert-rule",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RuleInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AlertRule"
+                }
+              }
+            },
+            "description": "Created"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Create a custom threshold rule",
+        "tags": [
+          "alerts"
+        ]
+      }
+    },
+    "/alerts/rules/{id}": {
+      "delete": {
+        "operationId": "delete-alert-rule",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Delete a custom rule",
+        "tags": [
+          "alerts"
+        ]
+      },
+      "put": {
+        "operationId": "update-alert-rule",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RuleInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AlertRule"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "Update a rule",
+        "tags": [
+          "alerts"
+        ]
+      }
+    },
     "/audit": {
       "get": {
         "operationId": "list-audit",
@@ -4793,6 +5638,69 @@
           }
         },
         "summary": "TLS certificates and ACME status",
+        "tags": [
+          "system"
+        ]
+      }
+    },
+    "/system/connections": {
+      "get": {
+        "operationId": "list-connections",
+        "parameters": [
+          {
+            "explode": false,
+            "in": "query",
+            "name": "sort",
+            "schema": {
+              "default": "msgs_to",
+              "enum": [
+                "msgs_to",
+                "msgs_from",
+                "bytes_to",
+                "bytes_from",
+                "pending",
+                "start",
+                "last"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "explode": false,
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "default": 100,
+              "format": "int64",
+              "maximum": 500,
+              "minimum": 1,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Connections"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorModel"
+                }
+              }
+            },
+            "description": "Error"
+          }
+        },
+        "summary": "NATS connections across accounts, busiest first",
         "tags": [
           "system"
         ]

@@ -2,11 +2,11 @@ import { Alert, Badge, Button, Card, Code, CopyButton, Group, SimpleGrid, Stack,
 import { IconAlertTriangle, IconCertificate, IconCheck, IconCopy } from '@tabler/icons-react'
 import { createFileRoute } from '@tanstack/react-router'
 import type { ReactNode } from 'react'
-import { useCertificates, useSystemInfo } from '@/api/queries'
+import { useCertificates, useConnections, useSystemInfo } from '@/api/queries'
 import { ErrorAlert } from '@/components/ErrorAlert'
 import { PageHeader } from '@/components/PageHeader'
 import { expiryBadge } from '@/lib/certs'
-import { formatBytes, formatNumber, formatTime, timeAgo } from '@/lib/format'
+import { formatBytes, formatCompact, formatNumber, formatTime, timeAgo } from '@/lib/format'
 
 export const Route = createFileRoute('/system')({ component: System })
 
@@ -26,11 +26,17 @@ function Row({ label, children }: { label: string; children: ReactNode }) {
 function System() {
   const info = useSystemInfo()
   const certs = useCertificates()
+  const conns = useConnections()
   const s = info.data
+  const srv = s?.server
+  const rt = s?.runtime
   const acme = certs.data?.acme
   return (
     <>
-      <PageHeader title="System" description="Server, NATS and certificate status." />
+      <PageHeader
+        title="System"
+        description="Server, NATS, connections and certificates. Prometheus metrics are on the metrics listener (/metrics, host loopback)."
+      />
       <ErrorAlert error={info.error ?? certs.error} />
       <SimpleGrid cols={{ base: 1, md: 3 }} mb="sm">
         <Card>
@@ -48,6 +54,11 @@ function System() {
                 {s?.ready ? 'ready' : 'not ready'}
               </Badge>
             </Row>
+            <Row label="Started">{rt?.started ? timeAgo(rt.started) : ''}</Row>
+            <Row label="Go">{rt ? `${rt.go_version} · ${rt.cpus} CPUs` : ''}</Row>
+            <Row label="Goroutines">{formatNumber(rt?.goroutines)}</Row>
+            <Row label="Heap / from OS">{rt ? `${formatBytes(rt.heap_bytes)} / ${formatBytes(rt.sys_bytes)}` : ''}</Row>
+            <Row label="GC cycles">{formatNumber(rt?.gc_cycles)}</Row>
           </Stack>
         </Card>
         <Card>
@@ -63,6 +74,17 @@ function System() {
             <Row label="Server">{s?.nats.server_name}</Row>
             <Row label="Version">{s?.nats.version}</Row>
             <Row label="RTT">{s ? `${s.nats.rtt_ms.toFixed(2)} ms` : ''}</Row>
+            <Row label="Uptime">{srv?.uptime}</Row>
+            <Row label="Memory / CPU">{srv ? `${formatBytes(srv.mem_bytes)} · ${srv.cpu_percent.toFixed(1)}%` : ''}</Row>
+            <Row label="Connections">{srv ? `${formatNumber(srv.connections)} (${formatNumber(srv.total_connections)} since start)` : ''}</Row>
+            <Row label="Messages in / out">{srv ? `${formatCompact(srv.in_msgs)} / ${formatCompact(srv.out_msgs)}` : ''}</Row>
+            <Row label="Slow consumers">
+              {srv && (
+                <Badge variant="light" color={srv.slow_consumers > 0 ? 'orange' : 'gray'}>
+                  {formatNumber(srv.slow_consumers)}
+                </Badge>
+              )}
+            </Row>
           </Stack>
         </Card>
         <Card>
@@ -134,6 +156,71 @@ function System() {
           </SimpleGrid>
         </Card>
       )}
+
+      <Card mb="sm">
+        <Group justify="space-between" mb="xs">
+          <Title order={5}>Connections</Title>
+          <Text size="xs" c="dimmed">
+            {conns.data ? `${conns.data.connections.length} of ${conns.data.total}, busiest first` : ''}
+          </Text>
+        </Group>
+        <Table.ScrollContainer minWidth={760}>
+          <Table data-testid="connections" verticalSpacing={4}>
+            <Table.Thead>
+              <Table.Tr>
+                <Table.Th>Name</Table.Th>
+                <Table.Th>Account</Table.Th>
+                <Table.Th>Address</Table.Th>
+                <Table.Th>Client</Table.Th>
+                <Table.Th ta="right">Msgs in / out</Table.Th>
+                <Table.Th ta="right">Pending</Table.Th>
+                <Table.Th>RTT</Table.Th>
+              </Table.Tr>
+            </Table.Thead>
+            <Table.Tbody>
+              {(conns.data?.connections ?? []).map((c) => (
+                <Table.Tr key={c.cid}>
+                  <Table.Td>
+                    <Text size="sm" ff="monospace">
+                      {c.name || `cid ${c.cid}`}
+                    </Text>
+                  </Table.Td>
+                  <Table.Td>
+                    <Badge variant="outline" color="gray" size="sm">
+                      {c.account || '—'}
+                    </Badge>
+                  </Table.Td>
+                  <Table.Td>
+                    <Text size="sm" ff="monospace">
+                      {c.ip}:{c.port}
+                    </Text>
+                  </Table.Td>
+                  <Table.Td>
+                    <Text size="xs" c="dimmed">
+                      {c.lang} {c.version} · {c.kind}
+                    </Text>
+                  </Table.Td>
+                  <Table.Td ta="right">
+                    <Text size="sm" ff="monospace">
+                      {formatCompact(c.in_msgs)} / {formatCompact(c.out_msgs)}
+                    </Text>
+                  </Table.Td>
+                  <Table.Td ta="right">
+                    <Text size="sm" ff="monospace" c={c.pending_bytes > 0 ? 'orange' : undefined}>
+                      {formatBytes(c.pending_bytes)}
+                    </Text>
+                  </Table.Td>
+                  <Table.Td>
+                    <Text size="xs" ff="monospace">
+                      {c.rtt}
+                    </Text>
+                  </Table.Td>
+                </Table.Tr>
+              ))}
+            </Table.Tbody>
+          </Table>
+        </Table.ScrollContainer>
+      </Card>
 
       <Card>
         <Group gap={6} mb="xs">

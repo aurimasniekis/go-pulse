@@ -202,3 +202,26 @@ export function useSecurity() {
 export function useCertificates() {
   return useQuery({ queryKey: ['certificates'], queryFn: async () => unwrap(await admin.GET('/system/certificates')), refetchInterval: 30_000 })
 }
+
+export function useAlerts() {
+  return useQuery({ queryKey: ['alerts'], queryFn: async () => unwrap(await admin.GET('/alerts')), refetchInterval: 10_000 })
+}
+
+export function useAlertHistory(rule?: string) {
+  return useInfiniteQuery({
+    queryKey: ['alerts', 'history', rule ?? ''],
+    initialPageParam: 0,
+    queryFn: async ({ pageParam }) =>
+      unwrap(await admin.GET('/alerts/history', { params: { query: { rule: rule || undefined, before_id: pageParam || undefined, limit: 50 } } })),
+    getNextPageParam: (last) => (last.length === 50 ? last[last.length - 1].id : undefined),
+    refetchInterval: 15_000,
+  })
+}
+
+export function useConnections() {
+  return useQuery({
+    queryKey: ['connections'],
+    queryFn: async () => unwrap(await admin.GET('/system/connections', { params: { query: { limit: 50 } } })),
+    refetchInterval: 10_000,
+  })
+}

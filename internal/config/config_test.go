@@ -130,3 +130,31 @@ func TestACME(t *testing.T) {
 		t.Fatalf("dev challtestsrv refused: %v", err)
 	}
 }
+
+func TestNotifiers(t *testing.T) {
+	kf := keyFile(t)
+	tok := filepath.Join(t.TempDir(), "tg")
+	if err := os.WriteFile(tok, []byte("123:abc\n"), 0o600); err != nil { // gitleaks:allow (test literal)
+		t.Fatal(err)
+	}
+	c, err := Load(env(map[string]string{"PULSE_MASTER_KEY_FILE": kf, "PULSE_PUBLIC_ADDR": "off", "PULSE_TELEGRAM_BOT_TOKEN_FILE": tok,
+		"PULSE_TELEGRAM_CHAT_ID": "-100", "PULSE_ALERT_REPEAT": "off"}))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if c.TelegramToken != "123:abc" || c.AlertRepeat >= 0 || c.AlertInterval != time.Minute || c.TelegramMinSeverity != "warning" {
+		t.Fatalf("%+v", c)
+	}
+	for name, m := range map[string]map[string]string{
+		"token without chat":    {"PULSE_TELEGRAM_BOT_TOKEN_FILE": tok},
+		"plain token in prod":   {"PULSE_TELEGRAM_BOT_TOKEN": "x", "PULSE_TELEGRAM_CHAT_ID": "1"},
+		"bad severity":          {"PULSE_DISCORD_MIN_SEVERITY": "loud"},
+		"interval too short":    {"PULSE_ALERT_INTERVAL": "1s"},
+		"discord url not https": {"PULSE_DISCORD_WEBHOOK_URL_FILE": tok},
+	} {
+		m["PULSE_MASTER_KEY_FILE"], m["PULSE_PUBLIC_ADDR"] = kf, "off"
+		if _, err := Load(env(m)); err == nil {
+			t.Errorf("%s: accepted", name)
+		}
+	}
+}

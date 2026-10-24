@@ -64,7 +64,7 @@
 | `PULSE_ADMIN_PUBLISHED_LOOPBACK` | `false` | Set `true` when the admin port binds inside a container and compose publishes it only on host loopback. Required in prod for a non-loopback `PULSE_ADMIN_ADDR` with auth none (ADR-0008). |
 | `PULSE_ADMIN_PUBLIC` | `false` | Mount the admin API on the public listener. Refused with auth none in prod. |
 | `PULSE_AUTH_MODE` | `none` | `none`; `oidc` refuses to start until implemented (R-02). |
-| `PULSE_METRICS_ADDR` | `127.0.0.1:9464` | `/metrics` (M10), `/healthz`, `/readyz`, `/internal/v1/bans` (M8). |
+| `PULSE_METRICS_ADDR` | `127.0.0.1:9464` | `/metrics` (Prometheus), `/healthz`, `/readyz`, `/internal/v1/bans` (banagent). |
 | `PULSE_HEALTHCHECK_URL` | `http://127.0.0.1:9464/readyz` | Probed by `pulsed healthcheck`. |
 
 ## ACME (Let's Encrypt for raw NATS, PL-EDGE-006, ADR-0032)
@@ -84,6 +84,22 @@
 The certificate and key are written to `<PULSE_NATS_DIR>/tls/acme.crt|key`, so pulsed needs the NATS volume mounted
 read-write (as in the reference compose). Status and expiry appear on the System page.
 
+## Alerts and notifiers (PL-OBS-004..006, ADR-0033)
+
+| Variable | Default | Meaning |
+|---|---|---|
+| `PULSE_ALERT_INTERVAL` | `1m` | Rule evaluation interval (≥ 5 s). |
+| `PULSE_ALERT_REPEAT` | `24h` | Re-notify while an alert keeps firing; `off` disables reminders. |
+| `PULSE_TELEGRAM_BOT_TOKEN_FILE` + `PULSE_TELEGRAM_CHAT_ID` | — | Telegram notifier (Bot API `sendMessage`). Both or neither. |
+| `PULSE_TELEGRAM_MIN_SEVERITY` | `warning` | `info`, `warning` or `critical`. |
+| `PULSE_TELEGRAM_API_URL` | `https://api.telegram.org` | Override for tests or a Bot API proxy. |
+| `PULSE_DISCORD_WEBHOOK_URL_FILE` | — | Discord notifier (incoming webhook URL; `https://` in prod). Mentions are disabled. |
+| `PULSE_DISCORD_MIN_SEVERITY` | `warning` | `info`, `warning` or `critical`. |
+
+Notifiers send at most 20 (Telegram) / 25 (Discord) messages per minute with a small burst; excess messages are counted
+as suppressed and the next delivered message says how many were dropped. Tokens and webhook URLs never appear in logs
+or API errors. Rules are edited on the Alerts page; their settings live in SQLite.
+
 ## Files the deployment provides
 
 | Secret / file | Used by | Notes |
@@ -93,5 +109,7 @@ read-write (as in the reference compose). Status and expiry appear on the System
 | AOP CA certificate | pulsed | `PULSE_AOP_CA_FILE`. |
 | Cloudflare ban-list token | pulsed | optional, `PULSE_CF_BANLIST_TOKEN_FILE`. |
 | Cloudflare ACME DNS token | pulsed | with ACME, `PULSE_ACME_CF_TOKEN_FILE`. |
+| Telegram bot token, Discord webhook URL | pulsed | optional, `PULSE_TELEGRAM_BOT_TOKEN_FILE`, `PULSE_DISCORD_WEBHOOK_URL_FILE`. |
+| Alloy config | alloy | `deploy/examples/config.alloy` (scrapes `127.0.0.1:9464` and the host; no remote_write). |
 
-More secrets (S3, age recipients, notifier tokens) are added with M10–M11.
+More secrets (S3, age recipients) are added with M11.

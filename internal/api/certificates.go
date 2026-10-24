@@ -46,7 +46,8 @@ type Certificates struct {
 // ACMEStatus is the Let's Encrypt renewal state for the raw NATS hostname.
 type ACMEStatus acme.Status
 
-func describeCert(s CertSource, now time.Time) CertificateInfo {
+// DescribeCert reads and summarises one certificate source.
+func DescribeCert(s CertSource, now time.Time) CertificateInfo {
 	ci := CertificateInfo{Name: s.Name, Purpose: s.Purpose, DNSNames: []string{}}
 	b := []byte(s.PEM)
 	if s.Path != "" {
@@ -86,7 +87,7 @@ func registerCertificates(api huma.API, d *Deps) {
 		out := &struct{ Body Certificates }{Body: Certificates{Certificates: []CertificateInfo{}}}
 		now := time.Now()
 		for _, s := range d.CertSources {
-			out.Body.Certificates = append(out.Body.Certificates, describeCert(s, now))
+			out.Body.Certificates = append(out.Body.Certificates, DescribeCert(s, now))
 		}
 		if d.ACME != nil {
 			st := ACMEStatus(d.ACME())

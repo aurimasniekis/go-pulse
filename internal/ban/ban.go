@@ -17,6 +17,7 @@ import (
 	"time"
 
 	"github.com/aurimasniekis/go-pulse/internal/audit"
+	"github.com/aurimasniekis/go-pulse/internal/metrics"
 	"github.com/aurimasniekis/go-pulse/internal/store"
 )
 
@@ -236,6 +237,20 @@ func (s *Service) loadAllow(ctx context.Context) ([]netip.Prefix, error) {
 	return out, rows.Err()
 }
 
+// ActiveCount is the number of bans in force now.
+func (s *Service) ActiveCount() int {
+	now := s.o.Now()
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	n := 0
+	for _, exp := range s.active {
+		if exp.IsZero() || exp.After(now) {
+			n++
+		}
+	}
+	return n
+}
+
 // IsBanned reports whether an address is currently banned.
 func (s *Service) IsBanned(ip string) bool {
 	a, err := netip.ParseAddr(ip)
@@ -265,6 +280,7 @@ func (s *Service) Fail(ctx context.Context, ip, source, detail string) {
 	}
 	key := KeyOf(a)
 	now := s.o.Now()
+	metrics.AuthFailures.WithLabelValues(source).Inc()
 	s.mu.Lock()
 	why := s.neverBan(key)
 	s.recent = append(s.recent, Failure{Time: now.UTC(), IP: a.Unmap().String(), Source: source, Detail: detail, Ignored: why})
@@ -350,6 +366,7 @@ func (s *Service) autoBan(ctx context.Context, key netip.Prefix, source, reason 
 	s.active[key] = b.ExpiresAt
 	s.mu.Unlock()
 	s.o.Log.Warn("banned", "network", b.Network, "until", b.ExpiresAt, "source", source, "offence", b.Offences)
+	metrics.Bans.WithLabelValues(source).Inc()
 	s.changed()
 	return b, nil
 }
@@ -393,6 +410,7 @@ func (s *Service) Manual(ctx context.Context, network string, d time.Duration, r
 	s.mu.Lock()
 	s.active[key] = b.ExpiresAt
 	s.mu.Unlock()
+	metrics.Bans.WithLabelValues("manual").Inc()
 	s.changed()
 	return b, nil
 }

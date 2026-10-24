@@ -169,8 +169,8 @@ Status values: `planned`, `in-progress`, `implemented`, `tested`, `externally-ve
 | M6 | Clients and ingress | tested | 2378428 |
 | M7 | Webhooks | tested | 26c5b2f |
 | M8 | Security and edge TLS | tested (VM/Cloudflare pending) | bb92060 |
-| M9 | ACME | tested against pebble (Let's Encrypt/Cloudflare pending) | (this commit) |
-| M10 | Observability | planned | |
+| M9 | ACME | tested against pebble (Let's Encrypt/Cloudflare pending) | 3155b52 |
+| M10 | Observability | tested (live Telegram/Discord pending) | (this commit) |
 | M11 | Backups | planned | |
 | M12 | Remaining UI | planned | |
 | M13 | Python and TS SDKs | planned | |
@@ -192,6 +192,7 @@ Status values: `planned`, `in-progress`, `implemented`, `tested`, `externally-ve
 | 2026-10-24 | M7 | Inbound hooks (GitHub, Stripe, HMAC, shared secret; sealed secrets; 401 feeds the ban hook), outbound dispatcher (ordered, backoff 1 s–1 h, 12 attempts, dead letters, HMAC signing, SSRF guard checked at dial time, delivery log, pause/resume, retry, test), admin API and Webhooks page; e2e covers inbound delivery and outbound test/pause/delete. |
 | 2026-10-24 | M8 | Ban detector (NATS AUTH.ERR, HTTP 401, webhook signatures; window, ×4 escalation, never-ban), SQLite bans/allowlist, HTTP 403 middleware, banagent (long-poll feed, nftables interval sets with timeouts; real nft tested in a privileged container), Cloudflare IP-list reconciler (fake API), origin cert hot reload, AOP mTLS (handshake tests), Cloudflare-aware real IP, /ws proxy (NATS over websocket through the proxy), Security page. |
 | 2026-10-24 | M9 | ACME manager on lego (account by key from `keys.enc`, DNS-01 via Cloudflare or challtestsrv), ACME pair listed before the internal leaf in `nats.conf` and selected by SNI (ADR-0032 amends ADR-0023), atomic write → re-render → RELOAD → served-serial check over a raw INFO/TLS handshake, renewal at min(30 d, lifetime/3) (found with pebble's 6-day certificates), `GET /system/certificates`, System page (server, NATS, JetStream, certificates, ACME status). `make test-acme` runs pebble + challtestsrv in Docker against a real nats-server. Canceled requests now return 499 instead of logging a 500. `make secrets` was scanning 0 commits locally (global `color.ui=always` breaks gitleaks' log parser); it now runs with `GIT_CONFIG_GLOBAL=/dev/null` and scans all 9 commits clean. |
+| 2026-10-24 | M10 | Prometheus registry on the metrics listener (pulsed counters, scrape-time VARZ/JSZ/stream gauges, bounded route labels), alert engine (9 built-ins incl. `nats_down`, custom threshold rules on rollups, pending/firing/resolved in SQLite, reminders, `_sys.alert.<rule>` events, history pruned at 90 d), Telegram and Discord notifiers (file secrets, rate limit, retries, URL-free errors), alerts admin API + Alerts page, System page (runtime, VARZ, connections), Alloy in the dev stack (target verified `up`) and a reference prod config. Found: Huma ignores path params on embedded input structs (inlined); e2e overview test was flaky because earlier runs' domains tie in the top-10 (seeding now gives the run a clear lead). |
 
 ## 6. Acceptance checklist (mapped to requirement IDs)
 
@@ -243,7 +244,7 @@ E browser E2E · C CI/static check · S spike/perf · R restore drill · X exter
 - [x] `PL-AUTH-009` Grant edits — M6 — ✅ tested: internal/clients TestGrantEditReconnectsConnectedClient; API version conflict 409; e2e grants edit
 - [x] `PL-AUTH-010` Connection view — M6 — ✅ implemented + tested: /clients/{id}/connections (CONNZ by user key), list connection counts; UI table (populated path covered by internal/clients Connections test)
 - [x] `PL-AUTH-011` Snippets — M6 — ✅ tested: web/src/lib/snippets.test.ts; e2e creds modal shows snippets
-- [ ] `PL-AUTH-012` Expiry warnings — M6 — ◐ partial: expires_soon flag in API and UI warnings; alert event arrives with M10
+- [x] `PL-AUTH-012` Expiry warnings — M6/M10 — ✅ tested: expires_soon flag in API/UI; `client_expiry` rule (internal/alerts TestClientExpiryAndPrune) fires and publishes `_sys.alert.client_expiry`
 
 #### PL-ADM — Dashboard access
 
@@ -334,13 +335,13 @@ E browser E2E · C CI/static check · S spike/perf · R restore drill · X exter
 #### PL-OBS — Observability
 
 - [ ] `PL-OBS-001` Logs — M1 — ◐ implemented: internal/logging (slog JSON); redaction review pending
-- [ ] `PL-OBS-002` Metrics — M10
+- [x] `PL-OBS-002` Metrics — M10 — ✅ tested: internal/app TestStartReadyShutdown scrapes /metrics (pulsed counters, NATS/JetStream/stream gauges, Go runtime); internal/metrics TestRoute (bounded labels); Alloy scrape of the dev stack reports `up`
 - [x] `PL-OBS-003` Health — M1 — ✅ tested: internal/app TestStartReadyShutdown (/healthz, /readyz); dev stack container health
-- [ ] `PL-OBS-004` Alert rules — M10
-- [ ] `PL-OBS-005` Alert events — M10
-- [ ] `PL-OBS-006` Notifiers — M10
-- [ ] `PL-OBS-007` System page — M10
-- [ ] `PL-OBS-008` Alloy — M10
+- [x] `PL-OBS-004` Alert rules — M10 — ✅ tested: internal/alerts (cert expiry fire/resolve, for_seconds + reminders, disable, no-data keeps state, threshold above/below on completed buckets, validation, client expiry); `backup_stale` reports no data until M11; e2e alerts.spec (dead-man rule fires, disable, delete)
+- [x] `PL-OBS-005` Alert events — M10 — ✅ tested: internal/alerts TestAlertEventPublished (`_sys.alert.cert_expiry` with envelope headers on the APP account); history in SQLite (TestCertExpiryFiresAndResolves)
+- [x] `PL-OBS-006` Notifiers — M10 — ◐ tested against fakes: internal/notify (Telegram/Discord payloads, 429 retry, permanent errors, token never in errors, severity floor, rate limit + suppressed count), test button via API (internal/api TestAlertsAPI); live Telegram/Discord delivery pending (X)
+- [x] `PL-OBS-007` System page — M9/M10 — ✅ tested: internal/api TestSystemConnectionsAndRuntime, TestCertificates; e2e smoke (server stats, connections, certificates)
+- [x] `PL-OBS-008` Alloy — M10 — ✅ verified locally: alloy v1.20.1 in the dev stack scrapes pulsed (`prometheus.scrape.pulsed` target `up`); reference config `deploy/examples/config.alloy` passes `alloy fmt`; VPS run pending (M14)
 
 #### PL-BAK — Backups
 
@@ -360,7 +361,7 @@ E browser E2E · C CI/static check · S spike/perf · R restore drill · X exter
 - [x] `PL-DB-002` Migrations — M1 — ✅ tested: internal/store TestMigrationsAndReopen, TestRefuseNewerSchema
 - [x] `PL-DB-003` Single owner — M1 — ✅ tested: internal/store TestExclusiveLock; internal/app second Start refused
 - [ ] `PL-DB-004` No network I/O in transactions — M1 — ◐ implemented: clients service prepares keys before Write and pushes after commit; no analyzer enforces it yet
-- [ ] `PL-DB-005` Retention — M1 — ◐ partial: revocations, rollups (8 d / 400 d), audit (400 d), delivery log (30 d), expired bans and offences (30 d) pruned; alert history arrives with M10
+- [x] `PL-DB-005` Retention — M1/M10 — ✅ tested: revocations, rollups (8 d / 400 d), audit (400 d), delivery log (30 d), expired bans and offences (30 d), alert history (90 d, internal/alerts TestClientExpiryAndPrune)
 - [ ] `PL-DB-006` Permissions and placement — M1 — ◐ partial: 0700/0600 modes tested (TestDatabaseFileMode); Linux network-FS refusal implemented, untested
 - [x] `PL-DB-007` Integrity — M1 — ✅ tested: internal/store TestCorruptDatabaseRefused
 
@@ -393,7 +394,7 @@ E browser E2E · C CI/static check · S spike/perf · R restore drill · X exter
 - [ ] `PL-OPS-002` Commands — M0 — ◐ partial: version, healthcheck, init, serve, keys export, openapi, banagent implemented; banagent only unit/nft-container tested
 - [x] `PL-OPS-003` Configuration — M1 — ✅ tested: internal/config tests; docs/operator/configuration.md
 - [ ] `PL-OPS-004` Profiles — M1 — ◐ partial: prod refusals for admin exposure, plain master key, missing key, plain-HTTP public listener and missing AOP CA tested (internal/config); dev master key detection not applicable (prod requires *_FILE)
-- [ ] `PL-OPS-005` Dev stack — M1 — ◐ partial: deploy/compose.dev.yaml runs init → nats → pulsed (verified locally); SeaweedFS (M11) pending; pebble runs in `make test-acme`, not in the dev stack (ADR-0032)
+- [ ] `PL-OPS-005` Dev stack — M1 — ◐ partial: deploy/compose.dev.yaml runs init → nats → pulsed (verified locally); Alloy added (M10); SeaweedFS (M11) pending; pebble runs in `make test-acme`, not in the dev stack (ADR-0032)
 - [ ] `PL-OPS-006` Reference prod compose — M1 — ◐ implemented: deploy/examples/compose.yaml; banagent service depends on M8
 - [ ] `PL-OPS-007` CI — M0 — ◐ implemented: .github/workflows/ci.yaml (SHA-pinned, GOTOOLCHAIN=local); `make check` green locally; never run on GitHub (no remote)
 - [ ] `PL-OPS-008` Release — M0 — ◐ implemented: .github/workflows/release.yaml; not externally verified (no remote, no tag)

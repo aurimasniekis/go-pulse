@@ -6,8 +6,11 @@ import (
 	"net"
 	"net/http"
 	"slices"
+	"strconv"
 	"strings"
 	"time"
+
+	"github.com/aurimasniekis/go-pulse/internal/metrics"
 )
 
 // CSRFHeader must be present on state-changing admin requests (PL-ADM-004). Browsers cannot add custom headers to
@@ -82,6 +85,16 @@ func (s *statusWriter) Flush() {
 
 func (s *statusWriter) Unwrap() http.ResponseWriter { return s.ResponseWriter }
 
+// methodLabel bounds the method label to the standard methods.
+func methodLabel(m string) string {
+	switch m {
+	case http.MethodGet, http.MethodHead, http.MethodPost, http.MethodPut, http.MethodPatch, http.MethodDelete, http.MethodOptions:
+		return m
+	default:
+		return "other"
+	}
+}
+
 func accessLog(log *slog.Logger, listener string, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		start := time.Now()
@@ -91,7 +104,11 @@ func accessLog(log *slog.Logger, listener string, next http.Handler) http.Handle
 		if sw.status >= 500 {
 			lvl = slog.LevelWarn
 		}
+		took := time.Since(start)
+		route := metrics.Route(r.URL.Path)
+		metrics.HTTPRequests.WithLabelValues(listener, route, methodLabel(r.Method), strconv.Itoa(sw.status)).Inc()
+		metrics.HTTPDuration.WithLabelValues(listener, route).Observe(took.Seconds())
 		log.Log(r.Context(), lvl, "http", "listener", listener, "method", r.Method, "path", r.URL.Path, "status", sw.status,
-			"ms", time.Since(start).Milliseconds())
+			"ms", took.Milliseconds())
 	})
 }

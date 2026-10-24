@@ -14,6 +14,7 @@ import (
 	"github.com/danielgtaylor/huma/v2/sse"
 	"github.com/nats-io/nats.go"
 
+	"github.com/aurimasniekis/go-pulse/internal/metrics"
 	"github.com/aurimasniekis/go-pulse/internal/natsauth"
 	"github.com/aurimasniekis/go-pulse/internal/query"
 	"github.com/aurimasniekis/go-pulse/internal/streams"
@@ -337,5 +338,6 @@ func (d *Deps) publishOne(ctx context.Context, tok *tokens.Token, e BatchEvent, 
 	if err != nil {
 		return nil, d.internalErr("publish", err)
 	}
+	metrics.IngestEvents.WithLabelValues("http").Inc()
 	return &PublishOutput{Stream: ack.Stream, Seq: ack.Sequence, ID: msg.Header.Get(envelope.HeaderID), Duplicate: ack.Duplicate}, nil
 }

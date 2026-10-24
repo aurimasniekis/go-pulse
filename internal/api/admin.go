@@ -6,7 +6,9 @@ import (
 	"log/slog"
 	"net/http"
 	"net/url"
+	"runtime"
 	"slices"
+	"time"
 
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/danielgtaylor/huma/v2/adapters/humago"
@@ -14,6 +16,7 @@ import (
 	"github.com/nats-io/nats.go/jetstream"
 
 	"github.com/aurimasniekis/go-pulse/internal/acme"
+	"github.com/aurimasniekis/go-pulse/internal/alerts"
 	"github.com/aurimasniekis/go-pulse/internal/audit"
 	"github.com/aurimasniekis/go-pulse/internal/auth"
 	"github.com/aurimasniekis/go-pulse/internal/ban"
@@ -70,6 +73,17 @@ type Deps struct {
 	// CertSources are the certificates shown on the System page; ACME returns the renewal status (nil when disabled).
 	CertSources []CertSource
 	ACME        func() acme.Status
+	Alerts      *alerts.Engine
+	Started     time.Time
+	// AccountNames maps account public keys to display names (SYS, APP).
+	AccountNames map[string]string
+}
+
+func (d *Deps) accountNames() map[string]string {
+	if d.AccountNames == nil {
+		return map[string]string{}
+	}
+	return d.AccountNames
 }
 
 func (d *Deps) log() *slog.Logger {
@@ -130,6 +144,8 @@ func NewAdminAPI(mux *http.ServeMux, d *Deps) huma.API {
 	registerAudit(api, d)
 	registerWebhooks(api, d)
 	registerSecurity(api, d)
+	registerAlerts(api, d)
+	registerConnections(api, d)
 	return api
 }
 
@@ -160,12 +176,45 @@ type SystemInfo struct {
 		Version    string  `json:"version"`
 		RTTMillis  float64 `json:"rtt_ms"`
 	} `json:"nats"`
-	JetStream *sysapi.Jsz `json:"jetstream,omitempty"`
+	JetStream *sysapi.Jsz  `json:"jetstream,omitempty"`
+	Server    *ServerStats `json:"server,omitempty" doc:"NATS server statistics (VARZ)"`
+	Runtime   RuntimeStats `json:"runtime"`
 	Connect   struct {
 		NATSURL   string `json:"nats_url" doc:"Where tools connect (raw NATS TLS)"`
 		PublicURL string `json:"public_url" doc:"Base URL of the public HTTP API"`
 		CACert    string `json:"ca_cert" doc:"Internal CA (PEM); clients need it while 4222 serves the bootstrap certificate"`
 	} `json:"connect"`
+}
+
+// ServerStats is the NATS VARZ subset shown on the System page.
+type ServerStats struct {
+	Start         time.Time `json:"start"`
+	Uptime        string    `json:"uptime"`
+	Go            string    `json:"go"`
+	Mem           int64     `json:"mem_bytes"`
+	CPU           float64   `json:"cpu_percent"`
+	Cores         int       `json:"cores"`
+	Connections   int       `json:"connections"`
+	TotalConns    uint64    `json:"total_connections"`
+	Subscriptions uint32    `json:"subscriptions"`
+	InMsgs        int64     `json:"in_msgs"`
+	OutMsgs       int64     `json:"out_msgs"`
+	InBytes       int64     `json:"in_bytes"`
+	OutBytes      int64     `json:"out_bytes"`
+	SlowConsumers int64     `json:"slow_consumers"`
+	MaxPayload    int       `json:"max_payload"`
+	ConfigLoaded  time.Time `json:"config_load_time"`
+}
+
+// RuntimeStats describes the pulsed process.
+type RuntimeStats struct {
+	Started    time.Time `json:"started,omitzero"`
+	GoVersion  string    `json:"go_version"`
+	Goroutines int       `json:"goroutines"`
+	HeapBytes  uint64    `json:"heap_bytes"`
+	SysBytes   uint64    `json:"sys_bytes" doc:"Memory obtained from the OS"`
+	GCCycles   uint32    `json:"gc_cycles"`
+	CPUs       int       `json:"cpus"`
 }
 
 func registerSystem(api huma.API, d *Deps) {
@@ -194,7 +243,16 @@ func registerSystem(api huma.API, d *Deps) {
 			if jsz, err := d.Sys.Jsz(ctx); err == nil {
 				b.JetStream = jsz
 			}
+			if v, err := d.Sys.Varz(ctx); err == nil {
+				b.Server = &ServerStats{Start: v.Start, Uptime: v.Uptime, Go: v.GoVersion, Mem: v.Mem, CPU: v.CPU, Cores: v.Cores,
+					Connections: v.Connections, TotalConns: v.TotalConns, Subscriptions: v.Subscriptions, InMsgs: v.InMsgs, OutMsgs: v.OutMsgs,
+					InBytes: v.InBytes, OutBytes: v.OutBytes, SlowConsumers: v.SlowConsumers, MaxPayload: v.MaxPayload, ConfigLoaded: v.ConfigLoadTime}
+			}
 		}
+		var ms runtime.MemStats
+		runtime.ReadMemStats(&ms)
+		b.Runtime = RuntimeStats{Started: d.Started, GoVersion: runtime.Version(), Goroutines: runtime.NumGoroutine(), HeapBytes: ms.HeapAlloc,
+			SysBytes: ms.Sys, GCCycles: ms.NumGC, CPUs: runtime.NumCPU()}
 		return out, nil
 	})
 }

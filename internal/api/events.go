@@ -11,6 +11,7 @@ import (
 	"github.com/danielgtaylor/huma/v2/sse"
 
 	"github.com/aurimasniekis/go-pulse/internal/audit"
+	"github.com/aurimasniekis/go-pulse/internal/metrics"
 	"github.com/aurimasniekis/go-pulse/internal/query"
 	"github.com/aurimasniekis/go-pulse/internal/streams"
 	"github.com/aurimasniekis/go-pulse/internal/tail"
@@ -116,6 +117,7 @@ func registerEvents(api huma.API, d *Deps) {
 			if err != nil {
 				return nil, mapQueryErr(d, "publish", err)
 			}
+			metrics.IngestEvents.WithLabelValues("admin").Inc()
 			_ = audit.Write(ctx, d.DB, d.actor(ctx), "event.publish", b.Subject, audit.OK, map[string]any{"seq": ack.Sequence, "type": b.Type})
 			return &struct{ Body PublishResult }{PublishResult{Stream: ack.Stream, Seq: ack.Sequence, ID: msg.Header.Get(envelope.HeaderID),
 				Duplicate: ack.Duplicate}}, nil
