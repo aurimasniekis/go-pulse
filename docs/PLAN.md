@@ -219,7 +219,7 @@ E browser E2E · C CI/static check · S spike/perf · R restore drill · X exter
 #### PL-ENV — Envelope
 
 - [x] `PL-ENV-001` Headers — M2 — ✅ tested: pkg/pulse/envelope conformance encode/decode
-- [ ] `PL-ENV-002` Shared encoder — M13
+- [x] `PL-ENV-002` Shared encoder — M13 — ✅ tested: pkg/pulse/envelope is the single Go encoder; Python and TS pass the same vectors (make sdk-test)
 - [x] `PL-ENV-003` Idempotency — M2 — ✅ tested: pkg/pulse TestDeduplicationAndValidation
 - [x] `PL-ENV-004` Blob references — M2 — ✅ tested: envelope blob vector; pkg/pulse TestBlobs
 - [x] `PL-ENV-005` Documentation — M2 — ✅ documented: docs/ENVELOPE.md
@@ -388,7 +388,7 @@ E browser E2E · C CI/static check · S spike/perf · R restore drill · X exter
 - [x] `PL-SDK-003` TS SDK — M13 — ✅ tested: sdk/ts conformance (vitest), interop over tls:// and ws:// (TestInterop/ts-node, ts-ws), real browser over /ws (e2e sdk-browser.spec)
 - [x] `PL-SDK-004` Conformance — M13 — ✅ tested: Go, Python and TS pass sdk/conformance/vectors.json
 - [x] `PL-SDK-005` Interop e2e — M13 — ✅ tested: make test-sdk-interop (Go publishes 6 envelope shapes incl. a blob; Python/TS replay identically, resume durables, publish events + blobs Go reads); browser via /ws in e2e
-- [ ] `PL-SDK-006` CLI — M2 — ◐ partial: `context`, `pub`, `sub --since/--seq/--new/--durable/--json` tested (cmd/pulse); `req`, `streams`, `tail`, `clients`, `backup` pending
+- [x] `PL-SDK-006` CLI — M2/M13 — ✅ tested: `context`, `pub`, `sub --since/--seq/--new/--durable/--json`, `tail`, `req` (cmd/pulse); `streams`, `clients ls|create|rotate|revoke`, `backup ls|run|restore` via the admin API (cmd/pulse TestClientsCreateAndAdminErrors; exercised against the dev stack)
 - [x] `PL-SDK-007` Inbox prefix — M2/M13 — ✅ tested: pkg/pulse (inbox prefix from creds tag; client permissions only allow _INBOX_<id>); Python and TS derive it from the creds and run within the scoped grants in TestInterop
 
 #### PL-OPS — Packaging and operations
@@ -397,7 +397,7 @@ E browser E2E · C CI/static check · S spike/perf · R restore drill · X exter
 - [ ] `PL-OPS-002` Commands — M0 — ◐ partial: version, healthcheck, init, serve, keys export, openapi, banagent implemented; banagent only unit/nft-container tested
 - [x] `PL-OPS-003` Configuration — M1 — ✅ tested: internal/config tests; docs/operator/configuration.md
 - [ ] `PL-OPS-004` Profiles — M1 — ◐ partial: prod refusals for admin exposure, plain master key, missing key, plain-HTTP public listener and missing AOP CA tested (internal/config); dev master key detection not applicable (prod requires *_FILE)
-- [ ] `PL-OPS-005` Dev stack — M1 — ◐ partial: deploy/compose.dev.yaml runs init → nats → pulsed (verified locally); Alloy (M10) and SeaweedFS (M11) added; pebble runs in `make test-acme`, not in the dev stack (ADR-0032)
+- [x] `PL-OPS-005` Dev stack — M1/M11 — ✅ verified locally: deploy/compose.dev.yaml runs init → nats → pulsed with Alloy and SeaweedFS (all healthy, e2e runs against it); pebble runs in `make test-acme` instead (ADR-0032)
 - [ ] `PL-OPS-006` Reference prod compose — M1 — ◐ implemented: deploy/examples/compose.yaml; banagent service depends on M8
 - [ ] `PL-OPS-007` CI — M0 — ◐ implemented: .github/workflows/ci.yaml (SHA-pinned, GOTOOLCHAIN=local); `make check` green locally; never run on GitHub (no remote)
 - [ ] `PL-OPS-008` Release — M0 — ◐ implemented: .github/workflows/release.yaml; not externally verified (no remote, no tag)
@@ -419,11 +419,11 @@ E browser E2E · C CI/static check · S spike/perf · R restore drill · X exter
 - [x] `PL-TST-004` Query tests — M3 — ✅ tested: internal/query (72 table-driven subtests)
 - [x] `PL-TST-005` E2E — M4 — ✅ tested: web/e2e/smoke.spec.ts (6 tests) vs `make dev-up`; .github/workflows/e2e.yaml (not yet run on GitHub)
 - [ ] `PL-TST-006` Gate spike — M2 — ◐ tooling ready: cmd/pulse-spike, scripts/spike.sh, `make spike`; not run — the user triggers it
-- [ ] `PL-TST-007` Restore drill — M11
+- [x] `PL-TST-007` Restore drill — M11 — ✅ gate passed: `make drill` (TestRestoreDrill)
 
 #### PL-DOC — Documentation
 
-- [ ] `PL-DOC-001` Operator docs — M12
+- [x] `PL-DOC-001` Operator docs — M12 — ✅ docs/operator: deployment, configuration, keys, TLS, firewall, bans, backups (+ ../BACKUPS.md restore), upgrades, SSO, troubleshooting
 - [x] `PL-DOC-002` API docs — M3 — ✅ documented: docs/API.md
 - [x] `PL-DOC-003` Envelope docs — M2 — ✅ documented: docs/ENVELOPE.md
 - [ ] `PL-DOC-004` Sizing — M2 — ◐ docs/SIZING.md procedure + budget; results pending the spike run

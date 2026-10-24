@@ -40,7 +40,7 @@ test('kv: create bucket, set and read a key, history, delete', async ({ page, re
   await expect(page.getByText(`Bucket ${bucket} deleted`)).toBeVisible()
 })
 
-test('objects: upload, download, delete; blobs is read-only', async ({ page }) => {
+test('objects: upload, download, delete; blobs is read-only', async ({ page, request }) => {
   const bucket = `e2e_obj_${Date.now().toString(36)}`
   await page.goto('/kv?tab=objects')
   await page.getByRole('button', { name: 'New object store' }).click()
@@ -63,6 +63,7 @@ test('objects: upload, download, delete; blobs is read-only', async ({ page }) =
   await confirm.getByLabel('confirmation').fill('notes.txt')
   await confirm.getByRole('button', { name: 'Delete' }).click()
   await expect(page.getByText('Object deleted')).toBeVisible()
+  await request.delete(`/api/admin/v1/objects/${bucket}?confirm=${bucket}`, { headers: csrf })
 
   await page.goto('/kv?tab=objects&bucket=blobs')
   await expect(page.getByText('Managed by pulsed')).toBeVisible()

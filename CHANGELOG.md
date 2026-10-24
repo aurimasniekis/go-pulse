@@ -39,6 +39,9 @@ versioning: [docs/VERSIONING.md](docs/VERSIONING.md).
   Playwright check of every page.
 - M13: Python SDK (`sdk/python`) and TypeScript SDK (`@pulse/sdk`, node and browser over `/ws`) with conformance and
   Go ↔ Python ↔ TS interop tests.
+- `pulse` CLI: `tail`, `req`, and `streams`, `clients ls|create|rotate|revoke`, `backup ls|run|restore` through the
+  admin API tunnel. Operator guides in `docs/operator/` (deployment, keys, TLS, bans, backups, upgrades,
+  troubleshooting).
 
 ### Fixed
 - Admin API requests canceled by the browser return 499 instead of logging an internal error.

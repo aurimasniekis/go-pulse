@@ -28,6 +28,6 @@ func newRootCmd() *cobra.Command {
 		Version:      app.Version,
 		SilenceUsage: true,
 	}
-	root.AddCommand(newContextCmd(), newPubCmd(), newSubCmd())
+	root.AddCommand(newContextCmd(), newPubCmd(), newSubCmd(), newTailCmd(), newReqCmd(), newStreamsCmd(), newClientsCmd(), newBackupCmd())
 	return root
 }
