@@ -1,11 +1,12 @@
 # Pulse — Implementation Plan
 
-> **Status:** active execution plan. Created at M0 on 2026-10-23.
-> The product contract is `docs/GOAL.md`; when the two disagree, GOAL.md wins. Fix this plan and record the change in DECISIONS.md.
+> **Status:** design reference and requirement status. The product contract is `docs/GOAL.md`; when the two disagree,
+> GOAL.md wins. Fix this plan and record the change in DECISIONS.md.
 > Decisions: `docs/DECISIONS.md` · Threats: `docs/THREAT_MODEL.md` · Tests: `docs/TEST_STRATEGY.md`.
-> Progress lives in §5.2 (milestone status) and §6 (acceptance checklist). Keep both current.
+> Status lives in §5 (milestones) and §6 (acceptance checklist). Keep both current. Changes are listed in `CHANGELOG.md`;
+> the build-time milestone plans and progress log are in git history (ADR-0039).
 
-Contents: 1 Summary · 2 Architecture · 3 Data model · 4 Key flows · 5 Milestones · 6 Acceptance checklist · 7 Risks · 8 Commit workflow
+Contents: 1 Summary · 2 Architecture · 3 Data model · 4 Key flows · 5 Milestone status · 6 Acceptance checklist · 7 Risks
 
 ---
 
@@ -21,7 +22,7 @@ live in JetStream. pulsed's own state lives in SQLite (ADR-0024).
 | A-2 | Event volume ≤ ~1M events/day, ≤ 50k distinct subjects. | Rollup dimensions and subject index caps need revisiting. |
 | A-3 | Cloudflare free plan in front of `events.example.com`. | More WAF and rate-limit rules become possible (R-03). |
 | A-4 | Go 1.27.3 (ADR-0019), Node 24.22, pnpm 10. | Pin bumps go through CI. |
-| A-5 | The operator reaches the admin UI with `ssh -L 8080:127.0.0.1:8080`. | OIDC (R-02) is required before exposure. |
+| A-5 | Operators reach the dashboard through `ssh -L 8080:127.0.0.1:8080` or, when enabled, behind Cloudflare with sign-in (ADR-0038). | n/a |
 
 ## 2. Architecture
 
@@ -131,31 +132,7 @@ old scoped key. Revoke: remove the scoped key, add the user key to `revocations`
 ### 4.4 Rollups
 Ordered `HeadersOnly` consumer from checkpoint+1 → in-memory minute buckets → flush every 10 s in one transaction → RAM cache.
 
-## 5. Milestones
-
-### 5.1 Work packages
-
-| M | Title | Scope | Done when |
-|---|---|---|---|
-| M0 | Skeleton | git init; GOAL/PLAN/DECISIONS/THREAT_MODEL/TEST_STRATEGY/AGENTS; go.mod, Makefile, Dockerfile, `internal/ui` embed, `pulsed version|healthcheck`; Vite + Mantine shell with theme; CI and release workflows; deployment repo skeleton docs. | `make check` green; image builds. |
-| M1 | Identity, NATS bootstrap, SQLite | secretbox, natsauth, natsconf, bootstrap, natsconn, sysapi, store (SQLite), config, `compose.dev.yaml` (init → nats → pulsed). | Embedded-server tests: creds connect, AUTH.ERR host, revoke → disconnect, accounts persist over restart, RELOAD with new cert. |
-| M2 | Envelope, EVENTS, Go SDK, CLI | envelope, EVENTS ensure, grants → permissions tests, SDK Publish/Subscribe(Since/Durable)/Handle[T], CLI context/pub/sub. Spike: 10 GB, 5k subjects, mem 900m → SIZING.md. | Tests green; spike recorded. |
-| M3 | API and query engine | Huma groups, listeners, auth seam, `pulsed openapi` → TS types, explorer and SSE tail endpoints, table-driven query tests. | Tests green; spec generated. |
-| M4 | UI core | Shell (sidebar, Cmd-K, theme), Explorer, Live tail, Streams & consumers; vitest + Playwright vs `make dev-up`. | Tests green. |
-| M5 | Rollups | Rollup engine, Overview (KPIs, throughput 1h/24h/30d/1y, top subjects, forecast), Subject tree. | Tests green. |
-| M6 | Clients and ingress | Clients & credentials UI, HTTP tokens, publish API, request bridge, audit log. | Tests green. |
-| M7 | Webhooks | Inbound verifiers (GitHub/Stripe vectors), outbound dispatcher, delivery log, retry. | Tests green. |
-| M8 | Security and edge TLS | Ban detector + enforcement, prod TLS with AOP (local CA + `curl --cert`), CF list sync (mocked), banagent, Security page. | Tests green. |
-| M9 | ACME | lego + pebble profile, reload + verify, expiry in System. | Tests green. |
-| M10 | Observability | `/metrics`, System page, alert rules, Telegram/Discord, Alloy in dev. | Tests green. |
-| M11 | Backups | SQLite snapshot, segments + snapshots, SeaweedFS S3, GFS, restore drill (gate). | Drill passes or fallback ADR. |
-| M12 | Remaining UI | KV/Object browser, Backups, Alerts, Settings, audit filters, Playwright smoke of every page. | Tests green. |
-| M13 | Python and TS SDKs | Conformance vectors, interop e2e (Go → Python, TS node, browser via /ws). | Tests green. |
-| M14 | Ansible (events-wan-lt) | base, firewall, fail2ban, docker, pulse, alloy roles; vm-verify.sh. | Needs test VM (externally verified). |
-| M15 | Terraform + deploy (events-wan-lt) | Module, `terraform test` with mocks, examples, `make deploy`, GO-LIVE.md. | validate + test green. |
-| M16 | Dashboard users and SSO (ADR-0038) | Users, roles, TOTP, sessions, invitations, break-glass, OIDC (PKCE, mappings, JIT, step-up, SSO-only), personal access tokens, public dashboard host, UI. | Tests + e2e green. |
-
-### 5.2 Status table
+## 5. Milestone status
 
 Status values: `planned`, `in-progress`, `implemented`, `tested`, `externally-verified`, `blocked`.
 
@@ -178,30 +155,6 @@ Status values: `planned`, `in-progress`, `implemented`, `tested`, `externally-ve
 | M14 | Ansible (events-wan-lt) | tested locally in a Debian 13 container; VM pending | n/a (no commits in that repo) |
 | M15 | Terraform + deploy (events-wan-lt) | module tested with mocks; deploy prepared, waits for a release and the VPS | n/a |
 | M16 | Dashboard users and SSO | tested (live IdP and Cloudflare-fronted dashboard pending) | see git log |
-
-### 5.3 Progress log
-
-| Date | M | Note |
-|---|---|---|
-| 2026-10-23 | M0 | Planning docs written. ADR-0024 (SQLite for pulsed state) recorded per user decision. ADR-0025 (scoped signing key per client). |
-| 2026-10-23 | M0 | Skeleton done: Go module, `pulsed version|healthcheck`, UI shell, Dockerfile, CI/release. Go bumped to 1.27.3 for GO-2026-6809 (ADR-0019). `make check` green. |
-| 2026-10-23 | M1 | secretbox, natsauth (grants→permissions, scoped signers), natsconf, bootstrap, natsconn, sysapi, store (SQLite), clients service, config, `pulsed init|serve|keys export`, dev compose (init → nats → pulsed). Found and fixed: empty NATS allow list = allow all (sentinel); scoped users need zero permission sections; upstream race in embedded reload (RELOAD tests use a subprocess). |
-| 2026-10-23 | M2 | Envelope + conformance vectors, EVENTS/blobs ensure, Go SDK (publish, ordered/durable subscribe, Handle[T], blobs), CLI context/pub/sub. Spike tooling written but not run: the user decides when (heavy). |
-| 2026-10-23 | M3 | Huma admin/public APIs, auth seam, Host allowlist (DNS rebinding), CSRF header, explorer engine (direct get batch, ordered consumer, backward windows, cursors, budgets), SSE tail, `pulsed openapi` + TS types (separate TS5 apigen package), UI served from the binary. |
-| 2026-10-23 | M4 | Shell with NATS status indicator, Explorer (URL filters, virtualized table, cursor paging, budget notice, event drawer with payload views and replay command), Live tail (SSE, buffered rendering, sampling notices), Streams list/detail/create/edit/delete, consumers. vitest + Playwright (6 smoke tests vs dev stack). Seeded-data e2e waits for M6 (no client creds in the dev stack yet). |
-| 2026-10-23 | M5 | Rollup engine (headers-only ordered consumers, exactly-once with checkpoint in the same SQLite tx, per-resolution dimensions, minute cache, key sampling, pruning), overview/throughput/subject tree APIs, admin publish endpoint, Overview (KPIs, ECharts throughput, rank lists, forecast) and Subjects pages; data-seeded e2e (9 tests). |
-| 2026-10-24 | M6 | HTTP tokens (hashed, CIDR-limited), public publish/batch/request/replay/tail with grant checks and an auth-failure hook for M8, clients/tokens/audit admin APIs, Clients (grants editor, show-once creds + snippets, rotate, revoke, live connections), HTTP tokens and Audit pages; e2e publishes through the public API with an issued token. Python/TS snippets describe the M13 SDK API and must match it. |
-| 2026-10-24 | M7 | Inbound hooks (GitHub, Stripe, HMAC, shared secret; sealed secrets; 401 feeds the ban hook), outbound dispatcher (ordered, backoff 1 s–1 h, 12 attempts, dead letters, HMAC signing, SSRF guard checked at dial time, delivery log, pause/resume, retry, test), admin API and Webhooks page; e2e covers inbound delivery and outbound test/pause/delete. |
-| 2026-10-24 | M8 | Ban detector (NATS AUTH.ERR, HTTP 401, webhook signatures; window, ×4 escalation, never-ban), SQLite bans/allowlist, HTTP 403 middleware, banagent (long-poll feed, nftables interval sets with timeouts; real nft tested in a privileged container), Cloudflare IP-list reconciler (fake API), origin cert hot reload, AOP mTLS (handshake tests), Cloudflare-aware real IP, /ws proxy (NATS over websocket through the proxy), Security page. |
-| 2026-10-24 | M9 | ACME manager on lego (account by key from `keys.enc`, DNS-01 via Cloudflare or challtestsrv), ACME pair listed before the internal leaf in `nats.conf` and selected by SNI (ADR-0032 amends ADR-0023), atomic write → re-render → RELOAD → served-serial check over a raw INFO/TLS handshake, renewal at min(30 d, lifetime/3) (found with pebble's 6-day certificates), `GET /system/certificates`, System page (server, NATS, JetStream, certificates, ACME status). `make test-acme` runs pebble + challtestsrv in Docker against a real nats-server. Canceled requests now return 499 instead of logging a 500. `make secrets` was scanning 0 commits locally (global `color.ui=always` breaks gitleaks' log parser); it now runs with `GIT_CONFIG_GLOBAL=/dev/null` and scans all 9 commits clean. |
-| 2026-10-24 | M10 | Prometheus registry on the metrics listener (pulsed counters, scrape-time VARZ/JSZ/stream gauges, bounded route labels), alert engine (9 built-ins incl. `nats_down`, custom threshold rules on rollups, pending/firing/resolved in SQLite, reminders, `_sys.alert.<rule>` events, history pruned at 90 d), Telegram and Discord notifiers (file secrets, rate limit, retries, URL-free errors), alerts admin API + Alerts page, System page (runtime, VARZ, connections), Alloy in the dev stack (target verified `up`) and a reference prod config. Found: Huma ignores path params on embedded input structs (inlined); e2e overview test was flaky because earlier runs' domains tie in the top-10 (seeding now gives the run a clear lead). |
-| 2026-10-24 | M11 | Backups (ADR-0035). Gate PL-BAK-007 passed: NATS 2.15 snapshots are NATSARC1 and restore keeps sequences and timestamps; republishing keeps none (0/15). pulsed snapshots every APP stream, stores message records in sequence-anchored buckets (HMAC names, S2 + age, deduplicated: an unchanged night uploads ~7 KB), plus `pulse.db` (VACUUM INTO) and `keys.enc`; verification, GFS 7/4/12 with chunk GC, authenticated restore (manifest MAC, chunk HMACs; replace pre-checks all chunks), background restore jobs, `pulsed backup keygen|list|run|restore`, Backups page, `backup_stale` alert wired, SeaweedFS 4.48 in the dev stack, `make test-s3`. Found and fixed while testing: the end-of-snapshot message has no status header when the archive fits one chunk; a restore stream filter that opened up after the first match (regression test). |
-| 2026-10-24 | M12 | KV & Objects browser (buckets, keys with filter and history, set/delete, object upload ≤ 64 MiB / download as attachment / delete; `blobs` read-only), Settings page (effective configuration with secrets as set/not set, per-browser time zone and colour scheme), audit time-range filters, every-page Playwright smoke (heading, no page/console errors), nav ↔ route vitest, missing-UI handler test. The Alerts (M10) and Backups (M11) pages landed with their milestones. e2e overview seeding now beats the current top-10 leader instead of relying on fixed counts (35/35 three runs in a row). |
-| 2026-10-24 | M13 | Python SDK (`sdk/python`, nats-py: connect with creds, publish, ordered/durable subscribe, request, blobs) and TS SDK (`sdk/ts`, @nats-io v3.4.0: node tls:// and ws://, browser bundle) with the same surface as the dashboard snippets; both pass the 37 conformance vectors; Go ↔ Python ↔ TS interop (`make test-sdk-interop`: identical replay with since, durable resume, blobs both ways, publish-back) and a real-browser replay over `/ws` through the dev stack (e2e sdk-browser.spec); CI job `sdk`. Found and fixed: re-subscribing a Go durable with a different start position failed ("deliver policy can not be updated"); regression test added. ADR-0036. |
-| 2026-10-24 | M14 | events-wan-lt (uncommitted, per the user's rule): roles base, firewall, fail2ban, docker, alloy, pulse; `make test-ansible` converges them in a privileged Debian 13 container with pulsed:dev and passes all assertions and a changed=0 second run. Findings fed back here: banagent needs root with only NET_ADMIN/DAC_READ_SEARCH (be3fc7a), Debian's nftables unit flushes everything on stop (firewall contract updated). VM verification (`scripts/vm-verify.sh`) waits for the test VM. |
-| 2026-10-24 | M15 | events-wan-lt: `make pin-image` (attestation check + digest), `make deploy`, docs/GO-LIVE.md. Waiting for a tagged release (no remote yet) and the VPS. |
-| 2026-10-24 | — | Repository prepared for publication (ADR-0037): Apache-2.0, README, SECURITY/CONTRIBUTING/RELEASING, VitePress website in `site/` with Pages workflow, `make screenshots`. Writing the docs found R-05 (consumer scoping) and R-06 (no EVENTS shrink path) and an image build break (`.dockerignore`), fixed. |
-| 2026-10-24 | M16 | Dashboard users, TOTP and OIDC SSO ported from hallpass (ADR-0038): internal/users, internal/oidc, internal/rbac, per-operation permissions, public dashboard host, personal access tokens, `pulsed admin bootstrap|recover|token`, sign-in/account/users/SSO UI. Go tests (users, oidc with an in-process IdP, api roles and routing), e2e 42 passed twice with real sign-in (global setup: bootstrap + TOTP), make check green. |
 
 ## 6. Acceptance checklist (mapped to requirement IDs)
 
@@ -463,10 +416,3 @@ E browser E2E · C CI/static check · S spike/perf · R restore drill · X exter
 | K-7 | Huma SSE's per-message write deadline. | Cleared at M3: the deadline is set per write, keepalives every 20 s; tail SSE tested. | Plain `http.Flusher` handler outside Huma, documented in the spec. |
 | K-8 | Installing SDKs from git (pnpm `github:…#path:/sdk/ts`, pip `#subdirectory=`). | M13. | Publish to a private registry. |
 | K-9 | SQLite single writer under bursty admin + rollup + delivery-log writes. | M5/M7 load tests. | Batch delivery-log writes. |
-
-## 8. Commit workflow
-
-1. `git status` and inspect the diff. Include only the milestone's files; no secrets.
-2. `git add <explicit paths>`.
-3. Generate the message with `/cc` (Conventional Commits). `/cc` prints a message only.
-4. `git commit` with that message. 5. Report the hash. **Never push** to `origin`, push tags or open PRs without an explicit instruction (ADR-0037).

@@ -5,7 +5,7 @@ Pulse is a personal, security-sensitive event bus (NATS JetStream + `pulsed`). T
 ## Before working
 
 1. Read `docs/GOAL.md` (canonical contract) and `docs/PLAN.md` (execution plan).
-2. Check `docs/PLAN.md` §5.2 (milestone status) and `docs/DECISIONS.md` §2 (open review items) for the next milestone and blockers.
+2. Check `docs/PLAN.md` §5 (milestone status) and `docs/DECISIONS.md` §2 (open review items) for the next milestone and blockers.
 3. Consult `docs/THREAT_MODEL.md` and `docs/TEST_STRATEGY.md` for the milestone's security and test obligations.
 
 ## Contract rules

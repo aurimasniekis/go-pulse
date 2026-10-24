@@ -465,6 +465,20 @@
   30 min); sensitive actions ask for re-authentication every 5 minutes. The e2e suite signs in through the API in a global
   setup. `pulse` admin commands and `pulsed backup run` need a personal access token.
 
+### ADR-0039 — User-facing docs stand alone; build-time planning material trimmed
+
+- **Status:** accepted (operator request, 2026-10-24). Not security-relevant: no requirement, guarantee or default
+  changes.
+- **Decision:** the README, website, operator docs, deploy file comments and user-visible strings (errors, CLI help,
+  OpenAPI descriptions, UI text) no longer cite requirement, ADR, review-item or milestone IDs or link to the planning
+  documents; each reference is dropped or replaced by the explanation it pointed to. The README links to the website
+  instead of the repository's docs folders and drops its status note; known limitations live on the website's security
+  page. PLAN.md drops the per-milestone work-package plans (§5.1), the progress log (§5.3) and the commit workflow
+  (§8, AGENTS.md is the source); the milestone status table is now §5. `docs/README.md` indexes the reference docs and
+  lists the planning documents separately as internal.
+- **Consequences:** code comments keep their IDs for traceability. GOAL.md, DECISIONS.md, THREAT_MODEL.md,
+  TEST_STRATEGY.md, the status table and the acceptance checklist stay; the removed text remains in git history.
+
 ## 2. Open review items
 
 | ID | Item | Default until decided |
