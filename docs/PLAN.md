@@ -339,7 +339,7 @@ E browser E2E · C CI/static check · S spike/perf · R restore drill · X exter
 
 #### PL-OBS — Observability
 
-- [ ] `PL-OBS-001` Logs — M1 — ◐ implemented: internal/logging (slog JSON); redaction review pending
+- [x] `PL-OBS-001` Logs — M1 — ✅ reviewed: slog JSON; log calls checked for secret fields (NATS URLs redacted, notifier URLs stripped); fixed outbound delivery errors embedding the destination URL (internal/outbound TestDeliveryErrorsDoNotLeakTheURL)
 - [x] `PL-OBS-002` Metrics — M10 — ✅ tested: internal/app TestStartReadyShutdown scrapes /metrics (pulsed counters, NATS/JetStream/stream gauges, Go runtime); internal/metrics TestRoute (bounded labels); Alloy scrape of the dev stack reports `up`
 - [x] `PL-OBS-003` Health — M1 — ✅ tested: internal/app TestStartReadyShutdown (/healthz, /readyz); dev stack container health
 - [x] `PL-OBS-004` Alert rules — M10 — ✅ tested: internal/alerts (cert expiry fire/resolve, for_seconds + reminders, disable, no-data keeps state, threshold above/below on completed buckets, validation, client expiry); `backup_stale` reports no data until M11; e2e alerts.spec (dead-man rule fires, disable, delete)
@@ -372,7 +372,7 @@ E browser E2E · C CI/static check · S spike/perf · R restore drill · X exter
 
 #### PL-UI — Dashboard
 
-- [ ] `PL-UI-001` Stack — M0 — ◐ implemented: Vite 8 + Mantine 8 + TanStack Router/Query/Table-ready/Virtual + embed; ECharts arrives with M5 charts
+- [x] `PL-UI-001` Stack — M0 — ✅ implemented: Vite 8 + Mantine 8 + TanStack Router/Query/Virtual + ECharts, embedded with go:embed; typecheck, vitest and Playwright in CI
 - [ ] `PL-UI-002` Look — M0 — ◐ implemented: theme (4px radius, compact inputs, Inter/JetBrains Mono, indigo, light/dark), checked by screenshots; no visual regression test
 - [x] `PL-UI-003` Shell — M4 — ✅ tested: e2e shell (status indicator, theme toggle, Cmd-K navigation); collapsible sidebar
 - [x] `PL-UI-004` Pages — M12 — ✅ tested: all 15 pages exist and render without errors (e2e pages.spec); functional e2e for every page with actions (smoke, data, access, webhooks, security, alerts, backups, kv)
@@ -396,7 +396,7 @@ E browser E2E · C CI/static check · S spike/perf · R restore drill · X exter
 #### PL-OPS — Packaging and operations
 
 - [x] `PL-OPS-001` Image — M0 — ✅ tested (local): `make image` builds distroless static-debian13, digests pinned, user 65532:65532; CI image job implemented, not yet run on GitHub
-- [ ] `PL-OPS-002` Commands — M0 — ◐ partial: version, healthcheck, init, serve, keys export, openapi, banagent implemented; banagent only unit/nft-container tested
+- [x] `PL-OPS-002` Commands — M0 — ✅ tested: version, healthcheck, init, serve, keys export, openapi, backup (cmd/pulsed tests); banagent unit + nft container tests and end to end in the events-wan-lt converge test
 - [x] `PL-OPS-003` Configuration — M1 — ✅ tested: internal/config tests; docs/operator/configuration.md
 - [ ] `PL-OPS-004` Profiles — M1 — ◐ partial: prod refusals for admin exposure, plain master key, missing key, plain-HTTP public listener and missing AOP CA tested (internal/config); dev master key detection not applicable (prod requires *_FILE)
 - [x] `PL-OPS-005` Dev stack — M1/M11 — ✅ verified locally: deploy/compose.dev.yaml runs init → nats → pulsed with Alloy and SeaweedFS (all healthy, e2e runs against it); pebble runs in `make test-acme` instead (ADR-0032)
@@ -404,7 +404,7 @@ E browser E2E · C CI/static check · S spike/perf · R restore drill · X exter
 - [ ] `PL-OPS-007` CI — M0 — ◐ implemented: .github/workflows/ci.yaml (SHA-pinned, GOTOOLCHAIN=local); `make check` green locally; never run on GitHub (no remote)
 - [ ] `PL-OPS-008` Release — M0 — ◐ implemented: .github/workflows/release.yaml; not externally verified (no remote, no tag)
 - [ ] `PL-OPS-009` Memory budget — M2 — ◐ limits configured (deploy/examples, deploy/compose.dev.yaml); measurement pending the operator-triggered spike (docs/SIZING.md)
-- [ ] `PL-OPS-010` Graceful shutdown — M1 — ◐ partial: listeners and NATS drain; rollup workers flush on shutdown before the DB closes (internal/app); outbound consumers arrive with M7
+- [x] `PL-OPS-010` Graceful shutdown — M1 — ✅ tested: listeners drain, rollups flush, outbound dispatchers stop, NATS drains; internal/app TestStartReadyShutdown asserts shutdown within PULSE_SHUTDOWN_TIMEOUT
 - [x] `PL-OPS-011` Versioning — M0 — ✅ tested: cmd/pulsed/main_test.go TestVersionJSON; docs/VERSIONING.md
 
 #### PL-AUD — Audit

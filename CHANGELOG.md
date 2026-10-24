@@ -44,6 +44,8 @@ versioning: [docs/VERSIONING.md](docs/VERSIONING.md).
   troubleshooting).
 
 ### Fixed
+- Outbound webhook delivery errors no longer include the destination URL, which can carry the secret (Slack and
+  Discord webhook paths, query tokens); they were stored in the delivery log and logged.
 - Reference compose: banagent could not write nftables sets (added capabilities do not reach the image's non-root
   user); it now runs as root with only NET_ADMIN and DAC_READ_SEARCH. The firewall contract documents that Debian's
   nftables unit flushes the whole ruleset on stop.

@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"strconv"
 	"strings"
 	"sync"
@@ -293,5 +294,28 @@ func TestValidationAndDelete(t *testing.T) {
 	b, _ := json.Marshal(DefaultBackoff)
 	if len(DefaultBackoff) != 11 || DefaultBackoff[0] != time.Second || DefaultBackoff[10] != time.Hour {
 		t.Fatalf("default backoff %s", b)
+	}
+}
+
+// PL-OBS-001: destination URLs often carry the secret (Slack/Discord webhook paths, query tokens); delivery errors are
+// stored and logged, so they must not contain the URL.
+func TestDeliveryErrorsDoNotLeakTheURL(t *testing.T) {
+	const secret = "T000/B000/s3cretWebhookPath" // gitleaks:allow (test literal)
+	ue := &url.Error{Op: "Post", URL: "https://hooks.example.com/services/" + secret + "?token=abc", Err: errors.New("dial tcp: connection refused")}
+	if got := cleanErr(ue); strings.Contains(got, secret) || strings.Contains(got, "token=abc") || !strings.Contains(got, "connection refused") {
+		t.Fatalf("cleanErr = %q", got)
+	}
+	f := setup(t, []string{"127.0.0.0/8"})
+	ctx := context.Background()
+	h, _, err := f.svc.Create(ctx, Input{Name: "gone", Filter: "evt.x.>", URL: "http://127.0.0.1:1/services/" + secret}, audit.System)
+	if err != nil {
+		t.Fatal(err)
+	}
+	d, err := f.svc.Test(ctx, h.ID, audit.System)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if d.Error == "" || strings.Contains(d.Error, secret) {
+		t.Fatalf("delivery error %q", d.Error)
 	}
 }

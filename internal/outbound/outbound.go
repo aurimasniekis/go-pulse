@@ -16,6 +16,7 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
+	"net/url"
 	"regexp"
 	"strconv"
 	"strings"
@@ -458,7 +459,7 @@ func (s *Service) attempt(ctx context.Context, r *row, e envelope.Event, attempt
 	defer cancel()
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, r.URL, bytes.NewReader(e.Data))
 	if err != nil {
-		d.Error = err.Error()
+		d.Error = cleanErr(err)
 		return d
 	}
 	for k, v := range r.Headers {
@@ -495,9 +496,16 @@ func (s *Service) attempt(ctx context.Context, r *row, e envelope.Event, attempt
 	return d
 }
 
+// cleanErr makes a transport error safe to store and log. *url.Error embeds the full URL, and destination URLs often carry
+// the secret (Slack and Discord webhook paths, tokens in query strings), so only the operation and the cause are kept
+// (PL-OBS-001).
 func cleanErr(err error) string {
 	if errors.Is(err, netguard.ErrBlocked) {
 		return "blocked: destination resolves to an internal address (allowlist it with PULSE_OUTBOUND_ALLOW)"
+	}
+	var ue *url.Error
+	if errors.As(err, &ue) {
+		err = fmt.Errorf("%s: %w", ue.Op, ue.Err)
 	}
 	msg := err.Error()
 	if len(msg) > 300 {

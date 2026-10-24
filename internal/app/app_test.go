@@ -103,7 +103,12 @@ func TestStartReadyShutdown(t *testing.T) {
 	if _, err := Start(ctx, testConfig(t, env), log); err == nil {
 		t.Fatal("second pulsed started on the same data dir")
 	}
+	// PL-OPS-010: listeners drain, consumers flush and NATS closes well inside the 20 s budget.
+	t0 := time.Now()
 	a.Shutdown(ctx)
+	if took := time.Since(t0); took > cfg.ShutdownTimeout {
+		t.Fatalf("shutdown took %s (budget %s)", took, cfg.ShutdownTimeout)
+	}
 
 	// Restart on the same data: no re-push needed, ready again.
 	cfg2 := testConfig(t, env)
