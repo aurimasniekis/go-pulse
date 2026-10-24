@@ -173,7 +173,7 @@ Status values: `planned`, `in-progress`, `implemented`, `tested`, `externally-ve
 | M10 | Observability | tested (live Telegram/Discord pending) | fc24724 |
 | M11 | Backups | tested; gate PL-BAK-007 passed (production S3 pending) | 20db4e6 |
 | M12 | Remaining UI | tested | 281a9ba |
-| M13 | Python and TS SDKs | tested | (this commit) |
+| M13 | Python and TS SDKs | tested | e0ee09d |
 | M14 | Ansible (events-wan-lt) | planned | n/a (no commits in that repo) |
 | M15 | Terraform + deploy (events-wan-lt) | planned | n/a |
 
