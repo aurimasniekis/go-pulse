@@ -1,10 +1,11 @@
 <template>
   <figure class="pl-flow">
-    <svg viewBox="0 0 940 390" role="img" aria-labelledby="pl-flow-title">
+    <svg viewBox="0 0 940 400" role="img" aria-labelledby="pl-flow-title">
       <title id="pl-flow-title">
         Tools connect straight to NATS on port 4222 with their own credentials. Browsers and webhook senders come in
         through Cloudflare to pulsed on port 443. pulsed runs the dashboard, rollups, bans and alerts, and sends
-        backups, notifications and outbound webhooks. The operator reaches the dashboard through an SSH tunnel.
+        backups, notifications and outbound webhooks. Operators sign in to the dashboard with a password and TOTP or with
+        single sign-on, through Cloudflare when the public dashboard is enabled, or through an SSH tunnel.
       </title>
       <defs>
         <marker id="pl-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
@@ -19,7 +20,7 @@
 
       <rect x="10" y="104" width="200" height="64" rx="12" class="pl-flow-box" />
       <text x="110" y="131" class="pl-flow-title">Browsers, HTTP</text>
-      <text x="110" y="154" class="pl-flow-sub">tokens · wss:// /ws</text>
+      <text x="110" y="154" class="pl-flow-sub">dashboard · tokens · /ws</text>
 
       <rect x="10" y="188" width="200" height="64" rx="12" class="pl-flow-box" />
       <text x="110" y="215" class="pl-flow-title">Tools, bots, agents</text>
@@ -64,10 +65,11 @@
       <line x1="740" y1="235" x2="786" y2="235" class="pl-flow-line" marker-end="url(#pl-arrow)" />
 
       <!-- operator -->
-      <rect x="490" y="320" width="250" height="60" rx="12" class="pl-flow-box" />
-      <text x="615" y="345" class="pl-flow-title">Operator</text>
-      <text x="615" y="368" class="pl-flow-sub">ssh -L → dashboard</text>
-      <line x1="615" y1="320" x2="615" y2="294" class="pl-flow-line" marker-end="url(#pl-arrow)" />
+      <rect x="490" y="316" width="250" height="78" rx="12" class="pl-flow-box" />
+      <text x="615" y="341" class="pl-flow-title">Operators</text>
+      <text x="615" y="363" class="pl-flow-sub">password + TOTP, or SSO</text>
+      <text x="615" y="382" class="pl-flow-sub">via Cloudflare or ssh -L</text>
+      <line x1="615" y1="316" x2="615" y2="294" class="pl-flow-line" marker-end="url(#pl-arrow)" />
     </svg>
   </figure>
 </template>

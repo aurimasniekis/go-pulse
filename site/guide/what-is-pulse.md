@@ -12,7 +12,8 @@ and an operator dashboard.
 tools / bots / agents ──NATS TLS (4222, own .creds)──▶ ┌───────────────── one VPS ─────────────────┐
 browsers, HTTP tools ──HTTPS via Cloudflare (443)────▶ │ pulsed: API · dashboard · rollups · bans │
 webhook senders ──HTTPS via Cloudflare──▶ /hooks/… ──▶ │ NATS 2.15 JetStream: EVENTS · KV · blobs │
-operator ──ssh -L──▶ 127.0.0.1:8080 dashboard ───────▶ └───────────────────────────────────────────┘
+operators ──password+TOTP or SSO──▶ dashboard ───────▶ └───────────────────────────────────────────┘
+          via Cloudflare (optional) or ssh -L
 ```
 
 <Shot name="overview" themed alt="Pulse overview: event counts, throughput chart, top domains and the disk forecast" caption="The Overview page" />

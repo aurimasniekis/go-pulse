@@ -42,17 +42,19 @@ features:
     details: >-
       Nightly, age-encrypted, deduplicated backups to S3-compatible storage on a 7/4/12 schedule. Restores keep
       sequence numbers and stored times, so replay by time works the same afterwards.
-  - title: Small and honest
+  - title: Users, roles and single sign-on
     details: >-
-      One VPS with 2 GB of RAM, one distroless image plus the official NATS image, metrics, alerts and an audit log.
-      Single node, single owner. The security page says what is tested and what is not.
+      Dashboard users sign in with a password and TOTP or through any OpenID Connect provider. Four roles, from
+      administrator to viewer, and every sign-in and change is in the audit log. Reach it by SSH tunnel or behind
+      Cloudflare.
 ---
 
 <div class="pl-home">
 
 <div class="pl-status">
 
-**Pre-release.** No version is tagged yet. Read the [security model](/security/) and its
+**Pre-release.** No version is tagged yet. Pulse is small on purpose: one VPS with 2 GB of RAM, one distroless image
+plus the official NATS image, single node. Read the [security model](/security/) and its
 [release status](/security/#release-status) before you run Pulse anywhere that matters.
 
 </div>
@@ -63,10 +65,12 @@ features:
 
 1. `pulsed init` sets NATS up in JWT operator mode, with its own operator, accounts and signing keys sealed by a master
    key.
-2. You create a **client** per tool in the dashboard and give it **grants**. Its `.creds` file is shown once.
-3. Tools publish events such as `evt.home.door.opened` with a small CloudEvents-style envelope, over NATS, HTTP or a
+2. `pulsed admin bootstrap` prints a one-time link for the first administrator. You sign in to the dashboard with a
+   password and TOTP, or later with single sign-on, and invite the rest of your people with a role each.
+3. You create a **client** per tool in the dashboard and give it **grants**. Its `.creds` file is shown once.
+4. Tools publish events such as `evt.home.door.opened` with a small CloudEvents-style envelope, over NATS, HTTP or a
    signed webhook.
-4. Any client with a subscribe grant replays from a time or sequence, then follows live events.
+5. Any client with a subscribe grant replays from a time or sequence, then follows live events.
 
 ## See it
 
@@ -77,6 +81,8 @@ features:
 <Shot name="clients" themed alt="Clients with their grants and live connections" caption="Clients and their grants" />
 <Shot name="security" themed alt="Security page with bans and authentication failures" caption="Bans and authentication failures" />
 <Shot name="system" themed alt="System page with NATS, JetStream and certificate status" caption="NATS, JetStream and certificates" />
+<Shot name="login" themed alt="Sign-in page with email and password and a single sign-on button" caption="Sign-in: password and TOTP, or single sign-on" />
+<Shot name="users" alt="Users page listing people with their roles, sign-in methods and status" caption="Users and roles" />
 </div>
 
 ## Where to go next
@@ -85,5 +91,6 @@ features:
 - Want to see it run? [Try it locally](/guide/try-locally) with Docker in a few minutes.
 - Connecting a tool? [Clients & SDKs](/clients/) for Go, Python, TypeScript, the CLI, HTTP and webhooks.
 - Running it for real? [Deploy on a VPS](/guide/deploy) and the [operator guides](/operators/).
+- Adding people or an identity provider? [Users and single sign-on](/operators/users).
 
 </div>

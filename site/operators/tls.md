@@ -1,18 +1,21 @@
 # Cloudflare and TLS
 
-Pulse has two public hostnames and three TLS surfaces. This page explains what each one needs and how its certificate
-is renewed.
+Pulse has two public hostnames (three with a separate dashboard hostname) and three TLS surfaces. This page explains
+what each one needs and how its certificate is renewed.
 
 ## Hostnames
 
 | Hostname (example) | Cloudflare | Serves | Port |
 |---|---|---|---|
 | `events.example.com` | **Proxied** (orange cloud) | Public HTTP API, `/hooks/*`, `/ws` for browsers | 443, Cloudflare ranges only |
+| `admin.events.example.com` (optional) | **Proxied** (orange cloud) | The dashboard, when `PULSE_ADMIN_PUBLIC=true` and `PULSE_ADMIN_PUBLIC_HOST` is set ([public dashboard](/operators/users#public-dashboard)) | 443, Cloudflare ranges only |
 | `r.events.example.com` | **DNS only** (grey cloud) | Raw NATS over TLS for tools with `.creds` | 4222, open |
 
 Cloudflare cannot proxy raw NATS, so tools connect to `r.events.example.com:4222` directly. Everything HTTP goes
 through Cloudflare: the firewall drops port 443 from any address outside Cloudflare's published ranges
-([firewall and bans](/operators/bans)). SSH is the only other open port. The dashboard is never public.
+([firewall and bans](/operators/bans)). SSH is the only other open port. The dashboard is public only when you
+enable it, behind Cloudflare and AOP like the API, on its own hostname or on `events.example.com`; otherwise it is
+reached through the SSH tunnel.
 
 Set `PULSE_PUBLIC_HOST` and `PULSE_RAW_HOST` to these names. They also appear in the connection snippets on the
 Clients and HTTP tokens pages (`PULSE_PUBLIC_URL`, `PULSE_PUBLIC_NATS_URL` override them).
@@ -24,13 +27,13 @@ infrastructure code; a Terraform module for them is not part of this repository.
 
 | Resource | Purpose |
 |---|---|
-| DNS: proxied record for the public host, DNS-only record for the raw host | The two hostnames above |
+| DNS: proxied record for the public host (and the dashboard host), DNS-only record for the raw host | The hostnames above |
 | SSL/TLS mode **Full (strict)** | Cloudflare verifies the origin certificate |
-| An **Origin CA certificate** for the public host | Served by pulsed on 443 (`PULSE_ORIGIN_CERT_FILE`, `PULSE_ORIGIN_KEY_FILE`) |
+| An **Origin CA certificate** for the public host (and the dashboard host) | Served by pulsed on 443 (`PULSE_ORIGIN_CERT_FILE`, `PULSE_ORIGIN_KEY_FILE`) |
 | **Per-hostname Authenticated Origin Pulls** with a client certificate from **your own CA** | Proves a request came through *your* zone (`PULSE_AOP_CA_FILE` is that CA) |
 | WebSockets enabled | For `/ws` |
-| Cache bypass for the public host | API responses, SSE and hooks must never be cached |
-| WAF custom rules and a rate-limiting rule | Block what does not match `/api/v1/*`, `/hooks/*`, `/ws`; slow down floods. The free plan's single rate-limit rule (10 s period) is enough |
+| Cache bypass for the public host (and the dashboard host) | API responses, SSE and hooks must never be cached |
+| WAF custom rules and a rate-limiting rule | Block what does not match `/api/v1/*`, `/hooks/*`, `/ws` (not on the dashboard host, and not at all when the dashboard shares the public host); slow down floods. The free plan's single rate-limit rule (10 s period) is enough |
 | Optional: an account **IP list** and a WAF rule that blocks it | Edge enforcement of Pulse bans |
 | Scoped API tokens | DNS edit on the zone for ACME; list edit for the ban list. Nothing broader |
 
