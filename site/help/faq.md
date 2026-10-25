@@ -2,7 +2,7 @@
 
 ### Is Pulse ready to use?
 
-Version 0.1.0 is the first release. The server, dashboard, SDKs and CLI are implemented and tested, including
+The current release is 0.1.1. The server, dashboard, SDKs and CLI are implemented and tested, including
 restore drills and cross-SDK interop. Not done yet: verification of the reference deployment on a real
 server, and the sizing spike that measures NATS memory and replay latency with 10 GB of events on the 2 GB target box.
 Read the [security model](/security/) before you rely on it.

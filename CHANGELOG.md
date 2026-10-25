@@ -5,6 +5,13 @@ versioning: [docs/VERSIONING.md](docs/VERSIONING.md).
 
 ## [Unreleased]
 
+## [0.1.1] - 2026-10-25
+
+### Added
+- The single sign-on groups claim can name a nested claim with a dotted path, such as `porch.groups` for Porch. A
+  top-level claim with exactly that name still takes precedence, so names like `https://example.com/groups` keep
+  working.
+
 ## [0.1.0] - 2026-10-25
 
 First release. Pulse is a personal durable event bus on NATS JetStream: tools publish and subscribe with their own
@@ -88,5 +95,6 @@ clients, webhooks, bans, alerts and backups. The image is `docker.io/aurimasniek
   throttled, audited and, on the public listener, count toward bans (`dashboard` source).
 - Outbound webhook delivery errors never include the destination URL, which can carry a secret.
 
-[Unreleased]: https://github.com/aurimasniekis/go-pulse/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/aurimasniekis/go-pulse/compare/v0.1.1...HEAD
+[0.1.1]: https://github.com/aurimasniekis/go-pulse/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/aurimasniekis/go-pulse/releases/tag/v0.1.0
