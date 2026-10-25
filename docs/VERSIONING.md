@@ -15,7 +15,8 @@
 
 Tags must match `vMAJOR.MINOR.PATCH[-PRERELEASE]` (pre-releases use `vX.Y.Z-rc.N`); the release workflow rejects
 anything else. Image tags drop the `v`
-(`ghcr.io/aurimasniekis/pulsed:X.Y.Z`), and `latest` follows final releases only. The deployment repo pins digests.
+(`docker.io/aurimasniekis/pulsed:X.Y.Z`, mirrored as `ghcr.io/aurimasniekis/pulsed:X.Y.Z` with the same digest), and
+`latest` follows final releases only. The deployment repo pins digests.
 
 - **MAJOR**: breaking change to any interface above (removed env var, `/api/v2`, envelope header rename, unreadable key store
   or backup version, a migration that needs manual steps).
