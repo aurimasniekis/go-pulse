@@ -4,9 +4,9 @@ Pulse follows semantic versioning; before 1.0.0, a minor release may change inte
 [changelog](https://github.com/aurimasniekis/go-pulse/blob/main/CHANGELOG.md) with upgrade steps. What counts as an
 interface is in [VERSIONING.md](https://github.com/aurimasniekis/go-pulse/blob/main/docs/VERSIONING.md).
 
-Releases are tagged `vX.Y.Z` and publish the image `ghcr.io/aurimasniekis/pulsed:X.Y.Z` for linux/amd64 and
-linux/arm64, with an SBOM and build provenance. **No release has been tagged yet**; until then, build the image from
-source ([deploy on a VPS](/guide/deploy)).
+Releases are tagged `vX.Y.Z` and publish the image `docker.io/aurimasniekis/pulsed:X.Y.Z`, mirrored to
+`ghcr.io/aurimasniekis/pulsed:X.Y.Z` with the same digest, for linux/amd64 and linux/arm64, with an SBOM and build
+provenance. The [GitHub releases](https://github.com/aurimasniekis/go-pulse/releases) list each image digest.
 
 ## Upgrading pulsed
 
@@ -15,11 +15,12 @@ source ([deploy on a VPS](/guide/deploy)).
 3. Verify the new image and pin its digest in your deployment repository:
 
    ```sh
-   gh attestation verify oci://ghcr.io/aurimasniekis/pulsed:X.Y.Z --repo aurimasniekis/go-pulse
-   docker buildx imagetools inspect ghcr.io/aurimasniekis/pulsed:X.Y.Z   # Digest: sha256:…
+   gh attestation verify oci://docker.io/aurimasniekis/pulsed:X.Y.Z --repo aurimasniekis/go-pulse
+   docker buildx imagetools inspect docker.io/aurimasniekis/pulsed:X.Y.Z   # Digest: sha256:…
    ```
 
-   Use `ghcr.io/aurimasniekis/pulsed@sha256:…` in the compose file, never a moving tag.
+   Use `docker.io/aurimasniekis/pulsed@sha256:…` (or the same digest on `ghcr.io`) in the compose file, never a moving
+   tag.
 4. Deploy: `docker compose up -d`. `init` runs again (idempotent; it also renews the internal NATS leaf), and pulsed
    applies SQLite migrations at start.
 5. Check `curl -fsS 127.0.0.1:9464/readyz`, the System page and the Alerts page.

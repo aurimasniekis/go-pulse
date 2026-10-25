@@ -44,7 +44,7 @@ snapshot.
 1. On a trusted machine, create the age identity and keep it offline (two copies):
 
    ```sh
-   pulsed backup keygen > backup-identity.txt   # or: docker run --rm ghcr.io/aurimasniekis/pulsed:<version> backup keygen
+   pulsed backup keygen > backup-identity.txt   # or: docker run --rm docker.io/aurimasniekis/pulsed:<version> backup keygen
    # stderr: recipient: age1…
    ```
 

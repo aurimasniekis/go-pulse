@@ -5,10 +5,8 @@ configuration as code: clients and their grants, HTTP tokens, streams, consumers
 alert rules, allowlist entries and bans, dashboard users, single sign-on providers and sign-in settings. Everything it
 does goes through the [admin API](/reference/admin-api), with the same permissions and audit log as the dashboard.
 
-::: warning Not on the Terraform Registry yet
-Until the provider is published, build it from source (`make build` in its repository) and point Terraform at it with
-`dev_overrides`, as its README describes.
-:::
+The provider is on the [Terraform Registry](https://registry.terraform.io/providers/aurimasniekis/pulse) as
+`aurimasniekis/pulse`. Provider 0.1 works with Pulse 0.1.0 and later.
 
 ## Access
 
@@ -25,7 +23,8 @@ docker compose exec pulsed pulsed admin token --email terraform@example.com --cr
 terraform {
   required_providers {
     pulse = {
-      source = "aurimasniekis/pulse"
+      source  = "aurimasniekis/pulse"
+      version = "~> 0.1"
     }
   }
 }

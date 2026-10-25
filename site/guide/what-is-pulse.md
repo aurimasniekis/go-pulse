@@ -57,8 +57,8 @@ Pulse is deliberately small. It is not:
 
 ## Status
 
-**Pre-release.** No version has been tagged yet. The server, the dashboard, the CLI and the Go, Python and TypeScript
-SDKs are implemented and tested locally. The reference deployment (a Debian 13 VPS behind Cloudflare) is set up by a
+**0.1.0, the first release.** The server, the dashboard, the CLI and the Go, Python and TypeScript SDKs are
+implemented and tested locally and in CI. The reference deployment (a Debian 13 VPS behind Cloudflare) is set up by a
 separate Ansible and Terraform deployment, tested locally but not yet verified on a real server. The sizing spike that
 sets the subject-cardinality guideline has not been run. Read the [security model](/security/) before you rely on it.
 

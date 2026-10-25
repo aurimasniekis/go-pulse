@@ -122,8 +122,15 @@ The reference deployment is one Debian VPS behind Cloudflare, with
 [Deploy on a VPS](https://aurimasniekis.github.io/go-pulse/guide/deploy) and the
 [configuration reference](https://aurimasniekis.github.io/go-pulse/reference/configuration).
 
-Releases publish `ghcr.io/aurimasniekis/pulsed` for linux/amd64 and linux/arm64 with an SBOM and build provenance; pin
-the image by digest. No version is released yet, so build the image with `make image`.
+Images are on Docker Hub as [`aurimasniekis/pulsed`](https://hub.docker.com/r/aurimasniekis/pulsed) (mirrored to
+`ghcr.io/aurimasniekis/pulsed`) for linux/amd64 and linux/arm64, with an SBOM and build provenance. Pin the image by
+digest and verify it first:
+
+```sh
+gh attestation verify oci://docker.io/aurimasniekis/pulsed:0.1.0 --repo aurimasniekis/go-pulse
+```
+
+Every release is listed in [CHANGELOG.md](CHANGELOG.md).
 
 ## Clients
 

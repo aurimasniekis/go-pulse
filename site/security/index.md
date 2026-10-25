@@ -105,8 +105,7 @@ cryptography. TLS verification is never disabled.
 
 ## Release status
 
-Pulse has **no tagged release yet**. The code is feature complete and tested locally; these items are still
-open:
+The current release is **0.1.0**, the first. These items are still open:
 
 - **No external review.** Nobody other than the author has reviewed the code, the key handling or the backup
   format.
@@ -114,7 +113,6 @@ open:
   tested in containers (including a Debian 13 converge test) but not on a real VM behind Cloudflare.
 - **Sizing not measured.** The memory budget (2 vCPU, 2 GB RAM) and the subject-cardinality guideline are provisional:
   the sizing spike (about 10 GB of events, 5,000 subjects) has not been run.
-- **CI on GitHub** runs only since the repository was published; the release workflow has not produced a release yet.
 - **Webhook verifiers** are tested against documented vectors and schemes, not live GitHub or Stripe deliveries.
 - **Single sign-on** is tested against an in-process identity provider (discovery, PKCE, JWKS rotation, token
   validation, step-up, linking), not yet against a live provider such as Keycloak or Entra ID.

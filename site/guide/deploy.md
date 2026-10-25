@@ -4,18 +4,19 @@ The reference deployment is **one small VPS behind Cloudflare**: 2 vCPU, 2 GB RA
 This page describes what such a deployment needs and how the first start goes. The operator guides go deeper into each
 part.
 
-::: warning No release yet
-No version has been tagged, so there is no published image yet. Releases will push
-`ghcr.io/aurimasniekis/pulsed:<version>` for linux/amd64 and linux/arm64, with an SBOM and build provenance, which you
-verify with:
+::: tip Images
+Releases publish `docker.io/aurimasniekis/pulsed:<version>` (mirrored to `ghcr.io/aurimasniekis/pulsed:<version>` with
+the same digest) for linux/amd64 and linux/arm64, with an SBOM and build provenance. Verify an image and look up its
+digest before you deploy it:
 
 ```sh
-gh attestation verify oci://ghcr.io/aurimasniekis/pulsed:0.1.0 --repo aurimasniekis/go-pulse
+gh attestation verify oci://docker.io/aurimasniekis/pulsed:0.1.0 --repo aurimasniekis/go-pulse
+docker buildx imagetools inspect docker.io/aurimasniekis/pulsed:0.1.0   # Digest: sha256:…
 ```
 
-Until then, build the image yourself (`make image` builds `pulsed:local` for your platform; set `IMAGE=` to change the
-tag) and load it on the server with `docker save pulsed:local | ssh <vps> docker load`. Pin images by digest in
-production, never by a moving tag.
+Pin images by digest in production, never by a moving tag. To run unreleased code, build the image yourself
+(`make image` builds `pulsed:local` for your platform; set `IMAGE=` to change the tag) and load it on the server with
+`docker save pulsed:local | ssh <vps> docker load`.
 :::
 
 ## Topology
@@ -79,7 +80,7 @@ Every `PULSE_*` variable and secret file is listed in the [configuration referen
 2. Create the backup identity **on your own machine**, not the server:
 
    ```sh
-   docker run --rm ghcr.io/aurimasniekis/pulsed:<version> backup keygen > backup-identity.txt
+   docker run --rm docker.io/aurimasniekis/pulsed:<version> backup keygen > backup-identity.txt
    ```
 
    Until a release exists: `docker run --rm pulsed:local backup keygen > backup-identity.txt`, after `make image`.

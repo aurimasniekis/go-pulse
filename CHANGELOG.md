@@ -5,6 +5,29 @@ versioning: [docs/VERSIONING.md](docs/VERSIONING.md).
 
 ## [Unreleased]
 
+## [0.1.0] - 2026-10-25
+
+First release. Pulse is a personal durable event bus on NATS JetStream: tools publish and subscribe with their own
+least-privilege credentials, any tool can replay history from a timestamp, and one server with a dashboard manages
+clients, webhooks, bans, alerts and backups. The image is `docker.io/aurimasniekis/pulsed:0.1.0` (also
+`ghcr.io/aurimasniekis/pulsed:0.1.0`) for linux/amd64 and linux/arm64.
+
+> **Not externally reviewed.** Nobody other than the author has reviewed the code, the key handling or the backup
+> format.
+
+### Known limitations
+
+- Pre-1.0: interfaces may change between minor versions ([docs/VERSIONING.md](docs/VERSIONING.md)).
+- The reference deployment (firewall, ban enforcement, IPv6 client addresses, host roles) was tested in containers,
+  including a Debian 13 converge test, but not yet on a real VPS behind Cloudflare.
+- The memory budget for the 2 vCPU / 2 GB target and the subject-cardinality guideline are provisional: the sizing
+  spike (about 10 GB of events, 5,000 subjects) has not been run.
+- Webhook verifiers are tested against documented vectors, not live GitHub or Stripe deliveries; single sign-on is
+  tested against an in-process identity provider, not a live one such as Keycloak or Entra ID.
+- A `subscribe` grant can pull from another client's consumer on the same stream if it knows the consumer's name.
+- `EVENTS` cannot be shrunk from Pulse: a lower `PULSE_EVENTS_MAX_BYTES` is ignored with a warning.
+- No visual regression tests for the dashboard; browser tests run in Chromium only.
+
 ### Added
 - `pulsed version|healthcheck`; embedded dashboard shell (Mantine 8, TanStack Router); distroless image; CI and release
   workflows.
@@ -42,7 +65,6 @@ versioning: [docs/VERSIONING.md](docs/VERSIONING.md).
 - `pulse` CLI: `tail`, `req`, and `streams`, `clients ls|create|rotate|revoke`, `backup ls|run|restore` through the
   admin API tunnel. Operator guides in `docs/operator/` (deployment, keys, TLS, bans, backups, upgrades,
   troubleshooting).
-
 - Apache-2.0 license, a README, `SECURITY.md` and `CONTRIBUTING.md`, and a documentation website built from
   `site/` (VitePress) and deployed to GitHub Pages, with screenshots from a throwaway stack (`make screenshots`).
 - Dashboard users and single sign-on: local accounts with Argon2id passwords,
@@ -53,42 +75,18 @@ versioning: [docs/VERSIONING.md](docs/VERSIONING.md).
   the dashboard optionally on the public listener on its own or the API hostname (`PULSE_ADMIN_PUBLIC`,
   `PULSE_ADMIN_PUBLIC_HOST`, `PULSE_ADMIN_URL`); `PULSE_SESSION_IDLE`, `PULSE_SESSION_MAX`, `PULSE_REAUTH_WINDOW`,
   `PULSE_MFA_REQUIRED_ROLES`; `pulse_dashboard_logins_total`; `make dev-admin`.
-- Admin API endpoints for declarative tooling (such as a Terraform provider): `DELETE /clients/{id}` and
+- Admin API endpoints for declarative tooling such as the
+  [Terraform provider](https://github.com/aurimasniekis/terraform-provider-pulse): `DELETE /clients/{id}` and
   `DELETE /tokens/{id}` remove revoked (or, for tokens, expired) records so their names can be reused, keeping client
   revocations in force; `GET|PUT /streams/{name}/consumers/{consumer}` reads and creates or updates a durable pull
   consumer; `GET|PUT /kv/{bucket}/config` and `GET|PUT /objects/{bucket}/config` read and update a bucket's
-  description, history, TTL and size limit. Consumers now report `ack_wait_seconds`, `max_deliver`, `max_ack_pending`
+  description, history, TTL and size limit. Consumers report `ack_wait_seconds`, `max_deliver`, `max_ack_pending`
   and the start position; KV buckets report `description` and `max_bytes`, object stores `max_bytes`.
 
-### Changed
-- Example hostnames are `events.example.com` and `r.events.example.com` everywhere in the repository.
-- **Breaking:** the dashboard and admin API require a signed-in user. `PULSE_AUTH_MODE` was removed and pulsed refuses
-  to start when it is set; run `pulsed admin bootstrap` after upgrading.
-- **Breaking:** `X-Pulse-CSRF` now carries the session's CSRF token (from `GET /auth/me`), and state-changing requests
-  need a same-origin `Origin`; the constant `1` is refused.
-- **Breaking:** `pulse clients|streams|backup` and `pulsed backup run` need a personal access token
-  (`--admin-token-file` / `pulse context add --admin-token-file`, `--token`, or `PULSE_ADMIN_TOKEN`).
-- Metric route labels come from a fixed list of API segments; unknown segments are `…/other`.
-
 ### Security
-- Strengthening: no anonymous dashboard access; every admin operation is authorized by role; failed
-  dashboard sign-ins are throttled, audited and, on the public listener, count toward bans (`dashboard` source).
+- No anonymous dashboard access: every admin operation is authorized by role; failed dashboard sign-ins are
+  throttled, audited and, on the public listener, count toward bans (`dashboard` source).
+- Outbound webhook delivery errors never include the destination URL, which can carry a secret.
 
-### Fixed
-- The image build failed since the browser SDK e2e test imports `sdk/ts`, which is outside the Docker build context;
-  `web/e2e/` is no longer part of the context.
-- Docs: the security documentation overstated consumer isolation between clients; `EVENTS` cannot be shrunk, so the
-  troubleshooting advice to lower `PULSE_EVENTS_MAX_BYTES` was wrong; metric labels in docs/API.md.
-- Outbound webhook delivery errors no longer include the destination URL, which can carry the secret (Slack and
-  Discord webhook paths, query tokens); they were stored in the delivery log and logged.
-- Reference compose: banagent could not write nftables sets (added capabilities do not reach the image's non-root
-  user); it now runs as root with only NET_ADMIN and DAC_READ_SEARCH. The firewall contract documents that Debian's
-  nftables unit flushes the whole ruleset on stop.
-- Admin API requests canceled by the browser return 499 instead of logging an internal error.
-- Go SDK: re-subscribing a durable with a different start position failed with "deliver policy can not be updated";
-  it now binds to the existing consumer.
-- The e2e overview test no longer depends on data left by earlier runs.
-- Inbound webhooks with a verified body above the NATS `max_payload` (1 MiB) answered 503; they now get 413.
-- Python and TypeScript SDKs: the `ca` option replaced the system roots instead of adding to them, so a tool that kept
-  it set failed once 4222 served a publicly trusted certificate.
-- `make secrets` ignores the user's git config: a global `color.ui=always` made gitleaks parse no commits locally.
+[Unreleased]: https://github.com/aurimasniekis/go-pulse/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/aurimasniekis/go-pulse/releases/tag/v0.1.0
