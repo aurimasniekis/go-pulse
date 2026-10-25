@@ -113,7 +113,7 @@ fresh login at the identity provider (see [step-up](#step-up)).
 | Issuer | Must be `https://` and exactly equal to `issuer` in the provider's discovery document. The dev profile also allows `http://localhost`. |
 | Client ID, client secret | The secret is optional (public clients with PKCE work). It is sealed at rest and never returned; leave the field empty to keep it. |
 | Scopes | Default `openid profile email`. `openid` is required. |
-| Groups claim | The claim that carries group names (an array or a single string), e.g. `groups`. Needed for mappings and JIT group rules. |
+| Groups claim | The claim that carries group names (an array or a single string), e.g. `groups`. Use dots for a nested claim, e.g. `porch.groups` for Porch; a top-level claim with exactly that name (such as `https://example.com/groups`) takes precedence. Needed for mappings and JIT group rules. |
 | Provisioning | `preprovisioned` (default): unknown identities are refused. `jit`: unknown identities become users when every restriction matches. |
 | JIT restrictions | Email domains (needs `email_verified`), Entra tenants (`tid`), Google hosted domains (`hd`), groups. At least one is required. |
 | CA bundle | Extra trust roots for a provider on a private CA. TLS verification is never disabled. |

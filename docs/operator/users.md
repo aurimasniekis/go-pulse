@@ -58,7 +58,7 @@ Settings → Single sign-on → Add provider:
 | Issuer | `https://` and exactly the `issuer` of the provider's discovery document. |
 | Client ID, client secret | The secret is optional (PKCE works without one), sealed at rest and never shown again. |
 | Scopes | Default `openid profile email`; `openid` is required. |
-| Groups claim | The claim with group names (array or string), e.g. `groups`. |
+| Groups claim | The claim with group names (array or string), e.g. `groups`. A dotted path reads a nested claim (`porch.groups`); an exact top-level name wins. |
 | Provisioning | `preprovisioned` (default): unknown identities are refused. `jit`: unknown identities become users when every restriction matches (verified email domains, `tid` tenants, `hd` hosted domains, groups). JIT users get roles only from mappings. |
 | CA bundle, private network, cross-origin endpoints | For providers on a private CA or network. Off by default; TLS verification is never disabled. |
 | Step-up fallback, ACR values | See step-up below. |

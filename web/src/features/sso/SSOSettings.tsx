@@ -266,7 +266,7 @@ function ProviderForm({ provider, callback, onClose }: { provider: SSOProvider |
           </Stack>
           <TagsInput label="Scopes" value={d.scopes} onChange={(v) => set('scopes', v)} description="Must include openid" />
           <TextInput label="Groups claim" value={d.groups_claim} onChange={(e) => set('groups_claim', e.currentTarget.value)}
-            description="Claim with group values for role mappings (e.g. groups)" />
+            description="Claim with group values for role mappings (e.g. groups; use dots for a nested claim, e.g. porch.groups)" />
           <Select label="Accounts" value={d.provisioning} allowDeselect={false} onChange={(v) => set('provisioning', (v ?? 'preprovisioned') as Draft['provisioning'])}
             data={[
               { value: 'preprovisioned', label: 'Linked by an administrator' },
