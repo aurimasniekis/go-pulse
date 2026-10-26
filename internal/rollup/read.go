@@ -106,7 +106,7 @@ type Forecast struct {
 	AvgDailyBytes int64      `json:"avg_daily_bytes"`
 	SampleDays    float64    `json:"sample_days" doc:"How much history the average is based on"`
 	HorizonDays   *float64   `json:"horizon_days,omitempty" doc:"max_bytes / average daily bytes"`
-	FullAt        *time.Time `json:"full_at,omitempty" doc:"When max_bytes is reached at the current rate (absent once full or with no traffic)"`
+	FullAt        *time.Time `json:"full_at,omitempty" doc:"When max_bytes is reached at the current rate (absent once full, with no traffic or more than 100 years away)"`
 	DiscardingOld bool       `json:"discarding_old" doc:"The stream is at its limit and drops its oldest events"`
 }
 
@@ -122,13 +122,17 @@ func ComputeForecast(current, maxBytes, avgDaily int64, sampleDays float64, now 
 	}
 	h := float64(maxBytes) / float64(avgDaily)
 	f.HorizonDays = &h
-	if current < maxBytes && !f.DiscardingOld {
-		left := float64(maxBytes-current) / float64(avgDaily)
+	// Beyond maxForecastDays the date doesn't fit a time.Duration; converting it would overflow (to a date in
+	// the past on amd64), so it stays absent like the no-traffic case.
+	if left := float64(maxBytes-current) / float64(avgDaily); current < maxBytes && !f.DiscardingOld && left < maxForecastDays {
 		t := now.Add(time.Duration(left * float64(24*time.Hour)))
 		f.FullAt = &t
 	}
 	return f
 }
+
+// maxForecastDays is the longest forecast reported as a date, well inside time.Duration's ~292 years.
+const maxForecastDays = 100 * 365
 
 // AverageDaily is the mean bytes/day over the last 30 days of committed rollups (minimum one hour of data).
 func (e *Engine) AverageDaily(ctx context.Context, stream string) (int64, float64, error) {

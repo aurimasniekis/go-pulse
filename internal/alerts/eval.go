@@ -121,8 +121,11 @@ func (e *Engine) evalStreams(ctx context.Context, kind string, p RuleParams, now
 				return nil, "", err
 			}
 			f := rollup.ComputeForecast(cur, maxB, avg, days, now)
-			if f.FullAt != nil && f.FullAt.Sub(now) < time.Duration(p.Days*24*float64(time.Hour)) {
-				left := f.FullAt.Sub(now).Hours() / 24
+			if f.FullAt == nil {
+				continue
+			}
+			// Compare in days: a large p.Days would overflow a time.Duration.
+			if left := f.FullAt.Sub(now).Hours() / 24; left < p.Days {
 				out = append(out, Finding{Key: name, Value: math.Round(left*10) / 10,
 					Summary: fmt.Sprintf("stream %s reaches max_bytes in %.1f days at the current rate; older events will then be discarded", name, left)})
 			}

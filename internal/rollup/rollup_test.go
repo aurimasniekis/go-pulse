@@ -287,6 +287,12 @@ func TestComputeForecast(t *testing.T) {
 	if idle.HorizonDays != nil || idle.FullAt != nil {
 		t.Fatalf("idle %+v", idle)
 	}
+	// A new stream's first trickle (6859 bytes in the minimum one-hour sample, 32 GiB max): ~207,000 days left,
+	// beyond time.Duration's ~292 years. The conversion used to overflow to a full_at in the past.
+	trickle := ComputeForecast(6859, 34184626176, 6859*24, 1.0/24, now)
+	if trickle.HorizonDays == nil || trickle.FullAt != nil {
+		t.Fatalf("trickle %+v", trickle)
+	}
 }
 
 func TestPrefixesAndJSONKeys(t *testing.T) {

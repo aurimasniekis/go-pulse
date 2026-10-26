@@ -2308,7 +2308,7 @@
             "type": "boolean"
           },
           "full_at": {
-            "description": "When max_bytes is reached at the current rate (absent once full or with no traffic)",
+            "description": "When max_bytes is reached at the current rate (absent once full, with no traffic or more than 100 years away)",
             "format": "date-time",
             "type": "string"
           },

@@ -2679,7 +2679,7 @@ export interface components {
             discarding_old: boolean;
             /**
              * Format: date-time
-             * @description When max_bytes is reached at the current rate (absent once full or with no traffic)
+             * @description When max_bytes is reached at the current rate (absent once full, with no traffic or more than 100 years away)
              */
             full_at?: string;
             /**
