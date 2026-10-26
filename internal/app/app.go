@@ -181,7 +181,7 @@ func Start(ctx context.Context, cfg *config.Config, log *slog.Logger) (*App, err
 		PublicNATSURL: cfg.PublicNATSURL, PublicURL: cfg.PublicURL, CACertPEM: a.Keys.CACert, AdminHosts: cfg.AdminHosts, Ready: a.Ready,
 		PublicAPIHost: strings.ToLower(cfg.PublicHost), PublicTLS: cfg.OriginCertFile != ""}
 	if cfg.AdminPublic {
-		deps.AdminPublicHost = cfg.AdminPublicHost
+		deps.AdminPublicHost, deps.AdminPublicPATs = cfg.AdminPublicHost, cfg.AdminPublicPATs
 	}
 	ep, err := a.setupEdge(ctx, cfg, deps, hookSvc)
 	if err != nil {

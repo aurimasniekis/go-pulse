@@ -76,6 +76,7 @@ setup link ([users.md](users.md)). `PULSE_AUTH_MODE` was removed; pulsed refuses
 |---|---|---|
 | `PULSE_ADMIN_PUBLIC` | `false` | Also serve the dashboard on the public listener (Cloudflare, AOP). Needs the public listener. |
 | `PULSE_ADMIN_PUBLIC_HOST` | `PULSE_PUBLIC_HOST` | Hostname of the public dashboard. Its own hostname serves only the dashboard and the API hostname only the API; the API hostname serves the dashboard on every non-API path. |
+| `PULSE_ADMIN_PUBLIC_TOKENS` | `false` | Also accept personal access tokens on the public dashboard host, each only from the networks it was created with (tokens without networks stay loopback-only). For automation such as Terraform in CI. Needs `PULSE_ADMIN_PUBLIC`. |
 | `PULSE_ADMIN_URL` | `https://<PULSE_ADMIN_PUBLIC_HOST>` with `PULSE_ADMIN_PUBLIC`, else `http://127.0.0.1:8080` | The dashboard origin: SSO redirects there (`<PULSE_ADMIN_URL>/auth/oidc/callback` is the redirect URI to register) and `pulsed admin` prints links for it. Must be https in prod unless it is the loopback tunnel. |
 | `PULSE_SESSION_IDLE` / `PULSE_SESSION_MAX` | `30m` / `12h` | Sign-out after inactivity / absolute session lifetime (at most 168h). |
 | `PULSE_REAUTH_WINDOW` | `5m` | Sensitive actions need authentication this recent: the list is in [users.md](users.md#roles) (credentials shown once, deleting streams and buckets, restores, user and SSO changes). At most 15m in prod. |

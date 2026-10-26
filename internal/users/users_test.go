@@ -6,6 +6,7 @@ import (
 	"encoding/base32"
 	"errors"
 	"path/filepath"
+	"slices"
 	"strings"
 	"sync"
 	"testing"
@@ -333,32 +334,70 @@ func TestPersonalAccessTokens(t *testing.T) {
 	tok, _, _ := f.enroll("eve@example.com")
 	p, err := f.svc.Authenticate(f.ctx, tok, meta.Listener)
 	must(t, err)
-	if _, _, err := f.svc.CreatePAT(f.ctx, p, "cli", RoleAdministrator, 0, ""); KindOf(err) != KindInvalid {
+	if _, _, err := f.svc.CreatePAT(f.ctx, p, "cli", RoleAdministrator, 0, nil, ""); KindOf(err) != KindInvalid {
 		t.Fatalf("token with a role the user lacks: %v", err)
 	}
-	pat, secret, err := f.svc.CreatePAT(f.ctx, p, "cli", RoleOperator, 24*time.Hour, "")
+	pat, secret, err := f.svc.CreatePAT(f.ctx, p, "cli", RoleOperator, 24*time.Hour, nil, "")
 	must(t, err)
-	tp, err := f.svc.AuthenticatePAT(f.ctx, secret, "127.0.0.1")
+	tp, err := f.svc.AuthenticatePAT(f.ctx, secret, "127.0.0.1", "loopback")
 	must(t, err)
 	if tp.Method != MethodToken || !tp.HasRole(RoleOperator) || !tp.VerifyCSRF("") || f.svc.RequireRecentAuth(tp, true) != nil {
 		t.Fatalf("%+v", tp)
 	}
-	if _, _, err := f.svc.CreatePAT(f.ctx, tp, "nested", RoleOperator, 0, ""); err == nil {
+	if _, _, err := f.svc.CreatePAT(f.ctx, tp, "nested", RoleOperator, 0, nil, ""); err == nil {
 		t.Fatal("a token created a token")
 	}
 	_, err = f.svc.Update(f.ctx, root, op.ID, UpdateInput{Roles: &[]string{RoleViewer}})
 	must(t, err)
-	tp, err = f.svc.AuthenticatePAT(f.ctx, secret, "127.0.0.1")
+	tp, err = f.svc.AuthenticatePAT(f.ctx, secret, "127.0.0.1", "loopback")
 	must(t, err)
 	if len(tp.User.Roles) != 0 {
 		t.Fatalf("token kept a role the user lost: %v", tp.User.Roles)
 	}
 	must(t, f.svc.RevokePAT(f.ctx, root, "", pat.ID))
-	if _, err := f.svc.AuthenticatePAT(f.ctx, secret, "127.0.0.1"); err == nil {
+	if _, err := f.svc.AuthenticatePAT(f.ctx, secret, "127.0.0.1", "loopback"); err == nil {
 		t.Fatal("revoked token accepted")
 	}
-	if _, err := f.svc.AuthenticatePAT(f.ctx, "pulse_pat_guess", "127.0.0.1"); err == nil {
+	if _, err := f.svc.AuthenticatePAT(f.ctx, "pulse_pat_guess", "127.0.0.1", "loopback"); err == nil {
 		t.Fatal("guessed token accepted")
+	}
+}
+
+// TestPATNetworks: a token is accepted on the public dashboard host only from the networks it was created with
+// (ADR-0041); without networks it stays loopback-only.
+func TestPATNetworks(t *testing.T) {
+	f := newFx(t)
+	f.bootstrap()
+	for _, bad := range [][]string{{"0.0.0.0/0"}, {"198.51.0.0/15"}, {"2001:db8::/32"}, {"not-an-ip"}} {
+		if _, _, err := f.svc.IssuePATOnHost(f.ctx, "terraform@example.com", "terraform", RoleOperator, 0, bad, true); KindOf(err) != KindInvalid {
+			t.Fatalf("%v: %v", bad, err)
+		}
+	}
+	if _, err := f.svc.GetByEmail(f.ctx, "terraform@example.com"); err == nil {
+		t.Fatal("a refused token still created its user")
+	}
+	pat, secret, err := f.svc.IssuePATOnHost(f.ctx, "terraform@example.com", "terraform", RoleOperator, 0,
+		[]string{" 203.0.113.7 ", "2001:db8:1::/48", "203.0.113.7/32"}, true)
+	must(t, err)
+	if want := []string{"203.0.113.7/32", "2001:db8:1::/48"}; !slices.Equal(pat.CIDRs, want) {
+		t.Fatalf("cidrs %v, want %v", pat.CIDRs, want)
+	}
+	if ts, _ := f.svc.ListPATs(f.ctx, pat.UserID); len(ts) != 1 || !slices.Equal(ts[0].CIDRs, pat.CIDRs) {
+		t.Fatalf("listed %+v", ts)
+	}
+	for ip, ok := range map[string]bool{"203.0.113.7": true, "::ffff:203.0.113.7": true, "2001:db8:1:2::9": true, "203.0.113.8": false, "": false} {
+		p, err := f.svc.AuthenticatePAT(f.ctx, secret, ip, "public")
+		if ok != (err == nil) || ok && p.Listener != "public" {
+			t.Errorf("public from %q: %+v %v", ip, p, err)
+		}
+	}
+	if _, err := f.svc.AuthenticatePAT(f.ctx, secret, "127.0.0.1", "loopback"); err != nil {
+		t.Fatalf("loopback: %v", err)
+	}
+	_, local, err := f.svc.IssuePATOnHost(f.ctx, "terraform@example.com", "local", RoleOperator, 0, nil, false)
+	must(t, err)
+	if _, err := f.svc.AuthenticatePAT(f.ctx, local, "203.0.113.7", "public"); err == nil {
+		t.Fatal("a token without networks was accepted on the public host")
 	}
 }
 

@@ -174,11 +174,15 @@ their Pulse TOTP code instead (they must have enrolled one).
 
 ## Personal access tokens
 
-The `pulse` CLI's admin commands (`pulse clients`, `pulse streams`, `pulse backup`) and `pulsed backup run` use a
-personal access token. **Account → Personal access tokens → New token**: a name, **one** of your own (manually
-assigned) roles and a lifetime (default 90 days, at most 366). The token (`pulse_pat_…`) is shown once.
+The `pulse` CLI's admin commands (`pulse clients`, `pulse streams`, `pulse backup`), `pulsed backup run` and the
+[Terraform provider](/operators/terraform) use a personal access token. **Account → Personal access tokens → New
+token**: a name, **one** of your own (manually assigned) roles, a lifetime (default 90 days, at most 366) and optional
+public networks. The token (`pulse_pat_…`) is shown once.
 
-- It works **only on the loopback admin listener**, through the SSH tunnel, never on the public dashboard.
+- It works on the **loopback admin listener**, through the SSH tunnel.
+- On the public dashboard host it works only if the server sets `PULSE_ADMIN_PUBLIC_TOKENS=true`, and only from the
+  public networks the token was created with (at least /16 or /48). A token without networks gets 401 there. Refused
+  tokens count towards a ban like failed sign-ins. See [Terraform from CI](/operators/terraform#from-ci).
 - At every request it holds the token's role only if you still hold that role.
 - It needs no CSRF token and skips the recent sign-in checks: a token created here needed a fresh sign-in with MFA,
   and a host-minted one (below) needs access to the host.
@@ -201,7 +205,8 @@ docker compose exec pulsed pulsed admin token --email automation@example.com --c
 ```
 
 `--create` makes a user without a password, which can only use tokens. Anyone who can run this can already use
-break-glass recovery, so it adds no new trust.
+break-glass recovery, so it adds no new trust. Add `--cidr <address>` (repeatable) for a token that automation uses
+from those addresses on the public dashboard host.
 
 ## Break-glass
 

@@ -63,6 +63,7 @@ start when it is set.
 |---|---|---|
 | `PULSE_ADMIN_PUBLIC` | `false` | Also serve the dashboard on the public listener (Cloudflare, AOP). Needs the public listener. |
 | `PULSE_ADMIN_PUBLIC_HOST` | `PULSE_PUBLIC_HOST` | The public dashboard's hostname. Its own hostname serves only the dashboard (and the API hostname only the API); the API hostname serves the dashboard on every path except `/api/v1`, `/hooks`, `/ws` and `/healthz`. |
+| `PULSE_ADMIN_PUBLIC_TOKENS` | `false` | Also accept personal access tokens on the public dashboard host, each only from the networks it was created with (tokens without networks stay loopback-only). For automation such as Terraform in CI. Needs `PULSE_ADMIN_PUBLIC`. |
 | `PULSE_ADMIN_URL` | `https://<PULSE_ADMIN_PUBLIC_HOST>` with `PULSE_ADMIN_PUBLIC`, else `http://127.0.0.1:8080` | The dashboard origin: SSO redirects to `<PULSE_ADMIN_URL>/auth/oidc/callback` (register exactly this) and `pulsed admin` prints links for it. An origin without a path. |
 | `PULSE_SESSION_IDLE` | `30m` | Sign-out after inactivity (at least `1m`). |
 | `PULSE_SESSION_MAX` | `12h` | Absolute session lifetime (between the idle timeout and `168h`). |

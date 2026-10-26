@@ -77,8 +77,8 @@ func (d *Deps) meta(ctx context.Context, r *http.Request) users.SessionMeta {
 
 const bearerPrefix = "Bearer "
 
-// authenticate resolves the session cookie (or, on the loopback listener only, a personal access token) into a
-// principal, and refuses cross-site state-changing requests: a mutation carrying a session cookie, or any
+// authenticate resolves the session cookie or a personal access token (on the loopback listener, or on the public one
+// when AdminPublicPATs allows it) into a principal, and refuses cross-site state-changing requests: a mutation carrying a session cookie, or any
 // unauthenticated mutation (sign-in endpoints), must come from the dashboard's own origin.
 func (d *Deps) authenticate(l listener, next http.Handler) http.Handler {
 	authLimit := newIPLimiter(20.0/60, 20) // sign-in attempts per address: 20 per minute
@@ -88,9 +88,12 @@ func (d *Deps) authenticate(l listener, next http.Handler) http.Handler {
 		var p *users.Principal
 		bearer := strings.HasPrefix(r.Header.Get("Authorization"), bearerPrefix+users.PATPrefix)
 		switch {
-		case bearer && l.kind == ListenerLoopback && d.Users != nil:
+		case bearer && (l.kind == ListenerLoopback || d.AdminPublicPATs) && d.Users != nil:
 			var err error
-			if p, err = d.Users.AuthenticatePAT(ctx, strings.TrimPrefix(r.Header.Get("Authorization"), bearerPrefix), ip); err != nil {
+			if p, err = d.Users.AuthenticatePAT(ctx, strings.TrimPrefix(r.Header.Get("Authorization"), bearerPrefix), ip, l.kind); err != nil {
+				if l.kind == ListenerPublic && errors.Is(err, users.ErrUnauthorized) && d.OnAuthFailure != nil {
+					d.OnAuthFailure(ip, "admin_token")
+				}
 				writeProblem(w, err)
 				return
 			}

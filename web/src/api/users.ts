@@ -40,7 +40,7 @@ export function useAccountMutations() {
       onSuccess: refresh('sessions'),
     }),
     createToken: useMutation({
-      mutationFn: async (body: { name: string; role: Schemas['PAT']['role']; days?: number }) =>
+      mutationFn: async (body: { name: string; role: Schemas['PAT']['role']; days?: number; cidrs?: string[] }) =>
         unwrap(await admin.POST('/account/tokens', { body: body as never })),
       onSuccess: refresh('tokens'),
     }),

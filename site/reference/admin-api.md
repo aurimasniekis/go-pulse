@@ -12,7 +12,7 @@ API that tools use is described in [HTTP API](/clients/http)
 |---|---|
 | Listeners | The loopback admin listener (`PULSE_ADMIN_ADDR`, default `127.0.0.1:8080`, published on host loopback only, reached with `ssh -L 8080:127.0.0.1:8080 <vps>`); with `PULSE_ADMIN_PUBLIC=true` also the dashboard host on the public listener (behind Cloudflare and AOP) |
 | Base path | `/api/admin/v1` (the dashboard is served at `/`; SSO redirects use `/auth/oidc/…`) |
-| Authentication | A signed-in user's session cookie, or a personal access token (loopback listener only). See [Users and single sign-on](/operators/users) |
+| Authentication | A signed-in user's session cookie, or a personal access token (loopback listener; the public host only when enabled, from the token's networks). See [Users and single sign-on](/operators/users) |
 
 Every operation needs a permission that the user's roles grant (administrator, operator, auditor, viewer); otherwise
 **403**. Without a session the answer is **401**.
@@ -25,9 +25,10 @@ https, `pulse_session` on the plain-http loopback listener) and returns `{mfa_pe
 - `X-Pulse-CSRF: <csrf_token>` (the session's token; without it or with a wrong one: 403), and
 - an `Origin` equal to the dashboard's own origin (browsers send it; cross-site requests get 403).
 
-**Personal access tokens** for scripts and the CLI: `Authorization: Bearer pulse_pat_…`. Accepted only on the loopback
-listener (401 on the public dashboard), no CSRF token or Origin needed, limited to the token's role while the user
-still holds it.
+**Personal access tokens** for scripts, automation and the CLI: `Authorization: Bearer pulse_pat_…`. Accepted on the
+loopback listener. On the public dashboard host they get 401 unless the server sets `PULSE_ADMIN_PUBLIC_TOKENS=true`
+and the request comes from one of the networks the token was created with. No CSRF token or Origin needed, limited to
+the token's role while the user still holds it.
 
 **Errors** carry a stable `code` next to the RFC 9457 fields:
 

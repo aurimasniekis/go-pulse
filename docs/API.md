@@ -22,7 +22,8 @@ Every admin operation needs a signed-in user and the permission `internal/api/pe
 - **Browser sessions:** `POST /auth/login` (then `/auth/mfa` or TOTP enrollment), SSO through `/auth/oidc/{provider}/start`.
   The session cookie is `__Host-pulse_session` on https and `pulse_session` on the plain-http loopback listener.
   `GET /auth/me` returns the user, permissions and the session's `csrf_token`.
-- **Personal access tokens** (loopback listener only): `Authorization: Bearer pulse_pat_…`; no CSRF token needed.
+- **Personal access tokens:** `Authorization: Bearer pulse_pat_…`; no CSRF token needed. Accepted on the loopback
+  listener, and on the public dashboard host only with `PULSE_ADMIN_PUBLIC_TOKENS=true` and from the token's own networks.
 - Errors carry a stable `code`: `unauthorized`, `reauth_required` and `mfa_required` (confirm with `POST /auth/reauth`
   or an SSO step-up, then retry), `forbidden`, `invalid`, `conflict`, `precondition`, `rate_limited`, `unavailable`.
 

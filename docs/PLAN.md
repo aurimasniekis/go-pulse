@@ -229,7 +229,7 @@ E browser E2E · C CI/static check · S spike/perf · R restore drill · X exter
 - [x] `PL-USR-009` Provisioning and mapping — M16 — ✅ tested: internal/oidc TestJITAndRoleSync, TestNoEmailMerge, TestSyncKeepsLastAdmin, TestLinkInvite
 - [x] `PL-USR-010` Step-up and SSO-only — M16 — ✅ tested: internal/oidc TestStepUp, TestSSOOnly; internal/users TestSessions (reauth window)
 - [ ] `PL-USR-011` Public dashboard — M16 — ◐ tested: internal/api TestPublicDashboardRouting; Cloudflare and AOP in front not externally verified (events-wan-lt D-014)
-- [x] `PL-USR-012` Personal access tokens — M16 — ✅ tested: internal/users TestPersonalAccessTokens; internal/api TestPersonalAccessTokens (loopback only, no CSRF needed)
+- [x] `PL-USR-012` Personal access tokens — M16 — ✅ tested: internal/users TestPersonalAccessTokens; internal/api TestPersonalAccessTokens (loopback, no CSRF needed; public host only when enabled and from the token's networks); internal/users TestPATNetworks
 
 #### PL-EDGE — Public listener and TLS
 

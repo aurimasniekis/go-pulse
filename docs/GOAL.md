@@ -192,7 +192,7 @@ Requirement IDs are stable: `PL-<AREA>-NNN`. They are never reused or renumbered
 | PL-USR-009 | **Provisioning and mapping.** Providers are preprovisioned or just-in-time with at least one restriction; group → role mappings replace a user's SSO roles at every SSO login; manual roles are kept; SSO sync never removes the last administrator. |
 | PL-USR-010 | **Step-up and SSO-only.** Sensitive actions need authentication within `PULSE_REAUTH_WINDOW` (5 min; at most 15 min in prod): password (+TOTP), a fresh IdP login (`prompt=login`, `auth_time`, `acr`), or TOTP for SSO users when the provider allows it. Password sign-in can be disabled only after a successful SSO test login and while an administrator can sign in with SSO. |
 | PL-USR-011 | **Public dashboard.** With `PULSE_ADMIN_PUBLIC=true` the dashboard is served behind Cloudflare and AOP on its own hostname (`PULSE_ADMIN_PUBLIC_HOST`, which then serves nothing else) or on the public API hostname for non-API paths; Host is checked; responses send HSTS. |
-| PL-USR-012 | **Personal access tokens.** For the CLI: accepted only on the loopback admin listener, one role capped by the user's current manual roles, expiry at most 366 days, stored as keyed MACs, revocable, every use attributed in the audit log. |
+| PL-USR-012 | **Personal access tokens.** For the CLI and automation: accepted on the loopback admin listener; on the public dashboard host only when the operator enables it and only from the source networks (at least /16 or /48) the token was created with, refused attempts feeding the ban detector; one role capped by the user's current manual roles, expiry at most 366 days, stored as keyed MACs, revocable, every use attributed in the audit log. |
 
 ### PL-EDGE — Public listener and TLS
 

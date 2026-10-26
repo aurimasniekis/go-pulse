@@ -5,6 +5,18 @@ versioning: [docs/VERSIONING.md](docs/VERSIONING.md).
 
 ## [Unreleased]
 
+### Added
+- Personal access tokens can name source networks. With the new `PULSE_ADMIN_PUBLIC_TOKENS=true` (off by default; needs
+  `PULSE_ADMIN_PUBLIC`), such a token also works on the public dashboard host, but only from those networks, so
+  automation like Terraform in CI can reach the admin API without an SSH tunnel. Set networks on the Account page or
+  with `pulsed admin token --cidr`; each must be at least /16 (IPv4) or /48 (IPv6). Tokens without networks stay
+  loopback-only, and refused tokens on the public host count towards a ban.
+
+### Security
+- Opting in with `PULSE_ADMIN_PUBLIC_TOKENS` relaxes the earlier rule that personal access tokens work only on the
+  loopback listener. A token with networks can be used by anyone who can send traffic from those networks; keep them
+  narrow and prefer the operator role for automation.
+
 ## [0.1.2] - 2026-10-26
 
 ### Fixed

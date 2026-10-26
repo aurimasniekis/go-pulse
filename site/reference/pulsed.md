@@ -123,7 +123,7 @@ once; every command writes audit records.
 ```sh
 pulsed admin bootstrap
 pulsed admin recover --email you@example.com [--new-admin]
-pulsed admin token --email automation@example.com [--create] [--role operator] [--days 1] [--name automation]
+pulsed admin token --email automation@example.com [--create] [--role operator] [--days 1] [--name automation] [--cidr 203.0.113.7]
 ```
 
 - **`bootstrap`** prints a one-time setup link (30 minutes) for creating the first administrator. It fails once an
@@ -131,8 +131,9 @@ pulsed admin token --email automation@example.com [--create] [--role operator] [
 - **`recover`** prints a single-use recovery login (30 minutes) for an existing user. Redeeming it signs out the user's
   sessions, removes their TOTP factor and recovery codes and offers a password reset. With `--new-admin` it creates a
   new administrator with that email instead.
-- **`token`** prints a personal access token (stdout, once) for scripts and deployment checks; it works only on the
-  loopback admin listener. `--create` creates a missing user without a password (it can only use tokens); the role is
+- **`token`** prints a personal access token (stdout, once) for scripts, deployment checks and automation; it works on
+  the loopback admin listener. With `--cidr` (repeatable, at least /16 or /48) it also works on the public dashboard
+  host from those networks, when `PULSE_ADMIN_PUBLIC_TOKENS=true`. `--create` creates a missing user without a password (it can only use tokens); the role is
   added to the user's roles when missing. Anyone who can run it can already use `recover`, so it adds no new trust.
 
 ## `pulsed keys export`

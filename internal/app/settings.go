@@ -36,7 +36,7 @@ func configSummary(c *config.Config) []api.ConfigSection {
 			v("PULSE_ADMIN_ADDR", c.AdminAddr), v("PULSE_METRICS_ADDR", c.MetricsAddr), list("PULSE_ADMIN_HOSTS", c.AdminHosts),
 			v("PULSE_ORIGIN_CERT_FILE", c.OriginCertFile), v("PULSE_AOP_CA_FILE", c.AOPCAFile), list("PULSE_OUTBOUND_ALLOW", c.OutboundAllow)}},
 		{Title: "Dashboard sign-in", Items: []api.ConfigItem{b("PULSE_ADMIN_PUBLIC", c.AdminPublic), v("PULSE_ADMIN_PUBLIC_HOST", c.AdminPublicHost),
-			v("PULSE_ADMIN_URL", c.AdminURL), v("PULSE_SESSION_IDLE", c.SessionIdle.String()), v("PULSE_SESSION_MAX", c.SessionMax.String()),
+			b("PULSE_ADMIN_PUBLIC_TOKENS", c.AdminPublicPATs), v("PULSE_ADMIN_URL", c.AdminURL), v("PULSE_SESSION_IDLE", c.SessionIdle.String()), v("PULSE_SESSION_MAX", c.SessionMax.String()),
 			v("PULSE_REAUTH_WINDOW", c.ReauthWindow.String()), list("PULSE_MFA_REQUIRED_ROLES", c.MFARequiredRoles)}},
 		{Title: "Bans", Items: []api.ConfigItem{v("PULSE_BAN_THRESHOLD", strconv.Itoa(c.BanThreshold)), v("PULSE_BAN_WINDOW", c.BanWindow.String()),
 			v("PULSE_BAN_DURATION", c.BanDuration.String()), v("PULSE_BAN_MAX", c.BanMax.String()), list("PULSE_BAN_ALLOW", c.BanAllow),

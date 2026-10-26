@@ -54,6 +54,7 @@ type Config struct {
 	// Dashboard sign-in (ADR-0038)
 	AdminPublic      bool          // also serve the dashboard on the public listener
 	AdminPublicHost  string        // its hostname there (default PULSE_PUBLIC_HOST: same host, path routing)
+	AdminPublicPATs  bool          // accept network-restricted personal access tokens there (automation)
 	AdminURL         string        // the dashboard origin SSO redirects to and links point at
 	SessionIdle      time.Duration // sign-out after inactivity
 	SessionMax       time.Duration // absolute session lifetime
@@ -151,6 +152,7 @@ func Load(getenv Getenv) (*Config, error) {
 		AdminPublishedLoopback: e.bool("PULSE_ADMIN_PUBLISHED_LOOPBACK", false),
 		AdminPublic:            e.bool("PULSE_ADMIN_PUBLIC", false),
 		AdminPublicHost:        strings.ToLower(e.str("PULSE_ADMIN_PUBLIC_HOST", "")),
+		AdminPublicPATs:        e.bool("PULSE_ADMIN_PUBLIC_TOKENS", false),
 		AdminURL:               strings.TrimRight(e.str("PULSE_ADMIN_URL", ""), "/"),
 		SessionIdle:            e.dur("PULSE_SESSION_IDLE", 30*time.Minute),
 		SessionMax:             e.dur("PULSE_SESSION_MAX", 12*time.Hour),
@@ -298,6 +300,9 @@ func (c *Config) Validate() error {
 		if c.AdminPublicHost == "" {
 			errs = append(errs, errors.New("PULSE_ADMIN_PUBLIC needs PULSE_ADMIN_PUBLIC_HOST or PULSE_PUBLIC_HOST"))
 		}
+	}
+	if c.AdminPublicPATs && !c.AdminPublic {
+		errs = append(errs, errors.New("PULSE_ADMIN_PUBLIC_TOKENS needs PULSE_ADMIN_PUBLIC"))
 	}
 	if c.SessionIdle < time.Minute || c.SessionMax < c.SessionIdle || c.SessionMax > 7*24*time.Hour {
 		errs = append(errs, errors.New("PULSE_SESSION_IDLE must be at least 1m and PULSE_SESSION_MAX between it and 168h"))

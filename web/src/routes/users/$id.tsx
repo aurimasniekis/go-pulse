@@ -332,6 +332,7 @@ function UserTokens({ id, canManage }: { id: string; canManage: boolean }) {
           <Table.Tr>
             <Table.Th>Name</Table.Th>
             <Table.Th>Role</Table.Th>
+            <Table.Th>Networks</Table.Th>
             <Table.Th>Expires</Table.Th>
             <Table.Th>Last used</Table.Th>
             <Table.Th />
@@ -346,6 +347,7 @@ function UserTokens({ id, canManage }: { id: string; canManage: boolean }) {
               <Table.Td>
                 <RoleBadges roles={[t.role]} />
               </Table.Td>
+              <Table.Td ff="monospace">{t.cidrs.join(', ') || 'loopback only'}</Table.Td>
               <Table.Td>{formatTime(t.expires_at)}</Table.Td>
               <Table.Td>{t.last_used_at ? `${timeAgo(t.last_used_at)} from ${t.last_used_ip}` : 'never'}</Table.Td>
               <Table.Td>

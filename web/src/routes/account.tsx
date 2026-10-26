@@ -1,5 +1,5 @@
 import {
-  Alert, Badge, Button, Card, Code, Group, Modal, NumberInput, PasswordInput, Select, SimpleGrid, Stack, Table, Text, TextInput, Title,
+  Alert, Badge, Button, Card, Code, Group, Modal, NumberInput, PasswordInput, Select, SimpleGrid, Stack, Table, TagsInput, Text, TextInput, Title,
 } from '@mantine/core'
 import { IconKey, IconLink, IconLogout, IconPlus, IconShieldCheck, IconTrash } from '@tabler/icons-react'
 import { useQueryClient } from '@tanstack/react-query'
@@ -305,6 +305,7 @@ function TokensCard() {
   const [name, setName] = useState('')
   const [role, setRole] = useState<string | null>(null)
   const [days, setDays] = useState<number | string>(90)
+  const [cidrs, setCidrs] = useState<string[]>([])
   const [secret, setSecret] = useState<string | null>(null)
   return (
     <Card mb="sm">
@@ -313,6 +314,7 @@ function TokensCard() {
         <Button size="xs" leftSection={<IconPlus size={14} />} disabled={manual.length === 0 || me.auth_method === 'token'}
           onClick={() => {
             setName('')
+            setCidrs([])
             setRole(manual[manual.length - 1] ?? null)
             setCreating(true)
           }}>
@@ -320,8 +322,9 @@ function TokensCard() {
         </Button>
       </Group>
       <Text size="sm" c="dimmed" mb="xs">
-        For the <Code>pulse</Code> CLI's admin commands (<Code>clients</Code>, <Code>streams</Code>, <Code>backup</Code>). Tokens work only on the
-        loopback admin listener, through the SSH tunnel, and carry one of your own roles.
+        For the <Code>pulse</Code> CLI's admin commands (<Code>clients</Code>, <Code>streams</Code>, <Code>backup</Code>) and automation such as
+        Terraform. Tokens work on the loopback admin listener, through the SSH tunnel, and carry one of your own roles. A token with
+        networks also works on the public dashboard host from those networks, if the server allows it.
         {manual.length === 0 && ' You have no manually assigned role, so you cannot create one.'}
       </Text>
       <ErrorAlert error={tokens.error} />
@@ -332,6 +335,7 @@ function TokensCard() {
               <Table.Th>Name</Table.Th>
               <Table.Th>Prefix</Table.Th>
               <Table.Th>Role</Table.Th>
+              <Table.Th>Networks</Table.Th>
               <Table.Th>Expires</Table.Th>
               <Table.Th>Last used</Table.Th>
               <Table.Th />
@@ -347,6 +351,7 @@ function TokensCard() {
                 <Table.Td>
                   <RoleBadges roles={[t.role]} />
                 </Table.Td>
+                <Table.Td ff="monospace">{t.cidrs.join(', ') || 'loopback only'}</Table.Td>
                 <Table.Td>{formatTime(t.expires_at)}</Table.Td>
                 <Table.Td>{t.last_used_at ? `${timeAgo(t.last_used_at)} from ${t.last_used_ip}` : 'never'}</Table.Td>
                 <Table.Td>
@@ -372,7 +377,7 @@ function TokensCard() {
             e.preventDefault()
             if (!role) return
             m.createToken.mutate(
-              { name: name.trim(), role: role, days: typeof days === 'number' ? days : undefined },
+              { name: name.trim(), role: role, days: typeof days === 'number' ? days : undefined, cidrs },
               {
                 onSuccess: (r) => {
                   setCreating(false)
@@ -388,6 +393,9 @@ function TokensCard() {
             <Select label="Role" data={manual} value={role} onChange={setRole} allowDeselect={false}
               description={role ? roleInfo[role as Role]?.description : undefined} />
             <NumberInput label="Lifetime (days)" min={1} max={366} value={days} onChange={setDays} />
+            <TagsInput label="Public networks" placeholder="203.0.113.7"
+              description="IPs or CIDRs (at least /16 or /48) that may also use the token on the public dashboard host; empty keeps it loopback-only"
+              value={cidrs} onChange={setCidrs} />
             <Group justify="flex-end">
               <Button variant="default" onClick={() => setCreating(false)}>
                 Cancel

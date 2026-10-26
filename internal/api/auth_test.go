@@ -149,8 +149,8 @@ func TestRolesThroughTheAPI(t *testing.T) {
 	}
 }
 
-// Personal access tokens work only on the loopback listener, without CSRF or Origin; the admin listener refuses
-// sign-in attempts from other origins.
+// Personal access tokens work on the loopback listener, and on the public host only from their networks when enabled,
+// without CSRF or Origin; the admin listener refuses sign-in attempts from other origins.
 func TestPersonalAccessTokens(t *testing.T) {
 	h := newHarness(t)
 	base := h.admin.URL + AdminPrefix
@@ -172,13 +172,46 @@ func TestPersonalAccessTokens(t *testing.T) {
 	if resp, _ := do(t, "POST", base+"/account/tokens", `{"name":"again","role":"administrator"}`, bearer); resp.StatusCode != http.StatusForbidden {
 		t.Fatalf("token created a token: %d", resp.StatusCode)
 	}
-	// The public dashboard host never accepts tokens.
+	// The public dashboard host accepts no tokens unless AdminPublicPATs is on.
 	h.deps.AdminPublicHost, h.deps.PublicAPIHost = "admin.events.example.com", "events.example.com"
 	pub := httptest.NewServer(NewPublic(h.deps))
 	defer pub.Close()
 	hdr := map[string]string{"Host": "admin.events.example.com", "X-Test-Anonymous": "1", "Authorization": "Bearer " + out.Secret}
 	if resp, _ := do(t, "GET", pub.URL+AdminPrefix+"/clients", "", hdr); resp.StatusCode != http.StatusUnauthorized {
 		t.Fatalf("token on the public listener: %d", resp.StatusCode)
+	}
+	// With it on, a token works there only from its own networks (ADR-0041), and a refused token feeds the ban detector.
+	resp, body = do(t, "POST", base+"/account/tokens", `{"name":"terraform","role":"administrator","cidrs":["203.0.113.7"]}`, csrfH)
+	if resp.StatusCode != http.StatusCreated || !strings.Contains(body, `"cidrs":["203.0.113.7/32"]`) {
+		t.Fatalf("create with networks: %d %s", resp.StatusCode, body)
+	}
+	var ci struct {
+		Secret string `json:"secret"`
+	}
+	_ = json.Unmarshal([]byte(body), &ci)
+	if resp, _ := do(t, "POST", base+"/account/tokens", `{"name":"wide","role":"administrator","cidrs":["0.0.0.0/0"]}`, csrfH); resp.StatusCode != http.StatusUnprocessableEntity {
+		t.Fatalf("token for every network: %d", resp.StatusCode)
+	}
+	h.deps.AdminPublicPATs = true
+	pats := httptest.NewServer(NewPublic(h.deps))
+	defer pats.Close()
+	from := func(secret, ip string) map[string]string {
+		return map[string]string{"Host": "admin.events.example.com", "X-Test-Anonymous": "1", "X-Test-IP": ip, "Authorization": "Bearer " + secret}
+	}
+	if resp, body := do(t, "GET", pats.URL+AdminPrefix+"/clients", "", from(ci.Secret, "203.0.113.7")); resp.StatusCode != http.StatusOK {
+		t.Fatalf("token from its network: %d %s", resp.StatusCode, body)
+	}
+	if resp, body := do(t, "POST", pats.URL+AdminPrefix+"/streams", `{"name":"TF","subjects":["tf.>"]}`, from(ci.Secret, "203.0.113.7")); resp.StatusCode != http.StatusCreated {
+		t.Fatalf("token write on the public host: %d %s", resp.StatusCode, body)
+	}
+	before := authFailures.Load()
+	for _, c := range []struct{ secret, ip string }{{ci.Secret, "198.51.100.9"}, {out.Secret, "203.0.113.7"}} {
+		if resp, _ := do(t, "GET", pats.URL+AdminPrefix+"/clients", "", from(c.secret, c.ip)); resp.StatusCode != http.StatusUnauthorized {
+			t.Fatalf("token from %s: %d", c.ip, resp.StatusCode)
+		}
+	}
+	if authFailures.Load() != before+2 {
+		t.Fatal("refused public tokens not reported to the ban detector")
 	}
 	if resp, _ := do(t, "GET", base+"/clients", "", map[string]string{"X-Test-Anonymous": "1", "Authorization": "Bearer pulse_pat_nope"}); resp.StatusCode != http.StatusUnauthorized {
 		t.Fatalf("bad token: %d", resp.StatusCode)

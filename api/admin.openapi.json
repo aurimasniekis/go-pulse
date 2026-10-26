@@ -1739,6 +1739,14 @@
             "readOnly": true,
             "type": "string"
           },
+          "cidrs": {
+            "description": "Source networks (at least /16 or /48) that may also use the token on the public dashboard host, when the server allows it; empty: loopback listener only",
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 16,
+            "type": "array"
+          },
           "days": {
             "description": "Lifetime (default 90)",
             "format": "int64",
@@ -3782,6 +3790,13 @@
       "PAT": {
         "additionalProperties": false,
         "properties": {
+          "cidrs": {
+            "description": "Source networks that may use the token on the public dashboard host; empty: loopback listener only",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
           "created_at": {
             "format": "date-time",
             "type": "string"
@@ -3822,6 +3837,7 @@
           "name",
           "prefix",
           "role",
+          "cidrs",
           "expires_at",
           "created_at",
           "revoked"
@@ -6135,7 +6151,7 @@
             "description": "Error"
           }
         },
-        "summary": "Create a personal access token for the pulse CLI (loopback listener only)",
+        "summary": "Create a personal access token for the pulse CLI or automation",
         "tags": [
           "account"
         ]

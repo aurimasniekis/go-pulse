@@ -369,16 +369,17 @@ func registerAccount(api huma.API, d *Deps) {
 		Secret string     `json:"secret" doc:"Shown once"`
 	}
 	huma.Register(api, huma.Operation{OperationID: "create-my-token", Method: http.MethodPost, Path: "/account/tokens",
-		Summary: "Create a personal access token for the pulse CLI (loopback listener only)", DefaultStatus: http.StatusCreated, Tags: tags},
+		Summary: "Create a personal access token for the pulse CLI or automation", DefaultStatus: http.StatusCreated, Tags: tags},
 		func(ctx context.Context, in *struct {
 			Body struct {
-				Name string `json:"name" maxLength:"64"`
-				Role string `json:"role" enum:"administrator,operator,auditor,viewer"`
-				Days int    `json:"days,omitempty" minimum:"1" maximum:"366" doc:"Lifetime (default 90)"`
+				Name  string   `json:"name" maxLength:"64"`
+				Role  string   `json:"role" enum:"administrator,operator,auditor,viewer"`
+				Days  int      `json:"days,omitempty" minimum:"1" maximum:"366" doc:"Lifetime (default 90)"`
+				CIDRs []string `json:"cidrs,omitempty" maxItems:"16" doc:"Source networks (at least /16 or /48) that may also use the token on the public dashboard host, when the server allows it; empty: loopback listener only"`
 			}
 		}) (*struct{ Body patOut }, error) {
 			ttl := time.Duration(in.Body.Days) * 24 * time.Hour
-			t, secret, err := d.Users.CreatePAT(ctx, principalFrom(ctx), in.Body.Name, in.Body.Role, ttl, d.meta(ctx, nil).IP)
+			t, secret, err := d.Users.CreatePAT(ctx, principalFrom(ctx), in.Body.Name, in.Body.Role, ttl, in.Body.CIDRs, d.meta(ctx, nil).IP)
 			if err != nil {
 				return nil, d.authErr("create token", err)
 			}

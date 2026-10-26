@@ -43,6 +43,7 @@ func TestProdRefusals(t *testing.T) {
 		"missing master key":              {},
 		"removed auth mode":               tlsProd(kf, map[string]string{"PULSE_AUTH_MODE": "none"}),
 		"public dashboard without a host": tlsProd(kf, map[string]string{"PULSE_ADMIN_PUBLIC": "true"}),
+		"public tokens, no dashboard":     tlsProd(kf, map[string]string{"PULSE_PUBLIC_HOST": "events.example.com", "PULSE_ADMIN_PUBLIC_TOKENS": "true"}),
 		"long reauth window in prod":      tlsProd(kf, map[string]string{"PULSE_REAUTH_WINDOW": "1h"}),
 		"http dashboard URL in prod":      tlsProd(kf, map[string]string{"PULSE_ADMIN_URL": "http://admin.events.example.com"}),
 		"dashboard URL with a path":       tlsProd(kf, map[string]string{"PULSE_ADMIN_URL": "https://admin.events.example.com/x"}),

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net/url"
+	"strings"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -119,15 +120,19 @@ func newAdminRecoverCmd() *cobra.Command {
 
 func newAdminTokenCmd() *cobra.Command {
 	var email, name, role string
+	var cidrs []string
 	var days int
 	var create bool
 	cmd := &cobra.Command{
 		Use:   "token",
 		Short: "Issue a personal access token for automation (prints it once; audited)",
 		Long: "Issues a personal access token for the loopback admin listener, e.g. for deployment checks or scripts. With --create a " +
-			"missing user is created without a password, so it can only use tokens. The role is added to the user's roles when missing.",
-		Example: "  pulsed admin token --email automation@example.com --create --role operator --days 1",
-		Args:    cobra.NoArgs,
+			"missing user is created without a password, so it can only use tokens. The role is added to the user's roles when missing. " +
+			"With --cidr the token also works on the public dashboard host, from those networks only, when PULSE_ADMIN_PUBLIC_TOKENS is on " +
+			"(e.g. Terraform in CI).",
+		Example: "  pulsed admin token --email automation@example.com --create --role operator --days 1\n" +
+			"  pulsed admin token --email terraform@example.com --create --name terraform --days 366 --cidr 203.0.113.7",
+		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			if email == "" {
 				return fmt.Errorf("--email is required")
@@ -137,13 +142,17 @@ func newAdminTokenCmd() *cobra.Command {
 				return err
 			}
 			defer db.Close()
-			t, secret, err := u.IssuePATOnHost(cmd.Context(), email, name, role, time.Duration(days)*24*time.Hour, create)
+			t, secret, err := u.IssuePATOnHost(cmd.Context(), email, name, role, time.Duration(days)*24*time.Hour, cidrs, create)
 			if err != nil {
 				return err
 			}
 			fmt.Fprintln(cmd.OutOrStdout(), secret)
-			fmt.Fprintf(cmd.ErrOrStderr(), "token %s (%s, role %s) expires %s; it works only on the loopback admin listener\n",
-				t.ID, t.Name, t.Role, t.ExpiresAt.UTC().Format(time.RFC3339))
+			where := "only on the loopback admin listener"
+			if len(t.CIDRs) > 0 {
+				where = "on the loopback admin listener and, with PULSE_ADMIN_PUBLIC_TOKENS, on the public dashboard host from " + strings.Join(t.CIDRs, ", ")
+			}
+			fmt.Fprintf(cmd.ErrOrStderr(), "token %s (%s, role %s) expires %s; it works %s\n",
+				t.ID, t.Name, t.Role, t.ExpiresAt.UTC().Format(time.RFC3339), where)
 			return nil
 		},
 	}
@@ -152,5 +161,6 @@ func newAdminTokenCmd() *cobra.Command {
 	cmd.Flags().StringVar(&role, "role", "operator", "role of the token: administrator, operator, auditor or viewer")
 	cmd.Flags().StringVar(&name, "name", "automation", "token name")
 	cmd.Flags().IntVar(&days, "days", 1, "lifetime in days (at most 366)")
+	cmd.Flags().StringSliceVar(&cidrs, "cidr", nil, "source address or network (at least /16 or /48) that may use the token on the public dashboard host; repeatable")
 	return cmd
 }

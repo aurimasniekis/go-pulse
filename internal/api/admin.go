@@ -78,6 +78,9 @@ type Deps struct {
 	// AdminPublicHost serves the dashboard on the public listener under this Host ("" = not exposed). It may equal the
 	// public API host (path routing) or be its own hostname.
 	AdminPublicHost string
+	// AdminPublicPATs accepts personal access tokens on the public dashboard host, each only from the source networks it
+	// was created with (automation such as Terraform in CI). Off: tokens work only on the loopback listener.
+	AdminPublicPATs bool
 	// PublicAPIHost is the public API hostname; with a separate AdminPublicHost each host gets only its own routes.
 	PublicAPIHost string
 	// PublicTLS: the public listener serves TLS (__Host- cookies with Secure).

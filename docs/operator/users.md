@@ -79,11 +79,12 @@ on that origin; the other listener's sign-in page links to it.
   and `acr`). Providers that do not send `auth_time` can use the user's Pulse TOTP instead (`local_totp`).
 - **Logout** ends the Pulse session; providers with RP-initiated logout enabled also offer signing out there.
 
-## Personal access tokens (CLI)
+## Personal access tokens (CLI and automation)
 
-Account → Personal access tokens: name, one of your roles, lifetime (default 90 days, at most 366). The token is shown
-once. It works only on the loopback admin listener (through the SSH tunnel), never on the public dashboard, and it never
-has more than the role you still hold.
+Account → Personal access tokens: name, one of your roles, lifetime (default 90 days, at most 366) and optional public
+networks. The token is shown once. It works on the loopback admin listener (through the SSH tunnel) and never has more
+than the role you still hold. A token with networks also works on the public dashboard host, only from those networks
+and only with `PULSE_ADMIN_PUBLIC_TOKENS=true`; see [Remote automation](#remote-automation).
 
 ```sh
 pulse context add home --url tls://r.events.example.com:4222 --creds ~/.config/pulse/home.creds \
@@ -94,6 +95,22 @@ pulse clients ls
 `pulsed backup run` takes one too (`--token` or `PULSE_ADMIN_TOKEN`). For scripts and deployment checks, mint one on the
 host instead: `docker compose exec pulsed pulsed admin token --email automation@example.com --create --role operator --days 1`
 (a passwordless user that can only use tokens; same trust as break-glass).
+
+### Remote automation
+
+For automation that cannot reach the tunnel, such as Terraform in CI:
+
+1. Set `PULSE_ADMIN_PUBLIC_TOKENS=true` (needs `PULSE_ADMIN_PUBLIC=true`).
+2. Mint a token restricted to the automation's egress addresses:
+   `pulsed admin token --email terraform@example.com --create --name terraform --role operator --days 366 --cidr 203.0.113.7`.
+   Networks must be at least /16 (IPv4) or /48 (IPv6); `--cidr` is repeatable.
+3. Point the client at `https://<PULSE_ADMIN_PUBLIC_HOST>`.
+
+The address checked is the client address after Cloudflare (`CF-Connecting-IP`, trusted only on AOP-verified
+connections). A refused token counts as a failed sign-in for the ban detector, so list the automation's address in
+`PULSE_BAN_ALLOW` only if you accept that it can then guess tokens without being banned. If the automation's address
+changes, mint a new token. Tokens without networks stay loopback-only. Use the operator role unless the automation
+manages users or sign-in settings.
 
 ## Break-glass
 

@@ -496,7 +496,33 @@
   `GET`/`PUT /kv/{bucket}/config` and `/objects/{bucket}/config` read and update a bucket, whose DTOs now include
   `description` and `max_bytes`.
 - **Consequences:** PATs stay loopback-only; running Terraform from CI therefore needs an SSH tunnel to the host.
-  Allowing PATs on the public dashboard would be a separate, security-relevant decision.
+  Allowing PATs on the public dashboard would be a separate, security-relevant decision (taken in ADR-0041).
+
+### ADR-0041 — Network-restricted personal access tokens on the public dashboard host — **security-relevant change**
+
+- **Status:** accepted (operator decision, 2026-10-26, choosing this over a separate mTLS automation listener and over
+  keeping SSH-only access). Weakens PL-USR-012 ("accepted only on the loopback admin listener") for tokens that opt in.
+- **Context:** Terraform runs in Atlantis, which cannot hold an SSH key to the host. Clients were created by an Ansible
+  workaround that minted a one-day token on the host and called the loopback API.
+- **Decision:**
+  - A personal access token may name up to 16 source networks (`cidrs`), each at least /16 (IPv4) or /48 (IPv6), set
+    at creation (Account page, `POST /account/tokens`, `pulsed admin token --cidr`) and shown in token lists. Stored in
+    `user_tokens.cidrs` (migration 0009); existing tokens have none.
+  - `PULSE_ADMIN_PUBLIC_TOKENS=true` (default false; needs `PULSE_ADMIN_PUBLIC`) makes the public dashboard host accept
+    a token when the client address is inside one of its networks. The address is the edge's real client IP:
+    `CF-Connecting-IP` only on AOP-verified connections from Cloudflare ranges (ADR-0031). Tokens without networks, and
+    every token while the option is off, get 401 there as before.
+  - A refused token on the public host is reported to the ban detector (source `admin_token`), like failed public
+    sign-ins. Bearer requests skip CSRF and Origin checks as on loopback (they are not ambient credentials).
+  - Everything else is unchanged: one role capped by the user's current manual roles, expiry at most 366 days, keyed
+    MAC at rest, revocation, uses attributed in the audit log, a token cannot create tokens.
+- **Alternatives:** an mTLS automation listener (client certificates from the internal CA on a new directly exposed
+  port: stronger, but a new firewall opening, certificate issuance and rotation, and more provider configuration);
+  keep loopback only (gives CI an SSH key to the host, a wider credential than an operator-role token).
+- **Consequences:** a leaked token with networks is usable by anyone who can send traffic from those networks (e.g.
+  other hosts behind the same NAT). Mitigations: narrow networks, the operator role for automation, short lifetimes
+  where possible, revocation, the audit log and the ban detector. A changed egress address needs a new token: networks
+  cannot be edited.
 
 ## 2. Open review items
 

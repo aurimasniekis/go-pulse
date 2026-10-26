@@ -99,7 +99,7 @@ export interface paths {
         /** My personal access tokens */
         get: operations["list-my-tokens"];
         put?: never;
-        /** Create a personal access token for the pulse CLI (loopback listener only) */
+        /** Create a personal access token for the pulse CLI or automation */
         post: operations["create-my-token"];
         delete?: never;
         options?: never;
@@ -2449,6 +2449,8 @@ export interface components {
              * @example /api/admin/v1/schemas/Create-my-tokenRequest.json
              */
             readonly $schema?: string;
+            /** @description Source networks (at least /16 or /48) that may also use the token on the public dashboard host, when the server allows it; empty: loopback listener only */
+            cidrs?: string[];
             /**
              * Format: int64
              * @description Lifetime (default 90)
@@ -3226,6 +3228,8 @@ export interface components {
             top_types_24h: components["schemas"]["KeyCount"][];
         };
         PAT: {
+            /** @description Source networks that may use the token on the public dashboard host; empty: loopback listener only */
+            cidrs: string[];
             /** Format: date-time */
             created_at: string;
             /** Format: date-time */
