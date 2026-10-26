@@ -5,6 +5,8 @@ versioning: [docs/VERSIONING.md](docs/VERSIONING.md).
 
 ## [Unreleased]
 
+## [0.1.3] - 2026-10-26
+
 ### Added
 - Personal access tokens can name source networks. With the new `PULSE_ADMIN_PUBLIC_TOKENS=true` (off by default; needs
   `PULSE_ADMIN_PUBLIC`), such a token also works on the public dashboard host, but only from those networks, so
@@ -117,7 +119,8 @@ clients, webhooks, bans, alerts and backups. The image is `docker.io/aurimasniek
   throttled, audited and, on the public listener, count toward bans (`dashboard` source).
 - Outbound webhook delivery errors never include the destination URL, which can carry a secret.
 
-[Unreleased]: https://github.com/aurimasniekis/go-pulse/compare/v0.1.2...HEAD
+[Unreleased]: https://github.com/aurimasniekis/go-pulse/compare/v0.1.3...HEAD
+[0.1.3]: https://github.com/aurimasniekis/go-pulse/compare/v0.1.2...v0.1.3
 [0.1.2]: https://github.com/aurimasniekis/go-pulse/compare/v0.1.1...v0.1.2
 [0.1.1]: https://github.com/aurimasniekis/go-pulse/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/aurimasniekis/go-pulse/releases/tag/v0.1.0
