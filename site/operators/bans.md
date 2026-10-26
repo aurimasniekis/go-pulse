@@ -65,8 +65,10 @@ table inet pulse_edge {
     type filter hook prerouting priority raw; policy accept;
     ip  saddr @pulse_ban_v4 drop
     ip6 saddr @pulse_ban_v6 drop
-    tcp dport 443 ip  saddr != @cloudflare_v4 drop
-    tcp dport 443 ip6 saddr != @cloudflare_v6 drop
+    # fib daddr type local: only traffic addressed to this host. Without it the rule also drops the containers'
+    # own outbound HTTPS (it enters prerouting from the Docker bridge), which breaks ACME and Cloudflare API calls.
+    fib daddr type local tcp dport 443 ip  saddr != @cloudflare_v4 drop
+    fib daddr type local tcp dport 443 ip6 saddr != @cloudflare_v6 drop
   }
 }
 ```
