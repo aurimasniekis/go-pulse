@@ -5,6 +5,16 @@ versioning: [docs/VERSIONING.md](docs/VERSIONING.md).
 
 ## [Unreleased]
 
+## [0.1.2] - 2026-10-26
+
+### Fixed
+- The disk forecast no longer fires for a new or quiet stream. When the stream would take more than about 292 years to
+  fill, the date overflowed to one in the past, so the alert reported "-106752.0 days" and the Overview showed a date
+  in 1734. Forecasts beyond 100 years now have no date, like a stream with no traffic.
+- The documented nftables edge rule (operator firewall guide and bans page) now matches only traffic addressed to the
+  host (`fib daddr type local`). The old rule also dropped the containers' own outbound HTTPS, which broke ACME
+  certificates, the Cloudflare ban-list sync and the Cloudflare range refresh.
+
 ## [0.1.1] - 2026-10-25
 
 ### Added
@@ -95,6 +105,7 @@ clients, webhooks, bans, alerts and backups. The image is `docker.io/aurimasniek
   throttled, audited and, on the public listener, count toward bans (`dashboard` source).
 - Outbound webhook delivery errors never include the destination URL, which can carry a secret.
 
-[Unreleased]: https://github.com/aurimasniekis/go-pulse/compare/v0.1.1...HEAD
+[Unreleased]: https://github.com/aurimasniekis/go-pulse/compare/v0.1.2...HEAD
+[0.1.2]: https://github.com/aurimasniekis/go-pulse/compare/v0.1.1...v0.1.2
 [0.1.1]: https://github.com/aurimasniekis/go-pulse/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/aurimasniekis/go-pulse/releases/tag/v0.1.0
