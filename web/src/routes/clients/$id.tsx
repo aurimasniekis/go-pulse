@@ -11,7 +11,7 @@ import { cleanGrants, GrantsEditor } from '@/components/GrantsEditor'
 import { PageHeader } from '@/components/PageHeader'
 import { Can } from '@/components/Can'
 import { Snippets } from '@/components/Snippets'
-import { formatBytes, formatNumber, formatTime, timeAgo } from '@/lib/format'
+import { formatBytes, formatGoDuration, formatNumber, formatTime, timeAgo } from '@/lib/format'
 import { notifyErr, notifyOk } from '@/lib/notify'
 import { clientSnippets } from '@/lib/snippets'
 import { CredsModal, StatusBadge, type IssuedState } from './index'
@@ -198,7 +198,7 @@ function ClientDetail() {
                         {k.lang} {k.version}
                       </Table.Td>
                       <Table.Td>{k.name || '—'}</Table.Td>
-                      <Table.Td>{k.rtt}</Table.Td>
+                      <Table.Td>{formatGoDuration(k.rtt)}</Table.Td>
                       <Table.Td>{k.uptime}</Table.Td>
                       <Table.Td ta="right">{k.subscriptions}</Table.Td>
                       <Table.Td ta="right">

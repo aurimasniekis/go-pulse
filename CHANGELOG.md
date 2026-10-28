@@ -6,8 +6,8 @@ versioning: [docs/VERSIONING.md](docs/VERSIONING.md).
 ## [Unreleased]
 
 ### Fixed
-- The System page shows each connection's round-trip time in milliseconds, like the NATS card, instead of the raw NATS
-  value (`1.371958ms` next to `910µs`).
+- The System page and a client's page show each connection's round-trip time in milliseconds, like the NATS card,
+  instead of the raw NATS value (`1.371958ms` next to `910µs`).
 
 ## [0.1.3] - 2026-10-26
 
