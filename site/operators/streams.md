@@ -47,7 +47,7 @@ are reserved for buckets. Deleting a stream asks you to type its name.
 Clients read from a user stream with a `subscribe` or `durable` grant that names the stream
 ([clients and grants](/operators/clients)).
 
-<Shot name="streams" alt="Streams page with EVENTS, a user stream and their consumers" caption="Streams and consumers" />
+<Shot name="streams" alt="Streams page with EVENTS, KV and object buckets and a user stream" caption="Streams" />
 
 ## Consumers
 
@@ -55,6 +55,8 @@ Each stream lists its consumers with pending, ack-pending and redelivery counts.
 tools' replays; durable ones are named `<client-id>_<name>`, plus pulsed's own (rollups, outbound webhooks), which use
 random names. Deleting a consumer asks for its name. A tool whose durable you delete starts again from its configured
 start position the next time it subscribes.
+
+<Shot name="stream-detail" alt="The EVENTS stream's page with its configuration, state and consumers" caption="A stream's page with its consumers" />
 
 ## Explorer and live tail
 
@@ -74,7 +76,9 @@ The **KV & Objects** page browses and edits JetStream KV buckets and object stor
 delete buckets, list keys, read a value with its history, set and delete keys, upload (up to 64 MiB) and download
 objects. The managed `blobs` store is read-only here. Every change is audited.
 
-<Shot name="kv" alt="KV browser with a key's value and revision history" caption="KV & Objects" />
+<Shot name="kv" alt="KV browser with a key's value and revision history" caption="A KV bucket" />
+
+<Shot name="objects" alt="An object store with uploaded files, their sizes and download links" caption="An object store" />
 
 ## Rollups and the subject index
 

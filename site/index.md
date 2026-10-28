@@ -68,12 +68,14 @@ Pulse is small on purpose: one VPS with 2 GB of RAM, one distroless image plus t
 
 ## See it
 
-<Shot name="overview" themed alt="Pulse overview with event counts, throughput over time, top domains and types and the disk forecast" caption="Overview: throughput, top domains and types, disk forecast and retention horizon" />
+<Shot name="overview" themed alt="Pulse overview with event counts, throughput over time and the top domains, types and subjects" caption="Overview: event counts, throughput and the top domains, types and subjects" />
 
 <div class="pl-gallery">
 <Shot name="explorer" themed alt="Event explorer with filters and a list of events" caption="Event explorer" />
 <Shot name="clients" themed alt="Clients with their grants and live connections" caption="Clients and their grants" />
-<Shot name="security" themed alt="Security page with bans and authentication failures" caption="Bans and authentication failures" />
+<Shot name="security" themed alt="Security page with automatic and manual bans and authentication failures" caption="Automatic bans and authentication failures" />
+<Shot name="webhook-deliveries" alt="An outbound webhook's delivery log with delivered and retried attempts" caption="Outbound webhooks with a delivery log" />
+<Shot name="alerts" alt="Alerts with a firing rule, Telegram and Discord notifiers and the rule list" caption="Alerts to Telegram and Discord" />
 <Shot name="system" themed alt="System page with NATS, JetStream and certificate status" caption="NATS, JetStream and certificates" />
 <Shot name="login" themed alt="Sign-in page with email and password and a single sign-on button" caption="Sign-in: password and TOTP, or single sign-on" />
 <Shot name="users" alt="Users page listing people with their roles, sign-in methods and status" caption="Users and roles" />

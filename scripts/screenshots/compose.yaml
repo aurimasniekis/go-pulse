@@ -1,10 +1,61 @@
 # Overrides for the documentation-screenshot stack (scripts/screenshots.sh), layered on deploy/compose.dev.yaml.
-# Snippets show example hostnames, and outbound webhooks may reach the receiver the spec runs on the Docker host.
+# Snippets show example hostnames, and outbound webhooks and the alert notifiers reach the receiver the spec runs on
+# the Docker host. Two scanners on a TEST-NET network (never-ban only covers private ranges) fail authentication so
+# the Security page shows automatic bans.
+x-scanner: &scanner
+  image: nats:2.15.1-alpine@sha256:7ae34c25dfd6fe2e01c6483eabef20d796690fdcac6c4d94ca780a6cf9877fde
+  entrypoint: ["/bin/sh", "-c"]
+  depends_on:
+    pulsed:
+      condition: service_healthy
+  mem_limit: 32m
+  restart: unless-stopped
+
+networks:
+  default:
+  scanners:
+    ipam:
+      config:
+        - subnet: 203.0.113.0/24
+
 services:
   pulsed:
     environment:
       PULSE_PUBLIC_NATS_URL: tls://r.events.example.com:4222
       PULSE_PUBLIC_URL: https://events.example.com
       PULSE_OUTBOUND_ALLOW: 192.168.65.0/24,172.16.0.0/12
+      # The run seeds traffic for over an hour before it shoots; dialogs that show secrets must not ask to re-authenticate.
+      PULSE_REAUTH_WINDOW: 3h
+      PULSE_TELEGRAM_API_URL: http://automations.home.arpa:28099/telegram
+      PULSE_TELEGRAM_BOT_TOKEN: "100000:docs-not-a-token" # gitleaks:allow (fictional; the receiver ignores it)
+      PULSE_TELEGRAM_CHAT_ID: "-1001000000000"
+      PULSE_TELEGRAM_MIN_SEVERITY: info
+      PULSE_DISCORD_WEBHOOK_URL: http://automations.home.arpa:28099/discord
     extra_hosts:
       - "automations.home.arpa:host-gateway"
+    networks:
+      default:
+      scanners:
+        ipv4_address: 203.0.113.2
+
+  # Guesses HTTP tokens: banned after PULSE_BAN_THRESHOLD failures, and again after the spec lifts the first ban.
+  token-scanner:
+    <<: *scanner
+    command:
+      - >-
+        while true; do wget -q -O /dev/null --header 'Authorization: Bearer pulse_scan1234_notarealtokenatall'
+        --post-data '{}' http://pulsed:8443/api/v1/publish/evt.home.door.opened.front; sleep 6; done
+    networks:
+      scanners:
+        ipv4_address: 203.0.113.50
+
+  # Sends GitHub deliveries with bad signatures.
+  hook-scanner:
+    <<: *scanner
+    command:
+      - >-
+        sleep 40; while true; do wget -q -O /dev/null --header 'X-GitHub-Event: push'
+        --header 'X-Hub-Signature-256: sha256=00' --post-data '{}' http://pulsed:8443/hooks/github; sleep 9; done
+    networks:
+      scanners:
+        ipv4_address: 203.0.113.77

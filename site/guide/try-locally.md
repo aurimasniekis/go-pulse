@@ -47,7 +47,9 @@ Open the link, choose an email and a password (at least 12 characters), and sign
 scan the QR code with an authenticator app, enter a code, save the recovery codes, then enter the next code. See
 [Users and single sign-on](/operators/users) for the details.
 
-<Shot name="overview" themed alt="The Overview page of a fresh dev instance" caption="Overview" />
+<Shot name="totp-enroll" alt="TOTP enrollment at first sign-in: a QR code, the secret and a field for the first code" caption="Enrolling TOTP at first sign-in" />
+
+<Shot name="overview" themed alt="The Overview page with event counts, throughput and the top domains and types" caption="Overview" />
 
 ## 3. Install the CLI
 

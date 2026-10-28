@@ -4,7 +4,7 @@
 signature and publishes the request body as an event. **Outbound** webhooks deliver events to your own HTTP endpoints,
 signed, in order and with retries. Both are managed on the **Webhooks** page.
 
-<Shot name="webhooks" alt="Inbound and outbound webhooks with the delivery log" caption="Webhooks" />
+<Shot name="webhooks" alt="Inbound webhooks with their URLs, subjects and accepted and rejected counts" caption="Inbound webhooks" />
 
 ## Inbound
 
@@ -139,6 +139,10 @@ Retries are signed again with a fresh timestamp.
 On the Webhooks page, per outbound hook: pending events, the last delivery, the **delivery log** (attempt, outcome,
 status code, latency, a short response excerpt), **pause** and **resume**, **send a test event**, and **retry** a dead
 delivery. Error messages in the log never include the destination URL, since URLs often carry secrets.
+
+<Shot name="webhooks-outbound" alt="Outbound webhooks with filters, destinations, pending events and the last delivery" caption="Outbound webhooks" />
+
+<Shot name="webhook-deliveries" alt="An outbound hook's delivery log with delivered and retried attempts" caption="The delivery log" />
 
 ### Destinations Pulse refuses
 
