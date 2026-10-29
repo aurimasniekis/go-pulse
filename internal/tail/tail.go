@@ -119,7 +119,7 @@ func (m *Manager) Open(ctx context.Context, r Request) (*Session, error) {
 			return
 		}
 		s.deliver(query.Message{Stream: md.Stream, Seq: md.Sequence.Stream, Subject: msg.Subject(), Time: md.Timestamp.UTC(),
-			Headers: msg.Headers(), Data: msg.Data(), Size: len(msg.Data()) + len(msg.Subject())})
+			Headers: msg.Headers(), Data: msg.Data(), Size: query.MessageSize(msg.Subject(), msg.Headers(), msg.Data())})
 	})
 	if err != nil {
 		release()

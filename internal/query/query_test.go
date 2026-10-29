@@ -272,3 +272,14 @@ func TestJSONLookup(t *testing.T) {
 		t.Error("non-JSON matched")
 	}
 }
+
+func TestMessageSize(t *testing.T) {
+	h := nats.Header{"ce-type": {"home.door.opened.v1"}, "x": {"a", "bc"}}
+	// subject 20 + payload 16 + "ce-type" 7 + 19 + "x" 1 + 1 + 2
+	if got := MessageSize("evt.home.door.opened", h, []byte(`{"door":"front"}`)); got != 66 {
+		t.Errorf("size = %d, want 66", got)
+	}
+	if got := MessageSize("evt.a.b.c", nil, nil); got != 9 {
+		t.Errorf("no headers or payload: size = %d, want 9", got)
+	}
+}

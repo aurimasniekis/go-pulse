@@ -169,9 +169,9 @@ func StripReadHeaders(h nats.Header) {
 	}
 }
 
-func (x *run) consider(stream string, seq uint64, subject string, t time.Time, h nats.Header, data []byte) {
-	StripReadHeaders(h)
-	x.res.Scanned++
+// MessageSize is an event's size as the dashboard and APIs report it: subject, header names and values, and payload,
+// the same measure as the rollups' byte counts.
+func MessageSize(subject string, h nats.Header, data []byte) int {
 	size := len(subject) + len(data)
 	for k, vs := range h {
 		size += len(k)
@@ -179,6 +179,13 @@ func (x *run) consider(stream string, seq uint64, subject string, t time.Time, h
 			size += len(v)
 		}
 	}
+	return size
+}
+
+func (x *run) consider(stream string, seq uint64, subject string, t time.Time, h nats.Header, data []byte) {
+	StripReadHeaders(h)
+	x.res.Scanned++
+	size := MessageSize(subject, h, data)
 	x.res.ScannedBytes += int64(size)
 	if !matchesAny(x.r.Subjects, subject) || !x.r.matches(h, data) {
 		return

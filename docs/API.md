@@ -87,8 +87,9 @@ Response: `events[]`, `next` (opaque cursor bound to the filters; reusing it wit
 `scanned_bytes`, `partial` + `reason` (`msgs`, `bytes`, `time`) when the scan budget (50k messages, 64 MiB, 3 s) ran out
 before the page filled — continue with `next`. At most 4 queries run at once (429 otherwise).
 
-Each event: `stream`, `seq`, `subject`, `stream_time`, `size`, `headers`, `data` + `encoding` (`utf8` or `base64`),
-envelope fields (`id`, `type`, `source`, `content_type`, `event_time`), `untyped`, `subject_valid`, `blob`.
+Each event: `stream`, `seq`, `subject`, `stream_time`, `size` (bytes of subject, headers and payload), `headers`, `data` +
+`encoding` (`utf8` or `base64`), envelope fields (`id`, `type`, `source`, `content_type`, `event_time`), `untyped`,
+`subject_valid`, `blob`.
 
 ### Live tail (`GET /tail`)
 
