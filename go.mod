@@ -7,7 +7,7 @@ require (
 	github.com/coreos/go-oidc/v3 v3.21.0
 	github.com/danielgtaylor/huma/v2 v2.39.1
 	github.com/go-acme/lego/v4 v4.35.2
-	github.com/go-jose/go-jose/v4 v4.1.4
+	github.com/go-jose/go-jose/v4 v4.1.6
 	github.com/google/nftables v0.3.0
 	github.com/klauspost/compress v1.20.1
 	github.com/minio/minio-go/v7 v7.4.1

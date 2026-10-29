@@ -133,7 +133,7 @@ Images are on Docker Hub as [`aurimasniekis/pulsed`](https://hub.docker.com/r/au
 digest and verify it first:
 
 ```sh
-gh attestation verify oci://docker.io/aurimasniekis/pulsed:0.1.4 --repo aurimasniekis/go-pulse
+gh attestation verify oci://docker.io/aurimasniekis/pulsed:0.1.5 --repo aurimasniekis/go-pulse
 ```
 
 Every release is listed in [CHANGELOG.md](CHANGELOG.md).

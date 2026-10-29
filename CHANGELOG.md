@@ -5,7 +5,20 @@ versioning: [docs/VERSIONING.md](docs/VERSIONING.md).
 
 ## [Unreleased]
 
+## [0.1.5] - 2026-10-29
+
+Includes every change from 0.1.4, which was tagged but not published: its image failed the release's vulnerability
+scan.
+
+### Security
+- `github.com/go-jose/go-jose/v4` is updated to v4.1.6 for CVE-2026-116587 (denial of service when parsing JWKs that
+  contain RSA keys). `pulsed` parses the JWKS of configured single sign-on providers with it, so a hostile or
+  compromised provider could cause a denial of service.
+
 ## [0.1.4] - 2026-10-29
+
+Tagged but not published: the release workflow stopped at its vulnerability scan (CVE-2026-116587, fixed in 0.1.5).
+No image or GitHub release exists for 0.1.4.
 
 ### Fixed
 - The System page and a client's page show each connection's round-trip time in milliseconds, like the NATS card,
@@ -133,7 +146,8 @@ clients, webhooks, bans, alerts and backups. The image is `docker.io/aurimasniek
   throttled, audited and, on the public listener, count toward bans (`dashboard` source).
 - Outbound webhook delivery errors never include the destination URL, which can carry a secret.
 
-[Unreleased]: https://github.com/aurimasniekis/go-pulse/compare/v0.1.4...HEAD
+[Unreleased]: https://github.com/aurimasniekis/go-pulse/compare/v0.1.5...HEAD
+[0.1.5]: https://github.com/aurimasniekis/go-pulse/compare/v0.1.4...v0.1.5
 [0.1.4]: https://github.com/aurimasniekis/go-pulse/compare/v0.1.3...v0.1.4
 [0.1.3]: https://github.com/aurimasniekis/go-pulse/compare/v0.1.2...v0.1.3
 [0.1.2]: https://github.com/aurimasniekis/go-pulse/compare/v0.1.1...v0.1.2
