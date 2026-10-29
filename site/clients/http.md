@@ -104,7 +104,7 @@ curl -fsS -G https://events.example.com/api/v1/events \
   "events": [
     {
       "stream": "EVENTS", "seq": 1042, "subject": "evt.home.door.opened",
-      "stream_time": "2026-10-24T08:00:01.123Z", "size": 16,
+      "stream_time": "2026-10-24T08:00:01.123Z", "size": 198,
       "headers": {"ce-type": ["home.door.opened.v1"], "…": ["…"]},
       "data": "{\"door\":\"front\"}", "encoding": "utf8",
       "id": "01J…", "type": "home.door.opened.v1", "source": "door-bot",
@@ -112,7 +112,7 @@ curl -fsS -G https://events.example.com/api/v1/events \
       "untyped": false, "subject_valid": true
     }
   ],
-  "next": "…", "scanned": 1, "scanned_bytes": 16, "partial": false, "first_seq": 1, "last_seq": 2210
+  "next": "…", "scanned": 1, "scanned_bytes": 198, "partial": false, "first_seq": 1, "last_seq": 2210
 }
 ```
 
