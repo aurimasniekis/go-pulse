@@ -1,9 +1,10 @@
 import { ActionIcon, Code, CopyButton, Tabs, Tooltip } from '@mantine/core'
 import { IconCheck, IconCopy } from '@tabler/icons-react'
 
-/** Tabbed copyable code snippets. */
+/** Tabbed copyable code snippets (nothing when there are none). */
 export function Snippets({ snippets }: { snippets: Record<string, string> }) {
   const names = Object.keys(snippets)
+  if (names.length === 0) return null
   return (
     <Tabs defaultValue={names[0]} keepMounted={false} data-testid="snippets">
       <Tabs.List>
