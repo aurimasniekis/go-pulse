@@ -8,6 +8,14 @@ versioning: [docs/VERSIONING.md](docs/VERSIONING.md).
 ### Fixed
 - The System page and a client's page show each connection's round-trip time in milliseconds, like the NATS card,
   instead of the raw NATS value (`1.371958ms` next to `910µs`).
+- An event's size is the same everywhere: subject, headers and payload, as in the Explorer list and the rollups. The
+  event detail (`GET /api/admin/v1/events/{stream}/{seq}`) and the live tail (dashboard and `GET /api/v1/tail`)
+  counted only the subject and payload.
+- Connection snippets for a new client or HTTP token show only what its grants allow. A client without a subscribe
+  grant no longer gets a subscribe example on `evt.example.>`, a client with only a durable grant gets a durable
+  subscription, and a token gets only the publish, replay and tail examples its grants allow.
+- The Audit page shows the whole actor (it was cut off at about 20 characters, such as `user:alex@example.c`); long
+  values are truncated with the full text on hover.
 
 ## [0.1.3] - 2026-10-26
 
