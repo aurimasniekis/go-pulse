@@ -19,6 +19,11 @@ versioning: [docs/VERSIONING.md](docs/VERSIONING.md).
 - The Audit page shows the whole actor (it was cut off at about 20 characters, such as `user:alex@example.c`); long
   values are truncated with the full text on hover.
 
+### Security
+- `github.com/go-jose/go-jose/v4` is updated to v4.1.6 for CVE-2026-116587 (denial of service when parsing JWKs that
+  contain RSA keys). `pulsed` parses the JWKS of configured single sign-on providers with it, so a hostile or
+  compromised provider could cause a denial of service.
+
 ## [0.1.3] - 2026-10-26
 
 ### Added
