@@ -42,7 +42,16 @@ const columns: Column<AuditEntry>[] = [
       </Badge>
     ),
   },
-  { key: 'actor', header: 'Actor', width: '120px', render: (e) => <Text size="sm">{e.actor}</Text> },
+  {
+    key: 'actor',
+    header: 'Actor',
+    width: 'minmax(180px, 1fr)',
+    render: (e) => (
+      <Text size="sm" truncate title={e.actor}>
+        {e.actor}
+      </Text>
+    ),
+  },
   { key: 'target', header: 'Target', width: 'minmax(160px, 1fr)', render: (e) => <Text size="sm" ff="monospace" truncate>{e.target}</Text> },
   { key: 'ip', header: 'IP', width: '130px', render: (e) => <Text size="sm" ff="monospace">{e.ip || '—'}</Text> },
   {
