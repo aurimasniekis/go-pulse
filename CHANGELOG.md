@@ -5,6 +5,8 @@ versioning: [docs/VERSIONING.md](docs/VERSIONING.md).
 
 ## [Unreleased]
 
+## [0.1.4] - 2026-10-29
+
 ### Fixed
 - The System page and a client's page show each connection's round-trip time in milliseconds, like the NATS card,
   instead of the raw NATS value (`1.371958ms` next to `910µs`).
@@ -131,7 +133,8 @@ clients, webhooks, bans, alerts and backups. The image is `docker.io/aurimasniek
   throttled, audited and, on the public listener, count toward bans (`dashboard` source).
 - Outbound webhook delivery errors never include the destination URL, which can carry a secret.
 
-[Unreleased]: https://github.com/aurimasniekis/go-pulse/compare/v0.1.3...HEAD
+[Unreleased]: https://github.com/aurimasniekis/go-pulse/compare/v0.1.4...HEAD
+[0.1.4]: https://github.com/aurimasniekis/go-pulse/compare/v0.1.3...v0.1.4
 [0.1.3]: https://github.com/aurimasniekis/go-pulse/compare/v0.1.2...v0.1.3
 [0.1.2]: https://github.com/aurimasniekis/go-pulse/compare/v0.1.1...v0.1.2
 [0.1.1]: https://github.com/aurimasniekis/go-pulse/compare/v0.1.0...v0.1.1
