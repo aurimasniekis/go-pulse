@@ -1,4 +1,4 @@
-import { createHash, createHmac, randomUUID } from 'node:crypto'
+import { createHash, createHmac, randomBytes, randomUUID } from 'node:crypto'
 import { existsSync, readFileSync } from 'node:fs'
 import { createServer } from 'node:http'
 import { join } from 'node:path'
@@ -18,7 +18,8 @@ test.skip(!OUT, 'PULSE_SCREENSHOTS_OUT is not set (run scripts/screenshots.sh)')
 const adminURL = process.env.PULSE_E2E_URL ?? 'http://127.0.0.1:8080'
 const publicURL = process.env.PULSE_E2E_PUBLIC_URL ?? 'http://127.0.0.1:8443'
 const wsURL = publicURL.replace(/^http/, 'ws') + '/ws'
-const seedMinutes = Number(process.env.PULSE_SCREENSHOTS_MINUTES ?? '12')
+// A little over an hour, so the Overview's 1h throughput chart has traffic all the way across.
+const seedMinutes = Number(process.env.PULSE_SCREENSHOTS_MINUTES ?? '62')
 const receiverPort = Number(process.env.PULSE_SCREENSHOTS_RECEIVER_PORT ?? '28099')
 const bundle = '../sdk/ts/dist/pulse.browser.js'
 const viewport = { width: 1440, height: 900 }
@@ -34,16 +35,25 @@ async function admin<T>(request: APIRequestContext, method: string, path: string
 
 const pick = <T,>(xs: T[]): T => xs[Math.floor(Math.random() * xs.length)]
 
-/** Dashboard users (ADR-0038): a few people with different roles, a pending invitation and an SSO provider. */
-async function seedUsers(request: APIRequestContext): Promise<void> {
+/**
+ * Dashboard users (ADR-0038): a few people with different roles, a pending invitation and an SSO provider. Mira
+ * gets a password through a single-use link, so her first sign-in can show TOTP enrollment. Returns that password.
+ */
+async function seedUsers(request: APIRequestContext): Promise<string> {
+  const ids: Record<string, string> = {}
   for (const [email, name, roles] of [
     ['mira@example.com', 'Mira Operator', ['operator']],
     ['tomas@example.com', 'Tomas Auditor', ['auditor']],
     ['ieva@example.com', 'Ieva Viewer', ['viewer']],
   ] as const) {
-    await admin(request, 'POST', '/users', { email, display_name: name, roles })
+    ids[email] = (await admin<{ id: string }>(request, 'POST', '/users', { email, display_name: name, roles })).id
   }
+  const miraPassword = `docs-${randomUUID()}`
+  const link = await admin<{ token: string }>(request, 'POST', `/users/${ids['mira@example.com']}/reset-link`)
+  const reset = await request.post(`${adminURL}/api/admin/v1/auth/reset/${link.token}`, { headers: { Origin: adminURL }, data: { password: miraPassword } })
+  expect(reset.ok(), `reset: ${reset.status()}`).toBe(true)
   await admin(request, 'POST', '/invitations', { email: 'jonas@example.com', roles: ['viewer'] })
+  await admin(request, 'POST', '/invitations', { email: 'ruta@example.com', roles: ['auditor'] })
   const prov = await admin<{ id: string }>(request, 'POST', '/sso/providers', {
     slug: 'authentik', display_name: 'Authentik', issuer: 'https://auth.example.com/application/o/pulse/', client_id: 'pulse-dashboard',
     groups_claim: 'groups', enabled: true,
@@ -51,6 +61,8 @@ async function seedUsers(request: APIRequestContext): Promise<void> {
   await admin(request, 'POST', `/sso/providers/${prov.id}/mappings`, { group_value: 'pulse-admins', role: 'administrator' })
   await admin(request, 'POST', `/sso/providers/${prov.id}/mappings`, { group_value: 'pulse-ops', role: 'operator' })
   await admin(request, 'POST', '/account/tokens', { name: 'laptop CLI', role: 'administrator', days: 90 })
+  await admin(request, 'POST', '/account/tokens', { name: 'terraform CI', role: 'administrator', days: 180, cidrs: ['198.51.100.0/24'] })
+  return miraPassword
 }
 
 /** Clients that connect over /ws from a background page and publish with their own credentials. */
@@ -89,20 +101,43 @@ const clients: { name: string; description: string; tags: string[]; grants: Gran
 
 interface Seeded {
   creds: Record<string, string>
+  ids: Record<string, string>
   weatherToken: string
   githubSecret: string
   stripeSecret: string
 }
 
 async function seedConfig(request: APIRequestContext): Promise<Seeded> {
+  type Issued = { client: { id: string }; creds: string }
   const creds: Record<string, string> = {}
-  for (const c of clients) creds[c.name] = (await admin<{ creds: string }>(request, 'POST', '/clients', c)).creds
-  await admin(request, 'POST', '/clients', {
+  const ids: Record<string, string> = {}
+  for (const c of clients) {
+    const r = await admin<Issued>(request, 'POST', '/clients', c)
+    creds[c.name] = r.creds
+    ids[c.name] = r.client.id
+  }
+  // Clients in other states: rotated once, expiring soon, and revoked.
+  const relay = await admin<Issued>(request, 'POST', '/clients', {
     name: 'github-relay',
     description: 'Mirrors repository events to the agents',
     tags: ['github'],
     grants: [{ action: 'subscribe', subject: 'evt.github.>' }],
   })
+  await admin(request, 'POST', `/clients/${relay.client.id}/rotate`, {})
+  await admin(request, 'POST', '/clients', {
+    name: 'garden-probe',
+    description: 'Soil moisture probe, trial run',
+    tags: ['sensor'],
+    grants: [{ action: 'publish', subject: 'evt.garden.>' }],
+    expires_in_days: 12,
+  })
+  const old = await admin<Issued>(request, 'POST', '/clients', {
+    name: 'old-nas-script',
+    description: 'Replaced by media-indexer',
+    tags: ['media'],
+    grants: [{ action: 'publish', subject: 'evt.media.>' }],
+  })
+  await admin(request, 'POST', `/clients/${old.client.id}/revoke`)
 
   const weatherToken = (
     await admin<{ secret: string }>(request, 'POST', '/tokens', {
@@ -172,6 +207,16 @@ async function seedConfig(request: APIRequestContext): Promise<Seeded> {
   await admin(request, 'POST', '/kv', { name: 'shopping-list', description: 'Shared shopping list', history: 1 })
   for (const item of ['oat-milk', 'coffee-beans', 'batteries-aa']) await admin(request, 'PUT', `/kv/shopping-list/entry?key=${item}`, { value: '1', encoding: 'utf8' })
 
+  // An object store with a few files (random bytes; only names and sizes show).
+  await admin(request, 'POST', '/objects', { name: 'floor-plans', description: 'Floor plans and sensor placement' })
+  for (const [name, size] of [['ground-floor.pdf', 412_000], ['first-floor.pdf', 388_000], ['garden.png', 1_240_000], ['sensor-map.json', 6_200]] as const) {
+    const res = await request.put(`${adminURL}/api/admin/v1/objects/floor-plans/upload?name=${encodeURIComponent(name)}`, {
+      headers: { ...csrf, 'Content-Type': 'application/octet-stream' },
+      data: randomBytes(size),
+    })
+    expect(res.ok(), `upload ${name}: ${res.status()}`).toBe(true)
+  }
+
   await admin(request, 'POST', '/streams', {
     name: 'SENSORS',
     description: 'Raw sensor readings, kept 30 days',
@@ -185,7 +230,7 @@ async function seedConfig(request: APIRequestContext): Promise<Seeded> {
     duplicates_seconds: 120,
     allow_direct: true,
   })
-  return { creds, weatherToken, githubSecret, stripeSecret }
+  return { creds, ids, weatherToken, githubSecret, stripeSecret }
 }
 
 /** Starts the background page: every client connects over /ws and publishes at a few events per second for `ms`. */
@@ -331,18 +376,35 @@ test('documentation screenshots', async ({ browser, request }) => {
   await new Promise<void>((r) => receiver.listen(receiverPort, '0.0.0.0', r))
 
   const seeded = await seedConfig(request)
-  await seedUsers(request)
+  const miraPassword = await seedUsers(request)
+  await admin(request, 'POST', '/alerts/notifiers/telegram/test')
+  await admin(request, 'POST', '/alerts/notifiers/discord/test')
   const bg = await (await browser.newContext()).newPage()
   await startClients(bg, seeded.creds, (seedMinutes + 12) * 60_000) // keep publishing (and connected) while shooting
   await sendFailures(request)
+
+  // The token scanner (scripts/screenshots/compose.yaml) is banned automatically; lift that ban once so it comes back
+  // as a repeat offender with a longer ban.
+  const scanner = '203.0.113.50/32'
+  type SecurityState = { active: { network: string; offences: number }[] | null }
+  const scannerBan = async () => (await admin<SecurityState>(request, 'GET', '/security')).active?.find((b) => b.network === scanner)
+  let lifted = false
 
   const end = Date.now() + seedMinutes * 60_000
   for (let s = 0; Date.now() < end; s++) {
     if (s % 4 === 0) await sendWeather(request, seeded.weatherToken)
     if (s % 9 === 0) await sendGithub(request, seeded.githubSecret)
     if (s % 40 === 5) await sendStripe(request, seeded.stripeSecret)
+    // Keep the admin session (shared with the screenshot browsers) within PULSE_SESSION_IDLE while nothing else uses it.
+    if (s % 60 === 30) await admin(request, 'GET', '/system/info')
+    if (!lifted && s % 10 === 0 && (await scannerBan())) {
+      await admin(request, 'POST', '/security/bans/lift', { network: scanner })
+      lifted = true
+    }
     await new Promise((r) => setTimeout(r, 1000))
   }
+  expect(lifted, 'the token scanner was never banned').toBe(true)
+  await expect.poll(async () => (await scannerBan())?.offences, { timeout: 120_000, intervals: [2000] }).toBe(2)
 
   await admin(request, 'POST', '/backups/run')
   await expect
@@ -377,6 +439,21 @@ test('documentation screenshots', async ({ browser, request }) => {
     await p.getByText('living-room', { exact: true }).first().click()
   })
   await shoot(browser, 'light', '/streams', 'streams.png')
+  await shoot(browser, 'light', '/streams/EVENTS', 'stream-detail.png', (p) => expect(p.getByTestId('consumers-table').getByRole('row').nth(1)).toBeVisible())
+  await shoot(browser, 'light', '/explorer', 'publish-event.png', async (p) => {
+    await p.getByRole('button', { name: 'Publish event' }).click()
+    const dialog = p.getByRole('dialog', { name: 'Publish event' })
+    await dialog.getByLabel('Subject').fill('evt.home.door.opened.front')
+    await dialog.getByLabel('Type', { exact: true }).fill('home.door.opened.v1')
+    await dialog.getByLabel('Payload').fill('{\n  "door": "front",\n  "battery": 88,\n  "by": "manual test"\n}')
+  })
+  await shoot(browser, 'light', '/', 'command-palette.png', async (p) => {
+    await expect(p.getByTestId('throughput-chart')).toBeVisible()
+    await p.keyboard.press('Control+K')
+    await expect(p.getByPlaceholder('Jump to…')).toBeVisible()
+  })
+  await shoot(browser, 'light', `/clients/${seeded.ids['home-assistant']}`, 'client-detail.png', (p) =>
+    expect(p.getByTestId('connections-table').getByRole('row').nth(1)).toBeVisible())
   await shoot(browser, 'light', '/clients', 'client-creds.png', async (p) => {
     await p.getByRole('button', { name: 'Create client' }).click()
     const dialog = p.getByRole('dialog', { name: 'Create client' })
@@ -388,6 +465,16 @@ test('documentation screenshots', async ({ browser, request }) => {
   })
   await shoot(browser, 'light', '/tokens', 'tokens.png')
   await shoot(browser, 'light', '/webhooks', 'webhooks.png')
+  const outbound = async (p: Page) => {
+    await p.getByRole('tab', { name: 'Outbound' }).click()
+    await expect(p.getByTestId('outbound-table').getByRole('row').nth(2)).toBeVisible()
+  }
+  await shoot(browser, 'light', '/webhooks', 'webhooks-outbound.png', outbound)
+  await shoot(browser, 'light', '/webhooks', 'webhook-deliveries.png', async (p) => {
+    await outbound(p)
+    await p.getByRole('button', { name: 'Deliveries of invoice-archive' }).click()
+    await expect(p.getByTestId('deliveries-table').getByRole('row').nth(3)).toBeVisible()
+  })
   await shoot(browser, 'light', '/alerts', 'alerts.png')
   await shoot(browser, 'light', '/backups', 'backups.png')
   // The restore scenario: a bucket was deleted after the backup.
@@ -406,14 +493,27 @@ test('documentation screenshots', async ({ browser, request }) => {
     await p.getByTestId('kv-keys').getByText('home.lights.night_scene', { exact: true }).click()
     await expect(p.getByRole('dialog', { name: 'home.lights.night_scene' })).toBeVisible()
   })
+  await shoot(browser, 'light', '/kv?tab=objects&bucket=floor-plans', 'objects.png', (p) => expect(p.getByText('garden.png', { exact: true })).toBeVisible())
   await shoot(browser, 'light', '/audit', 'audit.png', (p) => rows(p, 'audit-table'))
   await shoot(browser, 'light', '/settings', 'settings.png')
   await shoot(browser, 'light', '/settings?tab=sso', 'sso.png')
   await shoot(browser, 'light', '/users', 'users.png')
+  await shoot(browser, 'light', '/users?tab=invitations', 'invitations.png')
+  const alex = (await admin<{ id: string; email: string }[]>(request, 'GET', '/users')).find((u) => u.email === 'alex@example.com')
+  expect(alex, 'the screenshot administrator').toBeTruthy()
+  await shoot(browser, 'light', `/users/${alex!.id}`, 'user-detail.png')
   await shoot(browser, 'light', '/account', 'account.png')
   for (const scheme of ['light', 'dark'] as const) {
     await shoot(browser, scheme, '/login', `login-${scheme}.png`, (p) => expect(p.getByRole('link', { name: 'Sign in with Authentik' })).toBeVisible(), false)
   }
+  // Mira's first sign-in: operators must enroll TOTP before they get in.
+  await shoot(browser, 'light', '/login', 'totp-enroll.png', async (p) => {
+    const login = p.getByRole('form', { name: 'Sign in with email and password' })
+    await login.getByRole('textbox', { name: 'Email' }).fill('mira@example.com')
+    await login.getByRole('textbox', { name: 'Password' }).fill(miraPassword)
+    await login.getByRole('button', { name: 'Sign in' }).click()
+    await expect(p.getByRole('img', { name: 'Authenticator QR code' })).toBeVisible()
+  }, false)
 
   receiver.close()
 })

@@ -57,6 +57,13 @@ administrator can require it for anyone else with the user's **Require an authen
 
 Every one-time link is shown once. Pulse stores only a keyed MAC of it.
 
+<Shot name="invitations" alt="The Invitations tab with pending invitations, their roles and expiry" caption="Users → Invitations" />
+
+A user's page shows their roles, status and sign-in methods, their sessions, linked SSO identities and personal access
+tokens, with the administrator actions: password link, sign out everywhere, clear throttling, disable and delete.
+
+<Shot name="user-detail" alt="A user's page with roles, sign-in methods, sessions, SSO identities and personal access tokens" caption="A user's page" />
+
 ## Signing in
 
 <Shot name="login" themed alt="Pulse sign-in page with email and password and a single sign-on button" caption="Sign-in: password (then TOTP) or single sign-on" />
@@ -69,6 +76,11 @@ Every one-time link is shown once. Pulse stores only a keyed MAC of it.
 - Each address may also make at most 20 sign-in attempts per minute.
 - On the public dashboard, failed password sign-ins count toward [automatic bans](/operators/bans).
 - Every attempt is in the audit log (`user.login`).
+
+Roles in `PULSE_MFA_REQUIRED_ROLES` (administrator and operator by default) must enroll TOTP at their first password
+sign-in before they get in.
+
+<Shot name="totp-enroll" alt="TOTP enrollment at first sign-in: a QR code, the secret and a field for the first code" caption="TOTP enrollment at first sign-in" />
 
 Sessions end after **30 minutes** without activity and **12 hours** at most (`PULSE_SESSION_IDLE`,
 `PULSE_SESSION_MAX`). A session works only on the listener it was created on: a session from the SSH tunnel does not
@@ -89,7 +101,7 @@ fresh login at the identity provider (see [step-up](#step-up)).
 
 ## Your account
 
-<Shot name="account" alt="Account page with profile, two-factor authentication, password, sessions, SSO identities and personal access tokens" caption="Account: second factor, sessions, identities and CLI tokens" />
+<Shot name="account" alt="Account page with profile, two-factor authentication, password, sessions, SSO identities and personal access tokens" caption="Account: second factor, sessions, identities and personal access tokens" />
 
 
 **Account** (the user menu, top right):

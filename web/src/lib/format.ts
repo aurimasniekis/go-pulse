@@ -28,6 +28,21 @@ export function formatCompact(n: number | undefined | null): string {
   return new Intl.NumberFormat('en-US', { notation: 'compact', maximumFractionDigits: 1 }).format(n)
 }
 
+const goUnits: Record<string, number> = { ns: 1e-6, us: 1e-3, 'µs': 1e-3, 'μs': 1e-3, ms: 1, s: 1000, m: 60_000, h: 3_600_000 }
+
+/** A Go duration string from NATS (such as a connection's rtt, "1.371958ms" or "910µs") in milliseconds, like the NATS card. */
+export function formatGoDuration(d: string | undefined | null): string {
+  if (!d) return '—'
+  let ms = 0
+  let end = 0
+  const re = /(\d+(?:\.\d+)?)(ns|us|µs|μs|ms|s|m|h)/y
+  for (let m = re.exec(d); m !== null; m = re.exec(d)) {
+    ms += Number(m[1]) * goUnits[m[2]]
+    end = re.lastIndex
+  }
+  return end === d.length ? `${ms.toFixed(2)} ms` : d
+}
+
 export function formatDuration(seconds: number | undefined | null): string {
   if (seconds === undefined || seconds === null) return '—'
   if (seconds <= 0) return 'forever'

@@ -78,6 +78,8 @@ Credentials expire (365 days by default). The `client_expiry` alert fires 30 day
 
 The client's page lists its live connections (address, uptime, RTT, messages, bytes, subscriptions) from the NATS server.
 
+<Shot name="client-detail" alt="A client's page with its identity, grants and live connections" caption="A client's page: grants and live connections" />
+
 ## HTTP tokens
 
 For scripts, CI jobs and services that cannot hold a NATS connection, create an **HTTP token** on the **HTTP tokens**

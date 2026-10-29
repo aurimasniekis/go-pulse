@@ -21,13 +21,22 @@ Some actions (showing a new secret, deleting a stream, managing users, restoring
 last signed in more than 5 minutes ago: your password and code, or a fresh login at your identity provider. The action
 then continues.
 
+Administrators and operators enroll TOTP at their first password sign-in: scan the QR code, enter a code and save the
+recovery codes.
+
+<Shot name="totp-enroll" alt="TOTP enrollment at first sign-in: a QR code, the secret and a field for the first code" caption="TOTP enrollment at first sign-in" />
+
 The user menu (top right) has your **Account** page: change your password, enroll or replace TOTP, new recovery codes,
-your sessions, linked SSO identities, and personal access tokens for the CLI. See
-[Users and single sign-on](/operators/users).
+your sessions, linked SSO identities, and personal access tokens for the CLI and for automation such as Terraform
+(optionally limited to source networks). See [Users and single sign-on](/operators/users).
+
+<Shot name="account" alt="Account page with profile, two-factor authentication, password, sessions, SSO identities and personal access tokens" caption="Account" />
 
 The sidebar has three groups: **Events**, **Access** and **Operations**. Press <kbd>⌘K</kbd> / <kbd>Ctrl K</kbd> (or
 <kbd>/</kbd>) to jump to any page. The theme follows your system, or switch it in the header; the header also shows
 whether `pulsed` is connected to NATS.
+
+<Shot name="command-palette" alt="The command palette over the Overview page, listing the pages to jump to" caption="Jump to any page with ⌘K" />
 
 ## Events
 
@@ -48,6 +57,8 @@ payload text or a JSON path and value, from a sequence or a time. Filters on typ
 within a scan budget (50,000 messages, 64 MB or 3 seconds per page); when the budget runs out, **Continue scan** picks
 up where it stopped. The URL holds the filters, so a view can be bookmarked. **Publish event** sends one event as the
 operator.
+
+<Shot name="publish-event" alt="The Publish event dialog with a subject, type, payload and extra headers" caption="Publish event" />
 
 <Shot name="explorer" themed alt="The Explorer with filters and a table of events" caption="Explorer" />
 
@@ -75,14 +86,20 @@ The streams in the APP account with size, message count, limits and consumers (p
 `EVENTS` and `blobs` are managed by `pulsed`; you can create, edit and delete your own streams for subjects outside
 `evt.>`, and delete stale consumers. See [Streams, KV and objects](/operators/streams).
 
-<Shot name="streams" alt="Streams and consumers" caption="Streams" />
+<Shot name="streams" alt="Streams with their size, message count and limits" caption="Streams" />
+
+Click a stream for its configuration, state and consumers.
+
+<Shot name="stream-detail" alt="The EVENTS stream's page with its configuration, state and consumers" caption="A stream and its consumers" />
 
 ### KV & Objects
 
 Browse and edit key-value buckets (latest value and history per key) and object stores (upload, download, delete).
 The managed `blobs` store is read-only here.
 
-<Shot name="kv" alt="A KV bucket with keys and a value's history" caption="KV & Objects" />
+<Shot name="kv" alt="A KV bucket with keys and a value's history" caption="A KV bucket" />
+
+<Shot name="objects" alt="An object store with uploaded files, their sizes and download links" caption="An object store" />
 
 ## Access
 
@@ -95,6 +112,10 @@ connections. New `.creds` are shown once with connection snippets.
 <Shot name="clients" themed alt="Clients with grants, status, expiry and connection counts" caption="Clients" />
 
 <Shot name="client-creds" alt="The once-only credentials dialog with Go, Python, TypeScript and CLI snippets" caption="New credentials, shown once" />
+
+A client's page has its identity, grants and live connections, with **Rotate**, **Revoke** and **Disconnect**.
+
+<Shot name="client-detail" alt="A client's page with its identity, grants and live connections" caption="A client and its connections" />
 
 ### HTTP tokens
 
@@ -109,7 +130,11 @@ expiry and optionally a list of source networks. Tokens are stored only as hashe
 events matching a filter to a URL, signed and retried, with a delivery log, pause and resume, test deliveries and
 manual retries. See [Webhooks in and out](/clients/webhooks).
 
-<Shot name="webhooks" alt="Inbound and outbound webhooks with the delivery log" caption="Webhooks" />
+<Shot name="webhooks" alt="Inbound webhooks with their URLs, subjects and accepted and rejected counts" caption="Inbound webhooks" />
+
+<Shot name="webhooks-outbound" alt="Outbound webhooks with filters, destinations, pending events and the last delivery" caption="Outbound webhooks" />
+
+<Shot name="webhook-deliveries" alt="An outbound hook's delivery log with delivered and retried attempts" caption="An outbound hook's delivery log" />
 
 ### Security
 
@@ -133,6 +158,10 @@ and their status. Create users, change roles, disable or delete them, issue a si
 everywhere, clear sign-in throttling, and manage their SSO identities and personal access tokens. The **Invitations**
 tab invites people by email with preset roles and lists pending invitations. See
 [Users and single sign-on](/operators/users).
+
+<Shot name="users" alt="Users with their roles, sign-in methods, status and last sign-in" caption="Users" />
+
+<Shot name="user-detail" alt="A user's page with roles, sign-in methods, sessions, SSO identities and personal access tokens" caption="A user's page" />
 
 ## Operations
 

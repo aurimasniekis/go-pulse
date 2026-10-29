@@ -122,7 +122,7 @@ spike: ## Sizing spike: ~10 GB / 5k subjects into NATS under mem_limit 900m (hea
 e2e: sdk-build ## Playwright against the dev stack (make dev-up first)
 	cd web && pnpm e2e
 
-screenshots: ## Regenerate site/public/screenshots from a fresh, fictional pulse-docs stack (~20 min, Docker)
+screenshots: ## Regenerate site/public/screenshots from a fresh, fictional pulse-docs stack (~75 min, Docker)
 	./scripts/screenshots.sh
 
 site: ## Build the documentation website (site/, VitePress) into site/.vitepress/dist

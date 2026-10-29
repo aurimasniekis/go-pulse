@@ -1,4 +1,4 @@
-import { formatBytes, formatDuration, formatNumber, hexDump, payloadBytes, prettyJSON, preview, shellQuote, timeAgo, formatTime, getTimeZone, setTimeZone } from './format'
+import { formatBytes, formatDuration, formatGoDuration, formatNumber, hexDump, payloadBytes, prettyJSON, preview, shellQuote, timeAgo, formatTime, getTimeZone, setTimeZone } from './format'
 
 test('formatBytes', () => {
   expect(formatBytes(0)).toBe('0 B')
@@ -13,6 +13,15 @@ test('formatNumber and durations', () => {
   expect(formatDuration(0)).toBe('forever')
   expect(formatDuration(90061)).toBe('1d 1h')
   expect(formatDuration(3600)).toBe('1h')
+})
+
+test('formatGoDuration', () => {
+  expect(formatGoDuration('1.371958ms')).toBe('1.37 ms')
+  expect(formatGoDuration('910µs')).toBe('0.91 ms')
+  expect(formatGoDuration('1m2.5s')).toBe('62500.00 ms')
+  expect(formatGoDuration('0s')).toBe('0.00 ms')
+  expect(formatGoDuration('soon')).toBe('soon')
+  expect(formatGoDuration('')).toBe('—')
 })
 
 test('timeAgo', () => {

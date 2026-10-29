@@ -6,7 +6,7 @@ import { useCertificates, useConnections, useSystemInfo } from '@/api/queries'
 import { ErrorAlert } from '@/components/ErrorAlert'
 import { PageHeader } from '@/components/PageHeader'
 import { expiryBadge } from '@/lib/certs'
-import { formatBytes, formatCompact, formatNumber, formatTime, timeAgo } from '@/lib/format'
+import { formatBytes, formatCompact, formatGoDuration, formatNumber, formatTime, timeAgo } from '@/lib/format'
 
 export const Route = createFileRoute('/system')({ component: System })
 
@@ -211,7 +211,7 @@ function System() {
                   </Table.Td>
                   <Table.Td>
                     <Text size="xs" ff="monospace">
-                      {c.rtt}
+                      {formatGoDuration(c.rtt)}
                     </Text>
                   </Table.Td>
                 </Table.Tr>
