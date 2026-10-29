@@ -10,8 +10,8 @@ the same digest) for linux/amd64 and linux/arm64, with an SBOM and build provena
 digest before you deploy it:
 
 ```sh
-gh attestation verify oci://docker.io/aurimasniekis/pulsed:0.1.4 --repo aurimasniekis/go-pulse
-docker buildx imagetools inspect docker.io/aurimasniekis/pulsed:0.1.4   # Digest: sha256:…
+gh attestation verify oci://docker.io/aurimasniekis/pulsed:0.1.5 --repo aurimasniekis/go-pulse
+docker buildx imagetools inspect docker.io/aurimasniekis/pulsed:0.1.5   # Digest: sha256:…
 ```
 
 Pin images by digest in production, never by a moving tag. To run unreleased code, build the image yourself

@@ -105,7 +105,7 @@ cryptography. TLS verification is never disabled.
 
 ## Release status
 
-The current release is **0.1.4**. These items are still open:
+The current release is **0.1.5**. These items are still open:
 
 - **No external review.** Nobody other than the author has reviewed the code, the key handling or the backup
   format.
