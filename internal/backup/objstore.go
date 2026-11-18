@@ -175,6 +175,8 @@ type Mem struct {
 	objs map[string][]byte
 	mod  map[string]time.Time
 	Puts int
+	// Now stamps object modification times; nil means time.Now.
+	Now func() time.Time
 }
 
 // NewMem returns an empty store.
@@ -185,7 +187,11 @@ func (m *Mem) Put(_ context.Context, key string, data []byte) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	m.objs[key] = append([]byte(nil), data...)
-	m.mod[key] = time.Now()
+	if m.Now != nil {
+		m.mod[key] = m.Now()
+	} else {
+		m.mod[key] = time.Now()
+	}
 	m.Puts++
 	return nil
 }

@@ -44,7 +44,11 @@ func newRig(t *testing.T) *rig {
 	key, _ := NameKey(bytes.Repeat([]byte{7}, 32))
 	keys := filepath.Join(t.TempDir(), "keys.enc")
 	_ = os.WriteFile(keys, []byte("sealed-key-set"), 0o600)
-	r := &rig{drillEnv: d, db: db, mem: NewMem(), id: id, key: key, keys: keys, clock: time.Now()}
+	r := &rig{drillEnv: d, db: db, mem: NewMem(), id: id, key: key, keys: keys,
+		// Fixed mid-day UTC start: the tests add hours and assert same-day pruning, so a wall-clock start near
+		// midnight UTC would cross a day boundary.
+		clock: time.Date(2026, 6, 15, 12, 0, 0, 0, time.UTC)}
+	r.mem.Now = func() time.Time { return r.clock }
 	r.svc = New(db, d.nc, d.js, Options{Store: r.mem, Recipients: []age.Recipient{id.Recipient()}, NameKey: key, KeysFile: keys,
 		TempDir: t.TempDir(), Version: "test", Now: func() time.Time { return r.clock }})
 	return r
