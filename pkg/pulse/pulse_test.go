@@ -347,17 +347,22 @@ func TestDrainDoesNotStrandEventsUntilAckWait(t *testing.T) {
 	s.Stop()
 }
 
-func TestDrainContextTimeoutFallsBackToStop(t *testing.T) {
+func TestDrainContextTimeoutCancelsHandlerContext(t *testing.T) {
 	w := newWorld(t)
 	ctx := context.Background()
 	c := w.client(t, "slow", pub("evt.home.>"),
 		natsauth.Grant{Action: natsauth.ActDurable, Subject: "evt.home.>", Name: "slow"})
 	entered := make(chan struct{})
 	release := make(chan struct{})
+	handlerCtxErr := make(chan error, 1)
 	var once sync.Once
-	s, err := c.Subscribe(ctx, "evt.home.>", func(context.Context, pulse.Event) error {
-		once.Do(func() { close(entered) })
+	s, err := c.Subscribe(ctx, "evt.home.>", func(hctx context.Context, _ pulse.Event) error {
+		first := false
+		once.Do(func() { first = true; close(entered) })
 		<-release
+		if first {
+			handlerCtxErr <- hctx.Err()
+		}
 		return nil
 	}, pulse.Durable("slow"), pulse.OnlyNew())
 	if err != nil {
@@ -369,16 +374,23 @@ func TestDrainContextTimeoutFallsBackToStop(t *testing.T) {
 	<-entered
 	dctx, cancel := context.WithTimeout(ctx, 100*time.Millisecond)
 	defer cancel()
+	start := time.Now()
 	if err := s.Drain(dctx); !errors.Is(err, context.DeadlineExceeded) {
 		t.Fatalf("Drain = %v, want deadline exceeded", err)
 	}
+	if d := time.Since(start); d > 2*time.Second {
+		t.Fatalf("Drain took %v after a 100ms ctx", d)
+	}
 	close(release)
+	if err := <-handlerCtxErr; !errors.Is(err, context.Canceled) {
+		t.Fatalf("handler ctx err = %v, want canceled", err)
+	}
 	select {
 	case <-s.Closed():
 	case <-time.After(5 * time.Second):
-		t.Fatal("subscription not closed after fallback Stop")
+		t.Fatal("subscription not closed after Drain ctx timeout")
 	}
-	// Idempotent after Stop/Drain, and nil-safe.
+	// Idempotent after Drain/Stop, and nil-safe.
 	if err := s.Drain(ctx); err != nil {
 		t.Fatalf("second Drain = %v", err)
 	}

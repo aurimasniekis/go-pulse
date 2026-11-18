@@ -100,8 +100,10 @@ after a reconnect. Nothing is kept on the server when the tool stops; the next s
 `sub.Stop()` stops delivery at once; a durable keeps its position. An event delivered while `Stop` is in progress is
 not acked, so the server redelivers it only after AckWait. `sub.Drain(ctx)` is the graceful alternative: it stops
 requesting events, waits for those already delivered to be handled and acked, and returns once the subscription has
-closed. If `ctx` ends first it falls back to `Stop` and returns `ctx.Err()`. `sub.Closed()` is closed once it has fully stopped, and
-`sub.Consumer()` returns the JetStream consumer name.
+closed. If `ctx` ends first, `Drain` cancels the context passed to handlers and returns `ctx.Err()` without waiting;
+events already buffered may still reach the handler, with that cancelled context, until `sub.Closed()` fires.
+`sub.Closed()` is closed once the subscription has fully stopped, and `sub.Consumer()` returns the JetStream consumer
+name.
 
 ## The Event
 
