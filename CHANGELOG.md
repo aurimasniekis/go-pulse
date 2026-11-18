@@ -5,6 +5,11 @@ versioning: [docs/VERSIONING.md](docs/VERSIONING.md).
 
 ## [Unreleased]
 
+### Added
+- `Subscription.Drain(ctx)` in the Go SDK: a graceful stop that lets delivered events finish and ack before the
+  subscription closes. `Stop()` can leave an event delivered during shutdown unacked, so it is redelivered only after
+  AckWait.
+
 ## [0.1.5] - 2026-10-29
 
 Includes every change from 0.1.4, which was tagged but not published: its image failed the release's vulnerability

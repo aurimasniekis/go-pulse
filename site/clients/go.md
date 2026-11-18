@@ -97,7 +97,10 @@ after a reconnect. Nothing is kept on the server when the tool stops; the next s
 - `Since`, `FromSeq` and `OnlyNew` only apply the first time the consumer is created. Later subscriptions resume
   from the stored position.
 
-`sub.Stop()` stops delivery; a durable keeps its position. `sub.Closed()` is closed once it has fully stopped, and
+`sub.Stop()` stops delivery at once; a durable keeps its position. An event delivered while `Stop` is in progress is
+not acked, so the server redelivers it only after AckWait. `sub.Drain(ctx)` is the graceful alternative: it stops
+requesting events, waits for those already delivered to be handled and acked, and returns once the subscription has
+closed. If `ctx` ends first it falls back to `Stop` and returns `ctx.Err()`. `sub.Closed()` is closed once it has fully stopped, and
 `sub.Consumer()` returns the JetStream consumer name.
 
 ## The Event
