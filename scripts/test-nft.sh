@@ -4,5 +4,5 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 docker run --rm --privileged \
   -v "$PWD:/src:ro" -v pulse-gomod:/go/pkg/mod -v pulse-gocache:/root/.cache/go-build \
-  -w /src -e GOFLAGS=-buildvcs=false golang:1.27.3-trixie \
+  -w /src -e GOFLAGS=-buildvcs=false golang:1.27.4-trixie \
   go test -tags nft -count=1 -v -run TestNFT ./internal/banagent/
