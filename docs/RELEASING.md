@@ -29,25 +29,34 @@ race tests, builds and scans the image, pushes it to Docker Hub and GHCR, and cr
    (`git grep -nF <previous version> -- README.md site docs`).
 4. **Screenshots.** If the dashboard changed visibly, regenerate them with `make screenshots` (fictional data on a
    throwaway stack) and review every image before committing.
-5. **Vulnerability gate.** Run the release's Trivy scan locally on the commit you will tag. CI's `govulncheck` reports
-   only reachable vulnerabilities, so it can pass while Trivy flags a vulnerable package in the shipped binaries. The
-   release workflow's Trivy scan decides whether a tag is published, and this gap has already cost two tags. Build the
-   image with the Dockerfile's default build arguments, save it, and scan it with the Trivy version pinned as
-   `TRIVY_VERSION` in [release.yaml](../.github/workflows/release.yaml) (the Docker tag drops the leading `v`):
+5. **Vulnerability gate.** Run it on the release-prep commit from step 6, before opening the PR. CI's `govulncheck`
+   reports only reachable vulnerabilities, so it can pass while Trivy flags a vulnerable package in the shipped binaries.
+   The release workflow's Trivy scan decides whether a tag is published, and this gap has already cost two tags. The
+   workflow publishes linux/amd64 and linux/arm64, so scan both. Build each image with the Dockerfile's default build
+   arguments, save it, and scan it with the Trivy version pinned as `TRIVY_VERSION` in
+   [release.yaml](../.github/workflows/release.yaml) (the Docker tag drops the leading `v`). A plain
+   `docker buildx build` covers only the host architecture; the loop passes `--platform` for each one. The Dockerfile
+   cross-compiles from `$BUILDPLATFORM`, so the arm64 build does not run under emulation.
 
    ```sh
+   TRIVY=$(sed -n 's/^  TRIVY_VERSION: v//p' .github/workflows/release.yaml)
    TMP=$(mktemp -d)
-   docker buildx build --load -t pulsed:trivy-gate .
-   docker save -o "$TMP/pulsed-trivy-gate.tar" pulsed:trivy-gate
-   docker run --rm -v "$TMP:/work:ro" aquasec/trivy:<version> image --input /work/pulsed-trivy-gate.tar \
-     --scanners vuln --severity HIGH,CRITICAL --ignore-unfixed --exit-code 1
+   for ARCH in amd64 arm64; do
+     docker buildx build --platform "linux/$ARCH" --load -t "pulsed:trivy-gate-$ARCH" .
+     docker save -o "$TMP/pulsed-$ARCH.tar" "pulsed:trivy-gate-$ARCH"
+     docker run --rm -v "$TMP:/work:ro" "aquasec/trivy:$TRIVY" image --input "/work/pulsed-$ARCH.tar" \
+       --scanners vuln --severity HIGH,CRITICAL --ignore-unfixed --exit-code 1
+   done
    rm -rf "$TMP"
    ```
 
-   It must report 0 vulnerabilities and exit 0. Put the summary table in the release-prep PR. If it fails, fix the
-   dependency or base image on `main` and repeat this step.
-6. **Commit** these changes on `main` (`docs: prepare vX.Y.Z release`) and push. Wait for CI.
-7. **Tag** the exact commit CI tested and push the tag:
+   Each scan must report 0 vulnerabilities and exit 0. Put the summary tables in the release-prep PR (step 6). If one
+   fails, fix the dependency or base image on the release-prep branch, commit the fix, and repeat this step.
+6. **Release-prep PR.** Commit steps 2–4 on a release-prep branch (`release/vX.Y.Z`), not on `main`. Run step 5 on that
+   commit, then open a PR into `main` (`docs: prepare vX.Y.Z release`). Its description includes the step 1 Docker-suite
+   results and the step 5 Trivy result. Merge it, then wait for CI on `main` to be green on the merge commit.
+7. **Tag** that merge commit, the one CI just tested, and push the tag. If anything else landed on `main` after the
+   scan, repeat step 5 on the merge commit first:
 
    ```sh
    git tag -a vX.Y.Z -m "Pulse vX.Y.Z"
@@ -63,12 +72,12 @@ race tests, builds and scans the image, pushes it to Docker Hub and GHCR, and cr
    notes. Review it and publish it.
 10. **Verify what was published** from a clean machine:
 
-   ```sh
-   V=X.Y.Z
-   gh attestation verify "oci://docker.io/aurimasniekis/pulsed:$V" --repo aurimasniekis/go-pulse
-   gh attestation verify "oci://ghcr.io/aurimasniekis/pulsed:$V" --repo aurimasniekis/go-pulse
-   docker run --rm "docker.io/aurimasniekis/pulsed:$V" version
-   ```
+    ```sh
+    V=X.Y.Z
+    gh attestation verify "oci://docker.io/aurimasniekis/pulsed:$V" --repo aurimasniekis/go-pulse
+    gh attestation verify "oci://ghcr.io/aurimasniekis/pulsed:$V" --repo aurimasniekis/go-pulse
+    docker run --rm "docker.io/aurimasniekis/pulsed:$V" version
+    ```
 
 11. **After the release**, add an empty `## [Unreleased]` section to the CHANGELOG if it is missing.
 
