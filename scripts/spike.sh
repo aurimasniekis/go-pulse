@@ -24,7 +24,7 @@ docker run --rm --network pulse-spike_default \
   -v pulse-spike_pulsed-data:/data/pulsed:ro \
   -v "$PWD/deploy/.dev/master.key:/run/secrets/pulse_master_key:ro" \
   -v "$PWD:/src:ro" -v "$OUT:/out" -v pulse-spike-gomod:/go/pkg/mod -v pulse-spike-gocache:/root/.cache/go-build \
-  -w /src -e GOFLAGS=-buildvcs=false golang:1.27.3-trixie \
+  -w /src -e GOFLAGS=-buildvcs=false golang:1.27.4-trixie \
   sh -c 'go build -o /tmp/spike ./cmd/pulse-spike && /tmp/spike -target-bytes '"$TARGET"' -subjects '"$SUBJECTS"' -pause-file /out/pause -marks /out/marks.json -out /out/results.json' &
 SPIKE=$!
 

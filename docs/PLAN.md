@@ -21,7 +21,7 @@ live in JetStream. pulsed's own state lives in SQLite (ADR-0024).
 | A-1 | One VPS: 2 vCPU, 2 GB RAM, 50–100 GB disk, Debian 13. | Re-measure sizing (SIZING.md). |
 | A-2 | Event volume ≤ ~1M events/day, ≤ 50k distinct subjects. | Rollup dimensions and subject index caps need revisiting. |
 | A-3 | Cloudflare free plan in front of `events.example.com`. | More WAF and rate-limit rules become possible (R-03). |
-| A-4 | Go 1.27.3 (ADR-0019), Node 24.22, pnpm 10. | Pin bumps go through CI. |
+| A-4 | Go 1.27.4 (ADR-0019), Node 24.22, pnpm 10. | Pin bumps go through CI. |
 | A-5 | Operators reach the dashboard through `ssh -L 8080:127.0.0.1:8080` or, when enabled, behind Cloudflare with sign-in (ADR-0038). | n/a |
 
 ## 2. Architecture

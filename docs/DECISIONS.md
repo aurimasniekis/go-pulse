@@ -174,7 +174,7 @@
 - **Status:** accepted; amended at M0 (security fix)
 - **Decision:** The plan named Go 1.27.2. At M0, govulncheck reported GO-2026-6809 (crypto/x509 distrust of compromised
   intermediates) in 1.27.2, fixed in 1.27.3, so `go.mod` declares `go 1.27.3`, the build image is `golang:1.27.3-trixie` and CI
-  installs 1.27.3 with `GOTOOLCHAIN=local`. Later patch releases are adopted the same way when govulncheck requires it.
+  installs 1.27.3 with `GOTOOLCHAIN=local`. Amended again for GO-2026-6859 (`net/http`, fixed in 1.27.4): `go.mod`, the build image and CI now use 1.27.4. Later patch releases are adopted the same way when govulncheck requires it.
 
 ### ADR-0020 — Rollups via headers-only ordered consumers, stored in SQLite
 - **Status:** accepted (storage amended by ADR-0024)
