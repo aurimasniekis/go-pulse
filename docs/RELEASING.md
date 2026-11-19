@@ -41,17 +41,24 @@ race tests, builds and scans the image, pushes it to Docker Hub and GHCR, and cr
    ```sh
    TRIVY=$(sed -n 's/^  TRIVY_VERSION: v//p' .github/workflows/release.yaml)
    TMP=$(mktemp -d)
+   RC=0
    for ARCH in amd64 arm64; do
-     docker buildx build --platform "linux/$ARCH" --load -t "pulsed:trivy-gate-$ARCH" .
-     docker save -o "$TMP/pulsed-$ARCH.tar" "pulsed:trivy-gate-$ARCH"
-     docker run --rm -v "$TMP:/work:ro" "aquasec/trivy:$TRIVY" image --input "/work/pulsed-$ARCH.tar" \
-       --scanners vuln --severity HIGH,CRITICAL --ignore-unfixed --exit-code 1
+     docker buildx build --platform "linux/$ARCH" --load -t "pulsed:trivy-gate-$ARCH" . || RC=1
+     docker save -o "$TMP/pulsed-$ARCH.tar" "pulsed:trivy-gate-$ARCH" || RC=1
+     docker run --rm -i --entrypoint sh "aquasec/trivy:$TRIVY" -c \
+       'cat > /tmp/image.tar && trivy image --input /tmp/image.tar --scanners vuln --severity HIGH,CRITICAL --ignore-unfixed --exit-code 1' \
+       < "$TMP/pulsed-$ARCH.tar" || RC=1
    done
-   rm -rf "$TMP"
+   rm -rf "$TMP"; echo "trivy gate exit: $RC"; [ "$RC" -eq 0 ]
    ```
 
-   Each scan must report 0 vulnerabilities and exit 0. Put the summary tables in the release-prep PR (step 6). If one
-   fails, fix the dependency or base image on the release-prep branch, commit the fix, and repeat this step.
+   The image tar is streamed into the Trivy container on stdin rather than bind-mounted, because a bind mount fails
+   silently when the Docker daemon cannot see the client's filesystem (a remote `DOCKER_HOST` or a private `/tmp`).
+   Every failure, including the build and save steps, sets `RC=1`, and the last line exits non-zero when any step failed.
+
+   The gate passes only when the snippet prints `trivy gate exit: 0`, and each arch's scan reports 0 vulnerabilities.
+   Put that line and the per-arch summary tables in the release-prep PR (step 6). If the gate fails, fix the dependency
+   or base image on the release-prep branch, commit the fix, and repeat this step.
 6. **Release-prep PR.** Commit steps 2–4 on a release-prep branch (`release/vX.Y.Z`), not on `main`. Run step 5 on that
    commit, then open a PR into `main` (`docs: prepare vX.Y.Z release`). Its description includes the step 1 Docker-suite
    results and the step 5 Trivy result. Merge it, then wait for CI on `main` to be green on the merge commit.
