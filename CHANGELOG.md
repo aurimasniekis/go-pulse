@@ -5,13 +5,19 @@ versioning: [docs/VERSIONING.md](docs/VERSIONING.md).
 
 ## [Unreleased]
 
+## [0.1.6] - 2026-11-19
+
 ### Added
 - `Subscription.Drain(ctx)` in the Go SDK: a graceful stop that lets delivered events finish and ack before the
   subscription closes. `Stop()` can leave an event delivered during shutdown unacked, so it is redelivered only after
   AckWait.
 
 ### Security
-- Built with Go 1.27.4 (GO-2026-6859: an HTTP/1 server crash caused by a `MaxBytesReader` header race in `net/http`, fixed in 1.27.4).
+- Built with Go 1.27.4 (GO-2026-6859: an HTTP/1 server crash caused by a `MaxBytesReader` header race in `net/http`,
+  fixed in 1.27.4).
+
+The known limitations that still hold are listed under Release status in the
+[security model](https://aurimasniekis.github.io/go-pulse/security/).
 
 ## [0.1.5] - 2026-10-29
 
@@ -154,7 +160,8 @@ clients, webhooks, bans, alerts and backups. The image is `docker.io/aurimasniek
   throttled, audited and, on the public listener, count toward bans (`dashboard` source).
 - Outbound webhook delivery errors never include the destination URL, which can carry a secret.
 
-[Unreleased]: https://github.com/aurimasniekis/go-pulse/compare/v0.1.5...HEAD
+[Unreleased]: https://github.com/aurimasniekis/go-pulse/compare/v0.1.6...HEAD
+[0.1.6]: https://github.com/aurimasniekis/go-pulse/compare/v0.1.5...v0.1.6
 [0.1.5]: https://github.com/aurimasniekis/go-pulse/compare/v0.1.4...v0.1.5
 [0.1.4]: https://github.com/aurimasniekis/go-pulse/compare/v0.1.3...v0.1.4
 [0.1.3]: https://github.com/aurimasniekis/go-pulse/compare/v0.1.2...v0.1.3
