@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"fmt"
 	"sync"
 	"testing"
 	"time"
@@ -263,6 +264,140 @@ func TestDurableTypedHandlerAndRedelivery(t *testing.T) {
 	// Another durable name is not granted.
 	if _, err := c.Subscribe(ctx, "evt.home.>", h, pulse.Durable("other")); err == nil {
 		t.Fatal("ungranted durable created")
+	}
+}
+
+const drainAckWait = 3 * time.Second
+
+func TestDrainDoesNotStrandEventsUntilAckWait(t *testing.T) {
+	w := newWorld(t)
+	ctx := context.Background()
+	c := w.client(t, "drainer", pub("evt.home.>"),
+		natsauth.Grant{Action: natsauth.ActDurable, Subject: "evt.home.>", Name: "drain"})
+	var mu sync.Mutex
+	seen := map[string]bool{}
+	h := pulse.Handle(func(_ context.Context, _ pulse.Event, v door) error {
+		mu.Lock()
+		seen[v.Door] = true
+		mu.Unlock()
+		return nil
+	})
+	subscribe := func() *pulse.Subscription {
+		s, err := c.Subscribe(ctx, "evt.home.>", h, pulse.Durable("drain"), pulse.AckWait(drainAckWait), pulse.OnlyNew())
+		if err != nil {
+			t.Fatal(err)
+		}
+		return s
+	}
+	publish := func(name string) {
+		if _, err := c.Publish(ctx, "evt.home.door.opened", "home.door.opened.v1", door{name}); err != nil {
+			t.Error(err)
+		}
+	}
+	const iterations, perIteration = 25, 8
+	var want []string
+	s := subscribe()
+	for i := 0; i < iterations; i++ {
+		var wg sync.WaitGroup
+		wg.Add(1)
+		started := make(chan struct{})
+		go func() {
+			defer wg.Done()
+			for j := 0; j < perIteration; j++ {
+				name := fmt.Sprintf("d%d-%d", i, j)
+				mu.Lock()
+				want = append(want, name)
+				mu.Unlock()
+				publish(name)
+				if j == 1 {
+					close(started)
+				}
+			}
+		}()
+		<-started
+		dctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+		err := s.Drain(dctx)
+		cancel()
+		if err != nil {
+			t.Fatalf("iteration %d: drain: %v", i, err)
+		}
+		wg.Wait()
+		resumed := time.Now()
+		s = subscribe()
+		// Everything must arrive well before AckWait; a stranded event would take the full AckWait.
+		deadline := time.Now().Add(drainAckWait / 2)
+		for {
+			mu.Lock()
+			missing := 0
+			for _, n := range want {
+				if !seen[n] {
+					missing++
+				}
+			}
+			mu.Unlock()
+			if missing == 0 {
+				break
+			}
+			if time.Now().After(deadline) {
+				t.Fatalf("iteration %d: %d events not delivered %v after resume (AckWait %v)", i, missing, time.Since(resumed), drainAckWait)
+			}
+			time.Sleep(5 * time.Millisecond)
+		}
+	}
+	s.Stop()
+}
+
+func TestDrainContextTimeoutCancelsHandlerContext(t *testing.T) {
+	w := newWorld(t)
+	ctx := context.Background()
+	c := w.client(t, "slow", pub("evt.home.>"),
+		natsauth.Grant{Action: natsauth.ActDurable, Subject: "evt.home.>", Name: "slow"})
+	entered := make(chan struct{})
+	release := make(chan struct{})
+	handlerCtxErr := make(chan error, 1)
+	var once sync.Once
+	s, err := c.Subscribe(ctx, "evt.home.>", func(hctx context.Context, _ pulse.Event) error {
+		first := false
+		once.Do(func() { first = true; close(entered) })
+		<-release
+		if first {
+			handlerCtxErr <- hctx.Err()
+		}
+		return nil
+	}, pulse.Durable("slow"), pulse.OnlyNew())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := c.Publish(ctx, "evt.home.door.opened", "home.door.opened.v1", door{"x"}); err != nil {
+		t.Fatal(err)
+	}
+	<-entered
+	dctx, cancel := context.WithTimeout(ctx, 100*time.Millisecond)
+	defer cancel()
+	start := time.Now()
+	if err := s.Drain(dctx); !errors.Is(err, context.DeadlineExceeded) {
+		t.Fatalf("Drain = %v, want deadline exceeded", err)
+	}
+	if d := time.Since(start); d > 2*time.Second {
+		t.Fatalf("Drain took %v after a 100ms ctx", d)
+	}
+	close(release)
+	if err := <-handlerCtxErr; !errors.Is(err, context.Canceled) {
+		t.Fatalf("handler ctx err = %v, want canceled", err)
+	}
+	select {
+	case <-s.Closed():
+	case <-time.After(5 * time.Second):
+		t.Fatal("subscription not closed after Drain ctx timeout")
+	}
+	// Idempotent after Drain/Stop, and nil-safe.
+	if err := s.Drain(ctx); err != nil {
+		t.Fatalf("second Drain = %v", err)
+	}
+	s.Stop()
+	var nilSub *pulse.Subscription
+	if err := nilSub.Drain(ctx); err != nil {
+		t.Fatal(err)
 	}
 }
 

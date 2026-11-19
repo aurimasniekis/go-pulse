@@ -90,12 +90,36 @@ type Subscription struct {
 // Consumer is the JetStream consumer name.
 func (s *Subscription) Consumer() string { return s.consumer }
 
-// Stop stops delivery. Durable consumers keep their position on the server.
+// Stop stops delivery immediately. Durable consumers keep their position on the server. An event delivered while
+// Stop is in progress is never acked, so the server redelivers it only after AckWait; use Drain for a graceful stop.
 func (s *Subscription) Stop() {
 	s.once.Do(func() {
 		s.cc.Stop()
 		s.cancel()
 	})
+}
+
+// Drain stops requesting new events, lets the events already delivered to the handler finish (they are handled and
+// acked, nakked or termed as the handler result dictates) and returns once the subscription is fully closed.
+// Unlike Stop, nothing delivered during the shutdown is left unacked, so a durable consumer is not held back by
+// AckWait when it resumes; it keeps its position on the server.
+//
+// If ctx ends first, Drain cancels the context passed to handlers and returns ctx.Err() without waiting. Events
+// already buffered may still reach the handler, with that cancelled context, until Closed fires. Drain is safe on a
+// nil or already stopped subscription and may be called more than once.
+func (s *Subscription) Drain(ctx context.Context) error {
+	if s == nil || s.cc == nil {
+		return nil
+	}
+	s.cc.Drain()
+	select {
+	case <-s.cc.Closed():
+		s.cancel()
+		return nil
+	case <-ctx.Done():
+		s.Stop()
+		return ctx.Err()
+	}
 }
 
 // Closed is closed once the subscription has fully stopped.
