@@ -10,6 +10,9 @@ versioning: [docs/VERSIONING.md](docs/VERSIONING.md).
   subscription closes. `Stop()` can leave an event delivered during shutdown unacked, so it is redelivered only after
   AckWait.
 
+### Security
+- Built with Go 1.27.4 (GO-2026-6859: an HTTP/1 server crash caused by a `MaxBytesReader` header race in `net/http`, fixed in 1.27.4).
+
 ## [0.1.5] - 2026-10-29
 
 Includes every change from 0.1.4, which was tagged but not published: its image failed the release's vulnerability
